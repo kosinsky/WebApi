@@ -7,7 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Web.OData.Formatter;
-using Microsoft.OData.Core.UriParser.Extensions.Semantic;
+using Microsoft.OData.Core.UriParser.Aggregation;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Query.Expressions
@@ -29,34 +29,30 @@ namespace System.Web.OData.Query.Expressions
         /// <summary>
         /// Generates type by provided definition.
         /// </summary>
-        /// <param name="model"></param>
-        /// <param name="propertyNodes"></param>
-        /// <param name="statements"></param>
-        /// <param name="typeSuffix"></param>
-        /// <returns></returns>
         /// <remarks>
         /// We create new assembly each time, but they will be collected by GC.
         /// Current performance testing results is 0.5ms per type. We should consider caching types, however trade off is between CPU perfomance and memory usage (might be it will we an option for library user)
         /// </remarks>
-        public static Type GetResultType<T>(IEdmModel model, IEnumerable<GroupByPropertyNode> propertyNodes = null, IEnumerable<AggregateStatement> statements = null, string typeSuffix = null) where T : DynamicTypeWrapper
+        public static Type GetResultType<T>(IEdmModel model, IEnumerable<GroupByPropertyNode> propertyNodes = null,
+            IEnumerable<AggregateExpression> expressions = null, string typeSuffix = null) where T : DynamicTypeWrapper
         {
             Contract.Assert(model != null);
 
             // Do not have properties, just return base class
-            if ((statements == null || !statements.Any()) && (propertyNodes == null || !propertyNodes.Any()))
+            if ((expressions == null || !expressions.Any()) && (propertyNodes == null || !propertyNodes.Any()))
             {
                 return typeof(T);
             }
 
             TypeBuilder tb = GetTypeBuilder<T>(DynamicTypeName + typeSuffix ?? String.Empty);
-            if (statements != null && statements.Any())
+            if (expressions != null && expressions.Any())
             {
-                foreach (var field in statements)
+                foreach (var field in expressions)
                 {
                     if (field.TypeReference.Definition.TypeKind == EdmTypeKind.Primitive)
                     {
                         var primitiveType = EdmLibHelpers.GetClrType(field.TypeReference, model);
-                        CreateProperty(tb, field.AsAlias, primitiveType);
+                        CreateProperty(tb, field.Alias, primitiveType);
                     }
                 }
             }
@@ -65,14 +61,15 @@ namespace System.Web.OData.Query.Expressions
             {
                 foreach (var field in propertyNodes)
                 {
-                    if (field.Accessor != null && field.TypeReference.Definition.TypeKind == EdmTypeKind.Primitive)
+                    if (field.Expression != null && field.TypeReference.Definition.TypeKind == EdmTypeKind.Primitive)
                     {
                         var primitiveType = EdmLibHelpers.GetClrType(field.TypeReference, model);
                         CreateProperty(tb, field.Name, primitiveType);
                     }
                     else
                     {
-                        var complexProp = GetResultType<DynamicTypeWrapper>(model, field.Children, typeSuffix: field.Name);
+                        var complexProp = GetResultType<DynamicTypeWrapper>(model, field.ChildTransformations,
+                            typeSuffix: field.Name);
                         CreateProperty(tb, field.Name, complexProp);
                     }
                 }
@@ -86,29 +83,33 @@ namespace System.Web.OData.Query.Expressions
             var an = new AssemblyName(typeSignature);
 
             // Create GC collectable assembly. It will be collected after usage and we don't need to worry about memmory usage
-            AssemblyBuilder assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(an, AssemblyBuilderAccess.RunAndCollect);
+            AssemblyBuilder assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(an,
+                AssemblyBuilderAccess.RunAndCollect);
             ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule(ModuleName);
             TypeBuilder tb = moduleBuilder.DefineType(typeSignature,
-                                TypeAttributes.Public |
-                                TypeAttributes.Class |
-                                TypeAttributes.AutoClass |
-                                TypeAttributes.AnsiClass |
-                                TypeAttributes.BeforeFieldInit |
-                                TypeAttributes.AutoLayout,
-                                typeof(T));
+                TypeAttributes.Public |
+                TypeAttributes.Class |
+                TypeAttributes.AutoClass |
+                TypeAttributes.AnsiClass |
+                TypeAttributes.BeforeFieldInit |
+                TypeAttributes.AutoLayout,
+                typeof(T));
             return tb;
         }
 
         private static void CreateProperty(TypeBuilder tb, string propertyName, Type propertyType)
         {
-            PropertyBuilder propertyBuilder = tb.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
+            PropertyBuilder propertyBuilder = tb.DefineProperty(propertyName, PropertyAttributes.HasDefault,
+                propertyType, null);
 
             // Property get method
             // get
             // {
             //  return (propertyType)this.GetPropertyValue("propertyName");
             // }
-            MethodBuilder getPropMthdBldr = tb.DefineMethod("get_" + propertyName, MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig, propertyType, Type.EmptyTypes);
+            MethodBuilder getPropMthdBldr = tb.DefineMethod("get_" + propertyName,
+                MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig, propertyType,
+                Type.EmptyTypes);
             ILGenerator getIl = getPropMthdBldr.GetILGenerator();
 
             getIl.Emit(OpCodes.Ldarg_0);
@@ -130,10 +131,10 @@ namespace System.Web.OData.Query.Expressions
 
             MethodBuilder setPropMthdBldr =
                 tb.DefineMethod("set_" + propertyName,
-                  MethodAttributes.Public |
-                  MethodAttributes.SpecialName |
-                  MethodAttributes.HideBySig,
-                  null, new[] { propertyType });
+                    MethodAttributes.Public |
+                    MethodAttributes.SpecialName |
+                    MethodAttributes.HideBySig,
+                    null, new[] { propertyType });
 
             ILGenerator setIl = setPropMthdBldr.GetILGenerator();
             setIl.Emit(OpCodes.Ldarg_0);

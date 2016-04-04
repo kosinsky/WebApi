@@ -35,14 +35,10 @@ namespace System.Web.OData.Query.Expressions
         private Dictionary<string, ParameterExpression> _lambdaParameters;
         private Type _filterType;
 
-        private FilterBinder(IEdmModel model, IAssembliesResolver assembliesResolver, ODataQuerySettings querySettings)
-            : base(model, assembliesResolver, querySettings)
-        {
-        }
-
-        private FilterBinder(IEdmModel model, ODataQuerySettings querySettings)
+        private FilterBinder(IEdmModel model, ODataQuerySettings querySettings, Type filterType)
             : base(model, querySettings)
         {
+            _filterType = filterType;
         }
 
         private FilterBinder(
@@ -102,7 +98,7 @@ namespace System.Web.OData.Query.Expressions
             Contract.Assert(model != null);
             Contract.Assert(querySettings != null);
 
-            FilterBinder binder = new FilterBinder(model, querySettings);
+            FilterBinder binder = new FilterBinder(model, querySettings, elementType);
             LambdaExpression orderByLambda = binder.BindExpression(orderBy.Expression, orderBy.RangeVariable, elementType);
             return orderByLambda;
         }
@@ -625,6 +621,9 @@ namespace System.Web.OData.Query.Expressions
                 case ClrCanonicalFunctions.CastFunctionName:
                     return BindCastSingleValue(node);
 
+                case ClrCanonicalFunctions.IsofFunctionName:
+                    return BindIsOf(node);
+
                 case ClrCanonicalFunctions.DateFunctionName:
                     return BindDate(node);
 
@@ -632,6 +631,13 @@ namespace System.Web.OData.Query.Expressions
                     return BindTime(node);
 
                 default:
+                    // Get Expression of custom binded method.
+                    Expression expression = BindCustomMethodExpressionOrNull(node);
+                    if (expression != null)
+                    {
+                        return expression;
+                    }
+
                     throw new NotImplementedException(Error.Format(SRResources.ODataFunctionNotSupported, node.Name));
             }
             }
@@ -773,6 +779,56 @@ namespace System.Web.OData.Query.Expressions
                     return NullConstant;
                 }
             }
+        }
+
+        private Expression BindIsOf(SingleValueFunctionCallNode node)
+        {
+            Contract.Assert(ClrCanonicalFunctions.IsofFunctionName == node.Name);
+
+            Expression[] arguments = BindArguments(node.Parameters);
+
+            // Edm.Boolean isof(type)  or
+            // Edm.Boolean isof(expression,type)
+            Contract.Assert(arguments.Length == 1 || arguments.Length == 2);
+
+            Expression source = arguments.Length == 1 ? _lambdaParameters[ODataItParameterName] : arguments[0];
+            if (source == NullConstant)
+            {
+                return FalseConstant;
+            }
+
+            string typeName = (string)((ConstantNode)node.Parameters.Last()).Value;
+
+            IEdmType edmType = _model.FindType(typeName);
+            Type clrType = null;
+            if (edmType != null)
+            {
+                // bool nullable = source.Type.IsNullable();
+                IEdmTypeReference edmTypeReference = edmType.ToEdmTypeReference(false);
+                clrType = EdmLibHelpers.GetClrType(edmTypeReference, _model);
+            }
+
+            if (clrType == null)
+            {
+                return FalseConstant;
+            }
+
+            bool isSourcePrimitiveOrEnum = EdmLibHelpers.GetEdmPrimitiveTypeOrNull(source.Type) != null ||
+                                           TypeHelper.IsEnum(source.Type);
+
+            bool isTargetPrimitiveOrEnum = EdmLibHelpers.GetEdmPrimitiveTypeOrNull(clrType) != null ||
+                                           TypeHelper.IsEnum(clrType);
+
+            if (isSourcePrimitiveOrEnum && isTargetPrimitiveOrEnum)
+            {
+                if (source.Type.IsNullable())
+                {
+                    clrType = clrType.ToNullable();
+                }
+            }
+
+            // Be caution: Type method of LINQ to Entities only supports entity type.
+            return Expression.Condition(Expression.TypeIs(source, clrType), TrueConstant, FalseConstant);
         }
 
         private Expression BindCeiling(SingleValueFunctionCallNode node)
@@ -1181,6 +1237,21 @@ namespace System.Web.OData.Query.Expressions
             {
                 return any;
             }
+        }
+
+        private Expression BindCustomMethodExpressionOrNull(SingleValueFunctionCallNode node)
+        {
+            Expression[] arguments = BindArguments(node.Parameters);
+            IEnumerable<Type> methodArgumentsType = arguments.Select(argument => argument.Type);
+
+            // Search for custom method info that are binded to the node name
+            MethodInfo methodInfo;
+            if (UriFunctionsBinder.TryGetMethodInfo(node.Name, methodArgumentsType, out methodInfo))
+            {
+                return MakeFunctionCall(methodInfo, arguments);
+            }
+
+            return null;
         }
 
         private ParameterExpression HandleLambdaParameters(IEnumerable<RangeVariable> rangeVariables)

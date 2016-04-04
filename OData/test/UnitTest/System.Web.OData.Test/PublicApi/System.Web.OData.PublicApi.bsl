@@ -140,6 +140,11 @@ public sealed class System.Web.OData.EdmModelExtensions {
 	[
 	ExtensionAttribute(),
 	]
+	public static FunctionLinkBuilder GetFunctionLinkBuilder (Microsoft.OData.Edm.IEdmModel model, Microsoft.OData.Edm.IEdmFunction function)
+
+	[
+	ExtensionAttribute(),
+	]
 	public static NavigationSourceLinkBuilderAnnotation GetNavigationSourceLinkBuilder (Microsoft.OData.Edm.IEdmModel model, Microsoft.OData.Edm.IEdmNavigationSource navigationSource)
 
 	[
@@ -166,6 +171,11 @@ public sealed class System.Web.OData.EdmTypeExtensions {
 	ExtensionAttribute(),
 	]
 	public static bool IsDeltaFeed (Microsoft.OData.Edm.IEdmType type)
+}
+
+public sealed class System.Web.OData.ODataUriFunctions {
+	public static void AddCustomUriFunction (string functionName, Microsoft.OData.Core.UriParser.FunctionSignatureWithReturnType functionSignature, System.Reflection.MethodInfo methodInfo)
+	public static bool RemoveCustomUriFunction (string functionName, Microsoft.OData.Core.UriParser.FunctionSignatureWithReturnType functionSignature, System.Reflection.MethodInfo methodInfo)
 }
 
 public class System.Web.OData.ClrPropertyInfoAnnotation {
@@ -350,7 +360,6 @@ public class System.Web.OData.EnableQueryAttribute : System.Web.Http.Filters.Act
 	int MaxSkip  { public get; public set; }
 	int MaxTop  { public get; public set; }
 	int PageSize  { public get; public set; }
-	bool SearchDerivedTypeWhenAutoExpand  { public get; public set; }
 
 	public virtual System.Linq.IQueryable ApplyQuery (System.Linq.IQueryable queryable, ODataQueryOptions queryOptions)
 	public virtual object ApplyQuery (object entity, ODataQueryOptions queryOptions)
@@ -942,6 +951,7 @@ public abstract class System.Web.OData.Builder.ProcedureConfiguration {
 	NavigationSourceConfiguration NavigationSource  { public get; public set; }
 	bool OptionalReturn  { public get; public set; }
 	System.Collections.Generic.IEnumerable`1[[System.Web.OData.Builder.ParameterConfiguration]] Parameters  { public virtual get; }
+	ProcedureLinkBuilder ProcedureLinkBuilder  { protected get; protected set; }
 	IEdmTypeConfiguration ReturnType  { public get; public set; }
 	string Title  { public get; public set; }
 
@@ -1060,7 +1070,17 @@ public sealed class System.Web.OData.Builder.LinkGenerationHelpers {
 	[
 	ExtensionAttribute(),
 	]
+	public static System.Uri GenerateActionLink (FeedContext feedContext, Microsoft.OData.Edm.IEdmOperation action)
+
+	[
+	ExtensionAttribute(),
+	]
 	public static System.Uri GenerateFunctionLink (EntityInstanceContext entityContext, Microsoft.OData.Edm.IEdmOperation function)
+
+	[
+	ExtensionAttribute(),
+	]
+	public static System.Uri GenerateFunctionLink (FeedContext feedContext, Microsoft.OData.Edm.IEdmOperation function)
 
 	[
 	ExtensionAttribute(),
@@ -1109,7 +1129,9 @@ public class System.Web.OData.Builder.ActionConfiguration : ProcedureConfigurati
 	ProcedureKind Kind  { public virtual get; }
 
 	public System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] GetActionLink ()
+	public System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] GetFeedActionLink ()
 	public ActionConfiguration HasActionLink (System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] actionLinkFactory, bool followsConventions)
+	public ActionConfiguration HasFeedActionLink (System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] actionLinkFactory, bool followsConventions)
 	public ActionConfiguration Returns ()
 	public ActionConfiguration Returns (System.Type clrReturnType)
 	public ActionConfiguration ReturnsCollection ()
@@ -1124,12 +1146,12 @@ public class System.Web.OData.Builder.ActionConfiguration : ProcedureConfigurati
 	public ActionConfiguration SetBindingParameter (string name, IEdmTypeConfiguration bindingParameterType)
 }
 
-public class System.Web.OData.Builder.ActionLinkBuilder {
+public class System.Web.OData.Builder.ActionLinkBuilder : ProcedureLinkBuilder {
 	public ActionLinkBuilder (System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] actionLinkFactory, bool followsConventions)
-
-	bool FollowsConventions  { public get; }
+	public ActionLinkBuilder (System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] actionLinkFactory, bool followsConventions)
 
 	public virtual System.Uri BuildActionLink (EntityInstanceContext context)
+	public virtual System.Uri BuildActionLink (FeedContext context)
 	public static System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] CreateActionLinkFactory (System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] baseFactory, System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Boolean]] expensiveAvailabilityCheck)
 }
 
@@ -1321,7 +1343,9 @@ public class System.Web.OData.Builder.FunctionConfiguration : ProcedureConfigura
 	bool SupportedInFilter  { public get; public set; }
 	bool SupportedInOrderBy  { public get; public set; }
 
+	public System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] GetFeedFunctionLink ()
 	public System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] GetFunctionLink ()
+	public FunctionConfiguration HasFeedFunctionLink (System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] functionLinkFactory, bool followsConventions)
 	public FunctionConfiguration HasFunctionLink (System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] functionLinkFactory, bool followsConventions)
 	public FunctionConfiguration Returns ()
 	public FunctionConfiguration Returns (System.Type clrReturnType)
@@ -1335,12 +1359,12 @@ public class System.Web.OData.Builder.FunctionConfiguration : ProcedureConfigura
 	public FunctionConfiguration SetBindingParameter (string name, IEdmTypeConfiguration bindingParameterType)
 }
 
-public class System.Web.OData.Builder.FunctionLinkBuilder {
+public class System.Web.OData.Builder.FunctionLinkBuilder : ProcedureLinkBuilder {
 	public FunctionLinkBuilder (System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] functionLinkFactory, bool followsConventions)
-
-	bool FollowsConventions  { public get; }
+	public FunctionLinkBuilder (System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] functionLinkFactory, bool followsConventions)
 
 	public virtual System.Uri BuildFunctionLink (EntityInstanceContext context)
+	public virtual System.Uri BuildFunctionLink (FeedContext context)
 	public static System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] CreateFunctionLinkFactory (System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] baseFactory, System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Boolean]] expensiveAvailabilityCheck)
 }
 
@@ -1486,6 +1510,18 @@ public class System.Web.OData.Builder.PrimitiveTypeConfiguration : IEdmTypeConfi
 	ODataModelBuilder ModelBuilder  { public virtual get; }
 	string Name  { public virtual get; }
 	string Namespace  { public virtual get; }
+}
+
+public class System.Web.OData.Builder.ProcedureLinkBuilder {
+	public ProcedureLinkBuilder (System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] linkFactory, bool followsConventions)
+	public ProcedureLinkBuilder (System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] linkFactory, bool followsConventions)
+
+	System.Func`2[[System.Web.OData.FeedContext],[System.Uri]] FeedLinkFactory  { public get; }
+	bool FollowsConventions  { public get; }
+	System.Func`2[[System.Web.OData.EntityInstanceContext],[System.Uri]] LinkFactory  { public get; }
+
+	public virtual System.Uri BuildLink (EntityInstanceContext context)
+	public virtual System.Uri BuildLink (FeedContext context)
 }
 
 public class System.Web.OData.Builder.SelfLinkBuilder`1 {
@@ -1706,7 +1742,7 @@ public sealed class System.Web.OData.Extensions.UrlHelperExtensions {
 }
 
 public class System.Web.OData.Extensions.HttpRequestMessageProperties {
-	Microsoft.OData.Core.UriParser.Extensions.Semantic.ApplyClause ApplyClause  { public get; public set; }
+	Microsoft.OData.Core.UriParser.Aggregation.ApplyClause ApplyClause  { public get; public set; }
 	Microsoft.OData.Edm.IEdmModel Model  { public get; public set; }
 	System.Uri NextLink  { public get; public set; }
 	ODataPath Path  { public get; public set; }
@@ -1789,6 +1825,7 @@ public class System.Web.OData.Formatter.ODataMediaTypeFormatter : System.Net.Htt
 	public ODataMediaTypeFormatter (System.Collections.Generic.IEnumerable`1[[Microsoft.OData.Core.ODataPayloadKind]] payloadKinds)
 	public ODataMediaTypeFormatter (ODataDeserializerProvider deserializerProvider, ODataSerializerProvider serializerProvider, System.Collections.Generic.IEnumerable`1[[Microsoft.OData.Core.ODataPayloadKind]] payloadKinds)
 
+	System.Func`2[[System.Net.Http.HttpRequestMessage],[System.Uri]] BaseAddressFactory  { public get; public set; }
 	ODataDeserializerProvider DeserializerProvider  { public get; }
 	Microsoft.OData.Core.ODataMessageQuotas MessageReaderQuotas  { public get; }
 	Microsoft.OData.Core.ODataMessageReaderSettings MessageReaderSettings  { public get; }
@@ -1798,6 +1835,7 @@ public class System.Web.OData.Formatter.ODataMediaTypeFormatter : System.Net.Htt
 
 	public virtual bool CanReadType (System.Type type)
 	public virtual bool CanWriteType (System.Type type)
+	public static System.Uri GetDefaultBaseAddress (System.Net.Http.HttpRequestMessage request)
 	public virtual System.Net.Http.Formatting.MediaTypeFormatter GetPerRequestFormatterInstance (System.Type type, System.Net.Http.HttpRequestMessage request, System.Net.Http.Headers.MediaTypeHeaderValue mediaType)
 	public virtual System.Threading.Tasks.Task`1[[System.Object]] ReadFromStreamAsync (System.Type type, System.IO.Stream readStream, System.Net.Http.HttpContent content, System.Net.Http.Formatting.IFormatterLogger formatterLogger)
 	public virtual void SetDefaultContentHeaders (System.Type type, System.Net.Http.Headers.HttpContentHeaders headers, System.Net.Http.Headers.MediaTypeHeaderValue mediaType)
@@ -1944,7 +1982,7 @@ public abstract class System.Web.OData.Query.OrderByNode {
 public class System.Web.OData.Query.ApplyQueryOption {
 	public ApplyQueryOption (string rawValue, ODataQueryContext context, Microsoft.OData.Core.UriParser.ODataQueryOptionParser queryOptionParser)
 
-	Microsoft.OData.Core.UriParser.Extensions.Semantic.ApplyClause ApplyClause  { public get; }
+	Microsoft.OData.Core.UriParser.Aggregation.ApplyClause ApplyClause  { public get; }
 	ODataQueryContext Context  { public get; }
 	string RawValue  { public get; }
 	System.Type ResultClrType  { public get; }
@@ -2033,7 +2071,6 @@ public class System.Web.OData.Query.ODataQuerySettings {
 	bool EnsureStableOrdering  { public get; public set; }
 	HandleNullPropagationOption HandleNullPropagation  { public get; public set; }
 	System.Nullable`1[[System.Int32]] PageSize  { public get; public set; }
-	bool SearchDerivedTypeWhenAutoExpand  { public get; public set; }
 }
 
 public class System.Web.OData.Query.ODataRawQueryOptions {
@@ -2148,7 +2185,6 @@ public class System.Web.OData.Query.SelectExpandQueryOption {
 	int LevelsMaxLiteralExpansionDepth  { public get; public set; }
 	string RawExpand  { public get; }
 	string RawSelect  { public get; }
-	bool SearchDerivedTypeWhenAutoExpand  { public get; public set; }
 	Microsoft.OData.Core.UriParser.Semantic.SelectExpandClause SelectExpandClause  { public get; }
 	SelectExpandQueryValidator Validator  { public get; public set; }
 
@@ -2962,6 +2998,7 @@ public class System.Web.OData.Formatter.Serialization.ODataEntityTypeSerializer 
 	public virtual string CreateETag (EntityInstanceContext entityInstanceContext)
 	public virtual Microsoft.OData.Core.ODataNavigationLink CreateNavigationLink (Microsoft.OData.Edm.IEdmNavigationProperty navigationProperty, EntityInstanceContext entityInstanceContext)
 	public virtual Microsoft.OData.Core.ODataAction CreateODataAction (Microsoft.OData.Edm.IEdmAction action, EntityInstanceContext entityInstanceContext)
+	public virtual Microsoft.OData.Core.ODataFunction CreateODataFunction (Microsoft.OData.Edm.IEdmFunction function, EntityInstanceContext entityInstanceContext)
 	public virtual SelectExpandNode CreateSelectExpandNode (EntityInstanceContext entityInstanceContext)
 	public virtual Microsoft.OData.Core.ODataProperty CreateStructuralProperty (Microsoft.OData.Edm.IEdmStructuralProperty structuralProperty, EntityInstanceContext entityInstanceContext)
 	public virtual void WriteDeltaObjectInline (object graph, Microsoft.OData.Edm.IEdmTypeReference expectedType, Microsoft.OData.Core.ODataDeltaWriter writer, ODataSerializerContext writeContext)
@@ -2987,6 +3024,7 @@ public class System.Web.OData.Formatter.Serialization.ODataFeedSerializer : ODat
 	public ODataFeedSerializer (ODataSerializerProvider serializerProvider)
 
 	public virtual Microsoft.OData.Core.ODataFeed CreateODataFeed (System.Collections.IEnumerable feedInstance, Microsoft.OData.Edm.IEdmCollectionTypeReference feedType, ODataSerializerContext writeContext)
+	public virtual Microsoft.OData.Core.ODataOperation CreateODataOperation (Microsoft.OData.Edm.IEdmOperation operation, FeedContext feedContext, ODataSerializerContext writeContext)
 	public virtual void WriteObject (object graph, System.Type type, Microsoft.OData.Core.ODataMessageWriter messageWriter, ODataSerializerContext writeContext)
 	public virtual void WriteObjectInline (object graph, Microsoft.OData.Edm.IEdmTypeReference expectedType, Microsoft.OData.Core.ODataWriter writer, ODataSerializerContext writeContext)
 }
