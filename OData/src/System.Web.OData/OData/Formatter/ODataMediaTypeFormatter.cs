@@ -124,6 +124,7 @@ namespace System.Web.OData.Formatter
             _payloadKinds = formatter._payloadKinds;
             MessageWriterSettings = formatter.MessageWriterSettings;
             MessageReaderSettings = formatter.MessageReaderSettings;
+            BaseAddressFactory = formatter.BaseAddressFactory;
 
             // Parameter 2: version
             _version = version;
@@ -195,7 +196,7 @@ namespace System.Web.OData.Formatter
         /// <summary>
         /// The request message associated with the per-request formatter instance.
         /// </summary>
-        internal HttpRequestMessage Request { get; set; }
+        public HttpRequestMessage Request { get; set; }
 
         /// <inheritdoc/>
         public override MediaTypeFormatter GetPerRequestFormatterInstance(Type type, HttpRequestMessage request, MediaTypeHeaderValue mediaType)

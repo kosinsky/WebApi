@@ -170,6 +170,7 @@
     <Compile Include="ETags\ETagCurrencyTokenEfContext.cs" />
     <Compile Include="ETags\ETagCurrencyTokenEfContextTest.cs" />
     <Compile Include="ETags\ETagsOtherTypesTest.cs" />
+    <Compile Include="ETags\ETagsUntypedTests.cs" />
     <Compile Include="Formatter\ODataFeedSerializeWithoutNavigationSourceTests.cs" />
     <Compile Include="ODataCountTest\CountController.cs" />
     <Compile Include="ODataCountTest\CountDataModel.cs" />
@@ -183,6 +184,11 @@
     <Compile Include="Routing\DynamicProperties\DynamicPropertiesController.cs" />
     <Compile Include="Routing\DynamicProperties\DynamicPropertiesModel.cs" />
     <Compile Include="Routing\DynamicProperties\DynamicPropertiesTest.cs" />
+    <Compile Include="Spatial\SpatialController.cs" />
+    <Compile Include="Spatial\SpatialEdmModel.cs" />
+    <Compile Include="Spatial\SpatialFactory.cs" />
+    <Compile Include="Spatial\SpatialTests.cs" />
+    <Compile Include="Spatial\SpatialModels.cs" />
     <Compile Include="Swagger\SwaggerController.cs" />
     <Compile Include="Swagger\SwaggerMetadataTest.cs" />
     <Compile Include="Swagger\SwaggerPathHandler.cs" />

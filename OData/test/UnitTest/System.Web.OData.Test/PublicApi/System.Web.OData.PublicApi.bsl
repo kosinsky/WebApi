@@ -1788,6 +1788,7 @@ public class System.Web.OData.Formatter.ETag : System.Dynamic.DynamicObject, IDy
 
 	System.Type EntityType  { public get; public set; }
 	bool IsAny  { public get; public set; }
+	bool IsIfNoneMatch  { public get; public set; }
 	bool IsWellFormed  { public get; public set; }
 	object Item [string key] { public get; public set; }
 
@@ -1831,6 +1832,7 @@ public class System.Web.OData.Formatter.ODataMediaTypeFormatter : System.Net.Htt
 	Microsoft.OData.Core.ODataMessageReaderSettings MessageReaderSettings  { public get; }
 	Microsoft.OData.Core.ODataMessageQuotas MessageWriterQuotas  { public get; }
 	Microsoft.OData.Core.ODataMessageWriterSettings MessageWriterSettings  { public get; }
+	System.Net.Http.HttpRequestMessage Request  { public get; public set; }
 	ODataSerializerProvider SerializerProvider  { public get; }
 
 	public virtual bool CanReadType (System.Type type)
@@ -2503,8 +2505,10 @@ public class System.Web.OData.Routing.EntitySetPathSegment : ODataPathSegment {
 }
 
 public class System.Web.OData.Routing.KeyValuePathSegment : ODataPathSegment {
+	public KeyValuePathSegment (Microsoft.OData.Core.UriParser.Semantic.KeySegment segment)
 	public KeyValuePathSegment (string value)
 
+	Microsoft.OData.Core.UriParser.Semantic.KeySegment Segment  { public get; }
 	string SegmentKind  { public virtual get; }
 	string Value  { public get; }
 
