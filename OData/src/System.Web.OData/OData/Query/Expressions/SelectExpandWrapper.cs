@@ -8,7 +8,6 @@ using System.Web.OData.Formatter;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Properties;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Newtonsoft.Json;
 
 namespace System.Web.OData.Query.Expressions
@@ -59,7 +58,7 @@ namespace System.Web.OData.Query.Expressions
                 IEdmEntityType entityType = model.FindDeclaredType(TypeName) as IEdmEntityType;
                 if (entityType == null)
                 {
-                    throw Error.InvalidOperation(SRResources.EntityTypeNotInModel, TypeName);
+                    throw Error.InvalidOperation(SRResources.ResourceTypeNotInModel, TypeName);
                 }
 
                 return new EdmEntityTypeReference(entityType, isNullable: false);

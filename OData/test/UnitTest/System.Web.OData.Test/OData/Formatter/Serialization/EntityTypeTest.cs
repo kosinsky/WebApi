@@ -5,11 +5,12 @@ using System.Net.Http;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
-using System.Web.OData.Routing;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter.Serialization
 {
@@ -32,7 +33,7 @@ namespace System.Web.OData.Formatter.Serialization
 
         private ODataMediaTypeFormatter CreateFormatter()
         {
-            ODataMediaTypeFormatter formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.Entry });
+            ODataMediaTypeFormatter formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.Resource });
             formatter.Request = GetSampleRequest();
             formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadata);
             return formatter;
@@ -41,14 +42,13 @@ namespace System.Web.OData.Formatter.Serialization
         private HttpRequestMessage GetSampleRequest()
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/employees");
-            request.ODataProperties().Model = _model;
             HttpConfiguration configuration = new HttpConfiguration();
             string routeName = "Route";
             configuration.MapODataServiceRoute(routeName, null, _model);
             request.SetConfiguration(configuration);
             IEdmEntitySet entitySet = _model.EntityContainer.FindEntitySet("employees");
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment(entitySet));
-            request.ODataProperties().RouteName = routeName;
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(entitySet));
+            request.EnableODataDependencyInjectionSupport(routeName);
             return request;
         }
 

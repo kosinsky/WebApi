@@ -10,15 +10,17 @@ using System.Web.OData.Formatter;
 using System.Web.OData.Formatter.Deserialization;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 
 namespace System.Web.OData
 {
     public class EnumSerializerTest
     {
+        private readonly ODataSerializerProvider _serializerProvider =
+            DependencyInjectionHelper.GetDefaultODataSerializerProvider();
+
         [Fact]
         public void GetEdmTypeSerializer_ReturnODataEnumSerializer_ForEnumType()
         {
@@ -26,7 +28,7 @@ namespace System.Web.OData
             IEdmTypeReference edmType = new EdmEnumTypeReference(new EdmEnumType("TestModel", "Color"), isNullable: false);
 
             // Act
-            ODataEdmTypeSerializer serializer = new DefaultODataSerializerProvider().GetEdmTypeSerializer(edmType);
+            ODataEdmTypeSerializer serializer = _serializerProvider.GetEdmTypeSerializer(edmType);
 
             // Assert
             Assert.NotNull(serializer);
@@ -44,7 +46,9 @@ namespace System.Web.OData
 
             // Act & Assert
             Assert.ThrowsArgumentNull(
-                () => new ODataEnumSerializer().WriteObject(graph, type, messageWriter, writeContext),
+                () =>
+                    new ODataEnumSerializer(_serializerProvider).WriteObject(graph, type, messageWriter,
+                        writeContext),
                 "messageWriter");
         }
 
@@ -61,7 +65,7 @@ namespace System.Web.OData
 
             // Act & Assert
             Assert.ThrowsArgumentNull(
-                () => new ODataEnumSerializer().WriteObject(graph, type, messageWriter, writeContext),
+                () => new ODataEnumSerializer(_serializerProvider).WriteObject(graph, type, messageWriter, writeContext),
                 "writeContext");
         }
 
@@ -78,7 +82,7 @@ namespace System.Web.OData
 
             // Act & Assert
             Assert.ThrowsArgument(
-                () => new ODataEnumSerializer().WriteObject(graph, type, messageWriter, writeContext),
+                () => new ODataEnumSerializer(_serializerProvider).WriteObject(graph, type, messageWriter, writeContext),
                 "writeContext",
                 "The 'RootElementName' property is required on 'ODataSerializerContext'.");
         }
@@ -93,7 +97,7 @@ namespace System.Web.OData
 
             // Act & Assert
             Assert.Throws<InvalidOperationException>(
-                () => new ODataEnumSerializer().CreateODataValue(graph, expectedType, writeContext),
+                () => new ODataEnumSerializer(_serializerProvider).CreateODataValue(graph, expectedType, writeContext),
                 "ODataEnumSerializer cannot write an object of type 'Edm.Int32'.");
         }
 
@@ -101,6 +105,10 @@ namespace System.Web.OData
         public void EnumTypeSerializerTestForOData()
         {
             // Arrange
+            string enumComplexPayload = @"{
+  ""@odata.context"":""http://localhost/$metadata#System.Web.OData.EnumComplex"",""RequiredColor"":""Red, Blue"",""NullableColor"":null,""UndefinedColor"":""123""
+}";
+
             ODataMediaTypeFormatter formatter = GetFormatter();
             ObjectContent<EnumComplex> content = new ObjectContent<EnumComplex>(
                 new EnumComplex()
@@ -113,7 +121,7 @@ namespace System.Web.OData
                 ODataMediaTypes.ApplicationJsonODataMinimalMetadata);
 
             // Act & Assert
-            JsonAssert.Equal(Resources.EnumComplexType, content.ReadAsStringAsync().Result);
+            JsonAssert.Equal(enumComplexPayload, content.ReadAsStringAsync().Result);
         }
 
         [Fact]
@@ -121,8 +129,8 @@ namespace System.Web.OData
         {
             // Arrange
             const string expect =
-                "{\r\n" +
-                "  \"@odata.context\":\"http://localhost/odata/$metadata#Edm.Boolean\",\"value\":true\r\n" +
+                "{" +
+                "\"@odata.context\":\"http://localhost/odata/$metadata#Edm.Boolean\",\"value\":true" +
                 "}";
 
             HttpConfiguration config = new[] { typeof(NullableEnumValueController) }.GetHttpConfiguration();
@@ -144,8 +152,8 @@ namespace System.Web.OData
         {
             // Arrange
             const string expect =
-                "{\r\n" +
-                "  \"@odata.context\":\"http://localhost/odata/$metadata#Edm.Boolean\",\"value\":false\r\n" +
+                "{" +
+                "\"@odata.context\":\"http://localhost/odata/$metadata#Edm.Boolean\",\"value\":false" +
                 "}";
 
             HttpConfiguration config = new[] { typeof(NullableEnumValueController) }.GetHttpConfiguration();
@@ -164,7 +172,7 @@ namespace System.Web.OData
 
         private static ODataMediaTypeFormatter GetFormatter()
         {
-            var formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.Property })
+            var formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.Resource })
             {
                 Request = GetSampleRequest()
             };
@@ -176,11 +184,8 @@ namespace System.Web.OData
         private static HttpRequestMessage GetSampleRequest()
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/property");
-            request.ODataProperties().Model = GetSampleModel();
-            HttpConfiguration configuration = new HttpConfiguration();
-            configuration.Routes.MapFakeODataRoute();
-            request.SetConfiguration(configuration);
-            request.SetFakeODataRouteName();
+            request.EnableODataDependencyInjectionSupport(GetSampleModel());
+            request.GetConfiguration().Routes.MapFakeODataRoute();
             return request;
         }
 

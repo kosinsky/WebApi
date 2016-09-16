@@ -3,18 +3,17 @@
 
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter.Deserialization
 {
     public class ODataSingletonDeserializerTest
     {
         private IEdmModel _edmModel;
-        private IEdmEntityContainer _edmContainer;
         private IEdmSingleton _singleton;
         private readonly ODataDeserializerContext _readContext;
         private readonly ODataDeserializerProvider _deserializerProvider;
@@ -42,16 +41,15 @@ namespace System.Web.OData.Formatter.Deserialization
             model.SetAnnotationValue<ClrTypeAnnotation>(employeeType, new ClrTypeAnnotation(typeof(EmployeeModel)));
 
             _edmModel = model;
-            _edmContainer = defaultContainer;
 
             _readContext = new ODataDeserializerContext
             {
-                Path = new ODataPath(new SingletonPathSegment(_singleton)),
+                Path = new ODataPath(new SingletonSegment(_singleton)),
                 Model = _edmModel,
                 ResourceType = typeof(EmployeeModel)
-            }; 
+            };
 
-            _deserializerProvider = new DefaultODataDeserializerProvider();
+            _deserializerProvider = DependencyInjectionHelper.GetDefaultODataDeserializerProvider();
         }
 
         [Fact]
@@ -63,7 +61,7 @@ namespace System.Web.OData.Formatter.Deserialization
                 "\"EmployeeId\":789," +
                 "\"EmployeeName\":\"John Hark\"}";
 
-            ODataEntityDeserializer deserializer = new ODataEntityDeserializer(_deserializerProvider);
+            ODataResourceDeserializer deserializer = new ODataResourceDeserializer(_deserializerProvider);
 
             // Act
             EmployeeModel employee = deserializer.Read(

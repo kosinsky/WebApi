@@ -3,18 +3,18 @@
 
 using System.Collections;
 using System.Diagnostics.Contracts;
-using System.Net.Http;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Web.Http;
 using System.Web.OData.Extensions;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Formatter.Serialization
 {
     /// <summary>
-    /// ODataSerializer for serializing collection of Entities or Complex types or primitives.
+    /// ODataSerializer for serializing collection of primitive or enum types.
     /// </summary>
     public class ODataCollectionSerializer : ODataEdmTypeSerializer
     {
@@ -179,7 +179,7 @@ namespace System.Web.OData.Formatter.Serialization
             // if a V1 or V2 Client requests a type that has a collection within it ODataLib will throw.
             ODataCollectionValue value = new ODataCollectionValue
             {
-                Items = valueCollection,
+                Items = valueCollection.Cast<object>(),
                 TypeName = typeName
             };
 
@@ -235,10 +235,7 @@ namespace System.Web.OData.Formatter.Serialization
                     typeName = value.TypeName;
                 }
 
-                value.SetAnnotation<SerializationTypeNameAnnotation>(new SerializationTypeNameAnnotation
-                {
-                    TypeName = typeName
-                });
+                value.TypeAnnotation = new ODataTypeAnnotation(typeName);
             }
         }
 
@@ -279,7 +276,7 @@ namespace System.Web.OData.Formatter.Serialization
                 return feedType.AsCollection().ElementType();
             }
 
-            string message = Error.Format(SRResources.CannotWriteType, typeof(ODataFeedSerializer).Name, feedType.FullName());
+            string message = Error.Format(SRResources.CannotWriteType, typeof(ODataResourceSetSerializer).Name, feedType.FullName());
             throw new SerializationException(message);
         }
     }

@@ -7,7 +7,7 @@ using System.Web.OData.Builder;
 using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Query.Validators;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -136,7 +136,7 @@ namespace System.Web.OData.Query
         public void CanApplySkipTopOrderby()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var orderbyOption = new OrderByQueryOption("Name", context);
             var skipOption = new SkipQueryOption("2", context);
             var topOption = new TopQueryOption("2", context);

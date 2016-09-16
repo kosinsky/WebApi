@@ -11,11 +11,10 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser.Aggregation;
-using Microsoft.OData.Core.UriParser.Semantic;
-using Microsoft.OData.Core.UriParser.TreeNodeKinds;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
+using Microsoft.OData.UriParser.Aggregation;
 
 namespace System.Web.OData.Query.Expressions
 {
@@ -48,7 +47,7 @@ namespace System.Web.OData.Query.Expressions
                 case TransformationNodeKind.Aggregate:
                     var aggregateClause = this._transformation as AggregateTransformationNode;
                     _aggregateExpressions = aggregateClause.Expressions;
-                    ResultClrType = AggregationDynamicTypeProvider.GetResultType<DynamicTypeWrapper>(_model, null,
+                    ResultClrType = AggregationDynamicTypeProvider.GetResultType<DynamicTypeWrapper>(Model, null,
                         _aggregateExpressions);
                     break;
                 case TransformationNodeKind.GroupBy:
@@ -67,9 +66,9 @@ namespace System.Web.OData.Query.Expressions
                         }
                     }
 
-                    _groupByClrType = AggregationDynamicTypeProvider.GetResultType<DynamicTypeWrapper>(_model,
+                    _groupByClrType = AggregationDynamicTypeProvider.GetResultType<DynamicTypeWrapper>(Model,
                         _groupingProperties, null);
-                    ResultClrType = AggregationDynamicTypeProvider.GetResultType<DynamicTypeWrapper>(_model,
+                    ResultClrType = AggregationDynamicTypeProvider.GetResultType<DynamicTypeWrapper>(Model,
                         _groupingProperties, _aggregateExpressions);
                     break;
                 default:
@@ -257,11 +256,14 @@ namespace System.Web.OData.Query.Expressions
         {
             switch (node.Kind)
             {
-                case QueryNodeKind.EntityRangeVariableReference:
+                case QueryNodeKind.ResourceRangeVariableReference:
                     return this._lambdaParameter;
                 case QueryNodeKind.SingleValuePropertyAccess:
                     var propAccessNode = node as SingleValuePropertyAccessNode;
                     return CreatePropertyAccessExpression(BindAccessor(propAccessNode.Source), propAccessNode.Property);
+                case QueryNodeKind.SingleComplexNode:
+                    var singleComplexNode = node as SingleComplexNode;
+                    return CreatePropertyAccessExpression(BindAccessor(singleComplexNode.Source), singleComplexNode.Property);
                 case QueryNodeKind.SingleValueOpenPropertyAccess:
                     var openNode = node as SingleValueOpenPropertyAccessNode;
                     return Expression.Property(BindAccessor(openNode.Source), openNode.Name);
@@ -285,8 +287,8 @@ namespace System.Web.OData.Query.Expressions
 
         private Expression CreatePropertyAccessExpression(Expression source, IEdmProperty property)
         {
-            string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
-            if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) &&
+            string propertyName = EdmLibHelpers.GetClrPropertyName(property, Model);
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) &&
                 source != this._lambdaParameter)
             {
                 Expression propertyAccessExpression = Expression.Property(RemoveInnerNullPropagation(source),

@@ -1,13 +1,12 @@
 ﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
-using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Web.Http;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
-using System.Web.OData.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData.Edm;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Query.Validators
 {
@@ -17,6 +16,18 @@ namespace System.Web.OData.Query.Validators
     /// </summary>
     public class CountQueryValidator
     {
+        private readonly DefaultQuerySettings _defaultQuerySettings;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CountQueryValidator" /> class based on
+        /// the <see cref="DefaultQuerySettings" />.
+        /// </summary>
+        /// <param name="defaultQuerySettings">The <see cref="DefaultQuerySettings" />.</param>
+        public CountQueryValidator(DefaultQuerySettings defaultQuerySettings)
+        {
+            _defaultQuerySettings = defaultQuerySettings;
+        }
+
         /// <summary>
         /// Validates a <see cref="CountQueryOption" />.
         /// </summary>
@@ -38,46 +49,39 @@ namespace System.Web.OData.Query.Validators
 
             if (path != null && path.Segments.Count > 0)
             {
-                ODataPathSegment lastSegment = path.Segments.Last();
-
-                if (lastSegment is CountPathSegment && path.Segments.Count > 1)
+                IEdmProperty property = countQueryOption.Context.TargetProperty;
+                IEdmStructuredType structuredType = countQueryOption.Context.TargetStructuredType;
+                string name = countQueryOption.Context.TargetName;
+                if (EdmLibHelpers.IsNotCountable(property, structuredType,
+                    countQueryOption.Context.Model,
+                    _defaultQuerySettings.EnableCount))
                 {
-                    ValidateCount(path.Segments[path.Segments.Count - 2], countQueryOption.Context.Model);
-                }
-                else
-                {
-                    ValidateCount(lastSegment, countQueryOption.Context.Model);
+                    if (property == null)
+                    {
+                        throw new InvalidOperationException(Error.Format(
+                            SRResources.NotCountableEntitySetUsedForCount,
+                            name));
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(Error.Format(
+                            SRResources.NotCountablePropertyUsedForCount,
+                            name));
+                    }
                 }
             }
         }
 
-        private static void ValidateCount(ODataPathSegment segment, IEdmModel model)
+        internal static CountQueryValidator GetCountQueryValidator(ODataQueryContext context)
         {
-            Contract.Assert(segment != null);
-            Contract.Assert(model != null);
-
-            NavigationPathSegment navigationPathSegment = segment as NavigationPathSegment;
-            if (navigationPathSegment != null)
+            if (context == null)
             {
-                if (EdmLibHelpers.IsNotCountable(navigationPathSegment.NavigationProperty, model))
-                {
-                    throw new InvalidOperationException(Error.Format(
-                        SRResources.NotCountablePropertyUsedForCount,
-                        navigationPathSegment.NavigationPropertyName));
-                }
-                return;
+                return new CountQueryValidator(new DefaultQuerySettings());
             }
 
-            PropertyAccessPathSegment propertyAccessPathSegment = segment as PropertyAccessPathSegment;
-            if (propertyAccessPathSegment != null)
-            {
-                if (EdmLibHelpers.IsNotCountable(propertyAccessPathSegment.Property, model))
-                {
-                    throw new InvalidOperationException(Error.Format(
-                        SRResources.NotCountablePropertyUsedForCount,
-                        propertyAccessPathSegment.PropertyName));
-                }
-            }
+            return context.RequestContainer == null
+                ? new CountQueryValidator(context.DefaultQuerySettings)
+                : context.RequestContainer.GetRequiredService<CountQueryValidator>();
         }
     }
 }

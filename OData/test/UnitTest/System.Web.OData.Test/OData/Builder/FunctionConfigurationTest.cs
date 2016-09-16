@@ -12,8 +12,6 @@ using System.Web.OData.Extensions;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.TestCommon;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Expressions;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -35,7 +33,7 @@ namespace System.Web.OData.Builder
 
             // Assert
             Assert.Equal("Format", function.Name);
-            Assert.Equal(ProcedureKind.Function, function.Kind);
+            Assert.Equal(OperationKind.Function, function.Kind);
             Assert.NotNull(function.Parameters);
             Assert.Empty(function.Parameters);
             Assert.Null(function.ReturnType);
@@ -48,8 +46,8 @@ namespace System.Web.OData.Builder
             Assert.Equal("MyNamespace.Format", function.FullyQualifiedName);
             Assert.Equal("MyNamespaceII", functionII.Namespace);
             Assert.Equal("MyNamespaceII.FormatII", functionII.FullyQualifiedName);
-            Assert.NotNull(builder.Procedures);
-            Assert.Equal(2, builder.Procedures.Count());
+            Assert.NotNull(builder.Operations);
+            Assert.Equal(2, builder.Operations.Count());
         }
 
         [Fact]
@@ -58,11 +56,11 @@ namespace System.Web.OData.Builder
             // Arrange
             ODataModelBuilder builder = new ODataModelBuilder();
             ODataModelBuilder builder2 = new ODataModelBuilder();
-            ProcedureConfiguration toRemove = builder2.Function("ToRemove");
+            OperationConfiguration toRemove = builder2.Function("ToRemove");
 
             // Act
-            bool removedByName = builder.RemoveProcedure("ToRemove");
-            bool removed = builder.RemoveProcedure(toRemove);
+            bool removedByName = builder.RemoveOperation("ToRemove");
+            bool removed = builder.RemoveOperation(toRemove);
 
             //Assert
             Assert.False(removedByName);
@@ -420,10 +418,7 @@ namespace System.Web.OData.Builder
             Assert.Equal("FunctionName", function.Name);
             Assert.NotNull(function.ReturnType);
             Assert.NotNull(functionImport.EntitySet);
-            Assert.Equal("Customers", (functionImport.EntitySet as IEdmEntitySetReferenceExpression).ReferencedEntitySet.Name);
-            Assert.Equal(
-                typeof(Customer).FullName,
-                (functionImport.EntitySet as IEdmEntitySetReferenceExpression).ReferencedEntitySet.EntityType().FullName());
+            Assert.Equal("Customers", (functionImport.EntitySet as IEdmPathExpression).Path);
             Assert.Empty(function.Parameters);
         }
 
@@ -569,14 +564,14 @@ namespace System.Web.OData.Builder
             IEdmEntityType customerType = model.SchemaElements.OfType<IEdmEntityType>().SingleOrDefault();
             ODataSerializerContext serializerContext = new ODataSerializerContext { Model = model };
 
-            EntityInstanceContext context = new EntityInstanceContext(serializerContext, customerType.AsReference(), new Customer { CustomerId = 1 });
+            ResourceContext context = new ResourceContext(serializerContext, customerType.AsReference(), new Customer { CustomerId = 1 });
             IEdmFunction rewardFunction = Assert.Single(model.SchemaElements.OfType<IEdmFunction>()); // Guard
-            FunctionLinkBuilder functionLinkBuilder = model.GetAnnotationValue<FunctionLinkBuilder>(rewardFunction);
+            OperationLinkBuilder functionLinkBuilder = model.GetAnnotationValue<OperationLinkBuilder>(rewardFunction);
 
             //Assert
             Assert.Equal(expectedUri, reward.GetFunctionLink()(context));
             Assert.NotNull(functionLinkBuilder);
-            Assert.Equal(expectedUri, functionLinkBuilder.BuildFunctionLink(context));
+            Assert.Equal(expectedUri, functionLinkBuilder.BuildLink(context));
         }
 
         [Fact]
@@ -594,13 +589,13 @@ namespace System.Web.OData.Builder
 
             // Act
             IEdmFunction rewardFuntion = Assert.Single(model.SchemaElements.OfType<IEdmFunction>()); // Guard
-            FunctionLinkBuilder functionLinkBuilder = model.GetAnnotationValue<FunctionLinkBuilder>(rewardFuntion);
-            FeedContext context = new FeedContext();
+            OperationLinkBuilder functionLinkBuilder = model.GetAnnotationValue<OperationLinkBuilder>(rewardFuntion);
+            ResourceSetContext context = new ResourceSetContext();
 
             //Assert
             Assert.Equal(expectedUri, reward.GetFeedFunctionLink()(context));
             Assert.NotNull(functionLinkBuilder);
-            Assert.Equal(expectedUri, functionLinkBuilder.BuildFunctionLink(context));
+            Assert.Equal(expectedUri, functionLinkBuilder.BuildLink(context));
         }
 
         [Fact]
@@ -620,7 +615,7 @@ namespace System.Web.OData.Builder
             string routeName = "Route";
             configuration.MapODataServiceRoute(routeName, null, model);
             request.SetConfiguration(configuration);
-            request.ODataProperties().RouteName = routeName;
+            request.EnableODataDependencyInjectionSupport(routeName);
             UrlHelper urlHelper = new UrlHelper(request);
 
             // Act
@@ -630,13 +625,13 @@ namespace System.Web.OData.Builder
             IEdmEntitySet entitySet = container.EntitySets().SingleOrDefault();
             ODataSerializerContext serializerContext = new ODataSerializerContext { Model = model, NavigationSource = entitySet, Url = urlHelper };
 
-            EntityInstanceContext context = new EntityInstanceContext(serializerContext, movieType.AsReference(), new Movie { ID = 1, Name = "Avatar" });
-            FunctionLinkBuilder functionLinkBuilder = model.GetAnnotationValue<FunctionLinkBuilder>(watchFunction);
+            ResourceContext context = new ResourceContext(serializerContext, movieType.AsReference(), new Movie { ID = 1, Name = "Avatar" });
+            OperationLinkBuilder functionLinkBuilder = model.GetAnnotationValue<OperationLinkBuilder>(watchFunction);
 
             //Assert
             Assert.Equal(expectedUri, watch.GetFunctionLink()(context));
             Assert.NotNull(functionLinkBuilder);
-            Assert.Equal(expectedUri, functionLinkBuilder.BuildFunctionLink(context));
+            Assert.Equal(expectedUri, functionLinkBuilder.BuildLink(context));
         }
 
         [Fact]
@@ -655,7 +650,8 @@ namespace System.Web.OData.Builder
             string routeName = "Route";
             configuration.MapODataServiceRoute(routeName, null, model);
             request.SetConfiguration(configuration);
-            request.ODataProperties().RouteName = routeName;
+            request.EnableODataDependencyInjectionSupport(routeName);
+
             UrlHelper urlHelper = new UrlHelper(request);
 
             // Act
@@ -663,19 +659,19 @@ namespace System.Web.OData.Builder
             IEdmFunction watchFunction = Assert.Single(model.SchemaElements.OfType<IEdmFunction>()); // Guard
             IEdmEntitySet entitySet = container.EntitySets().SingleOrDefault();
 
-            FeedContext context = new FeedContext
+            ResourceSetContext context = new ResourceSetContext
             {
                 EntitySetBase = entitySet,
                 Url = urlHelper,
                 Request = request
             };
 
-            FunctionLinkBuilder functionLinkBuilder = model.GetAnnotationValue<FunctionLinkBuilder>(watchFunction);
+            OperationLinkBuilder functionLinkBuilder = model.GetAnnotationValue<OperationLinkBuilder>(watchFunction);
 
             //Assert
             Assert.Equal(expectedUri, watch.GetFeedFunctionLink()(context));
             Assert.NotNull(functionLinkBuilder);
-            Assert.Equal(expectedUri, functionLinkBuilder.BuildFunctionLink(context));
+            Assert.Equal(expectedUri, functionLinkBuilder.BuildLink(context));
         }
 
         [Fact]
@@ -812,7 +808,7 @@ namespace System.Web.OData.Builder
             var functionBuilder = movie.Function("FunctionName").Returns<int>();
             functionBuilder.Parameter(paramType, "p1");
 
-            MethodInfo method = typeof(ProcedureConfiguration).GetMethod("CollectionParameter", BindingFlags.Instance | BindingFlags.Public);
+            MethodInfo method = typeof(OperationConfiguration).GetMethod("CollectionParameter", BindingFlags.Instance | BindingFlags.Public);
             method.MakeGenericMethod(paramType).Invoke(functionBuilder, new[] { "p2" });
 
             // Act

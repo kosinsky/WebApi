@@ -22,8 +22,8 @@ namespace System.Web.OData.Builder.Conventions
             // Arrange
             var mockEntityType = new Mock<EntityTypeConfiguration>();
             var mockEntitySet = new Mock<EntitySetConfiguration>();
-            mockEntitySet.Setup(entitySet => entitySet.GetFeedSelfLink()).Returns((Func<FeedContext, Uri>)null).Verifiable();
-            mockEntitySet.Setup(entitySet => entitySet.HasFeedSelfLink(It.IsAny<Func<FeedContext, Uri>>()))
+            mockEntitySet.Setup(entitySet => entitySet.GetFeedSelfLink()).Returns((Func<ResourceSetContext, Uri>)null).Verifiable();
+            mockEntitySet.Setup(entitySet => entitySet.HasFeedSelfLink(It.IsAny<Func<ResourceSetContext, Uri>>()))
                 .Returns(mockEntitySet.Object).Verifiable();
             mockEntitySet.Setup(entitySet => entitySet.EntityType).Returns(mockEntityType.Object);
 
@@ -52,7 +52,7 @@ namespace System.Web.OData.Builder.Conventions
 
             // Assert
             mockEntitySet.Verify();
-            mockEntitySet.Verify(entitySet => entitySet.HasFeedSelfLink(It.IsAny<Func<FeedContext, Uri>>()), Times.Never());
+            mockEntitySet.Verify(entitySet => entitySet.HasFeedSelfLink(It.IsAny<Func<ResourceSetContext, Uri>>()), Times.Never());
         }
 
         [Fact]
@@ -68,7 +68,7 @@ namespace System.Web.OData.Builder.Conventions
             HttpRequestMessage request = GetODataRequest(model);
             NavigationSourceLinkBuilderAnnotation linkBuilder = model.GetNavigationSourceLinkBuilder(vehiclesEdmEntitySet);
             var serializerContext = new ODataSerializerContext { Model = model, NavigationSource = vehiclesEdmEntitySet, Url = request.GetUrlHelper() };
-            var entityContext = new EntityInstanceContext(serializerContext, carType.AsReference(), new Car { Model = 2009, Name = "Contoso" });
+            var entityContext = new ResourceContext(serializerContext, carType.AsReference(), new Car { Model = 2009, Name = "Contoso" });
 
             EntitySelfLinks selfLinks = linkBuilder.BuildEntitySelfLinks(entityContext, ODataMetadataLevel.FullMetadata);
 
@@ -90,7 +90,7 @@ namespace System.Web.OData.Builder.Conventions
             HttpRequestMessage request = GetODataRequest(model);
             NavigationSourceLinkBuilderAnnotation linkBuilder = model.GetNavigationSourceLinkBuilder(vehicleEdmSingleton);
             var serializerContext = new ODataSerializerContext { Model = model, NavigationSource = vehicleEdmSingleton, Url = request.GetUrlHelper() };
-            var entityContext = new EntityInstanceContext(serializerContext, carType.AsReference(), new Car { Model = 2014, Name = "Contoso" });
+            var entityContext = new ResourceContext(serializerContext, carType.AsReference(), new Car { Model = 2014, Name = "Contoso" });
 
             // Act
             EntitySelfLinks selfLinks = linkBuilder.BuildEntitySelfLinks(entityContext, ODataMetadataLevel.FullMetadata);
@@ -113,7 +113,7 @@ namespace System.Web.OData.Builder.Conventions
             HttpRequestMessage request = GetODataRequest(model);
             NavigationSourceLinkBuilderAnnotation linkBuilder = model.GetNavigationSourceLinkBuilder(vehiclesEdmEntitySet);
             var serializerContext = new ODataSerializerContext { Model = model, NavigationSource = vehiclesEdmEntitySet, Url = request.GetUrlHelper() };
-            var entityContext = new EntityInstanceContext(serializerContext, sportbikeType.AsReference(), new SportBike { Model = 2009, Name = "Ninja" });
+            var entityContext = new ResourceContext(serializerContext, sportbikeType.AsReference(), new SportBike { Model = 2009, Name = "Ninja" });
 
             EntitySelfLinks selfLinks = linkBuilder.BuildEntitySelfLinks(entityContext, ODataMetadataLevel.FullMetadata);
 
@@ -134,7 +134,7 @@ namespace System.Web.OData.Builder.Conventions
             HttpRequestMessage request = GetODataRequest(model);
             NavigationSourceLinkBuilderAnnotation linkBuilder = model.GetNavigationSourceLinkBuilder(vehicleEdmSingleton);
             var serializerContext = new ODataSerializerContext { Model = model, NavigationSource = vehicleEdmSingleton, Url = request.GetUrlHelper() };
-            var entityContext = new EntityInstanceContext(serializerContext, sportbikeType.AsReference(), new SportBike { Model = 2014, Name = "Ninja" });
+            var entityContext = new ResourceContext(serializerContext, sportbikeType.AsReference(), new SportBike { Model = 2014, Name = "Ninja" });
 
             // Act
             EntitySelfLinks selfLinks = linkBuilder.BuildEntitySelfLinks(entityContext, ODataMetadataLevel.FullMetadata);
@@ -151,7 +151,7 @@ namespace System.Web.OData.Builder.Conventions
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost");
             request.SetConfiguration(configuration);
-            request.ODataProperties().RouteName = routeName;
+            request.EnableODataDependencyInjectionSupport(routeName);
 
             return request;
         }

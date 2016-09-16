@@ -7,6 +7,7 @@ using System.Web.OData;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Query;
+using System.Web.OData.Query.Validators;
 using Nuwa;
 using WebStack.QA.Test.OData.Common;
 using Xunit;
@@ -105,7 +106,9 @@ namespace WebStack.QA.Test.OData.QueryComposition
         {
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
             configuration.Formatters.JsonFormatter.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
             configuration.AddODataQueryFilter();
+            configuration.EnableDependencyInjection();
         }
 
         [Fact]
@@ -147,6 +150,9 @@ namespace WebStack.QA.Test.OData.QueryComposition
 
             ODataQueryContext context = new ODataQueryContext(GetEdmModel(), typeof(ODataQueryOptions_Todo), path: null);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?$orderby=Name desc");
+            HttpConfiguration configuration = new HttpConfiguration();
+            configuration.EnableDependencyInjection();
+            request.SetConfiguration(configuration);
             ODataQueryOptions<ODataQueryOptions_Todo> options = new ODataQueryOptions<ODataQueryOptions_Todo>(context, request);
             var result = controller.OptionsOnString(options);
             Assert.Equal("Test99", result);
@@ -159,6 +165,9 @@ namespace WebStack.QA.Test.OData.QueryComposition
 
             ODataQueryContext context = new ODataQueryContext(new ODataConventionModelBuilder().GetEdmModel(), typeof(string), path: null);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?$top=1");
+            HttpConfiguration configuration = new HttpConfiguration();
+            configuration.EnableDependencyInjection();
+            request.SetConfiguration(configuration);
             ODataQueryOptions<string> options = new ODataQueryOptions<string>(context, request);
             var result = controller.OptionsWithString(options);
             Assert.Equal("One", result.List.Single());

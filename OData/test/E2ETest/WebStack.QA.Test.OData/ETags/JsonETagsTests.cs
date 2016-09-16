@@ -1,17 +1,18 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using System.Web.Http;
 using System.Web.OData;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Routing;
 using System.Web.OData.Routing.Conventions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Annotations;
-using Microsoft.OData.Edm.Expressions;
+using Microsoft.OData.Edm.Vocabularies;
 using Microsoft.OData.Edm.Vocabularies.V1;
 using Newtonsoft.Json.Linq;
 using Nuwa;
@@ -33,6 +34,7 @@ namespace WebStack.QA.Test.OData.ETags
         public static void UpdateConfiguration(HttpConfiguration configuration)
         {
             configuration.Routes.Clear();
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
             configuration.MapODataServiceRoute("odata", "odata", GetEdmModel(), new DefaultODataPathHandler(), ODataRoutingConventions.CreateDefault());
             configuration.MessageHandlers.Add(new ETagMessageHandler());
         }
@@ -64,8 +66,8 @@ namespace WebStack.QA.Test.OData.ETags
         [Fact]
         public void ModelBuilderTest()
         {
-            const string expectMetadata =
-                "        <EntitySet Name=\"ETagsCustomers\" EntityType=\"WebStack.QA.Test.OData.ETags.ETagsCustomer\">\r\n" +
+            string expectMetadata =
+                "<EntitySet Name=\"ETagsCustomers\" EntityType=\"WebStack.QA.Test.OData.ETags.ETagsCustomer\">\r\n" +
                 "          <Annotation Term=\"Org.OData.Core.V1.OptimisticConcurrency\">\r\n" +
                 "            <Collection>\r\n" +
                 "              <PropertyPath>Id</PropertyPath>\r\n" +
@@ -88,6 +90,9 @@ namespace WebStack.QA.Test.OData.ETags
                 "            </Collection>\r\n" +
                 "          </Annotation>\r\n" +
                 "        </EntitySet>";
+
+            // Remove indentation
+            expectMetadata = Regex.Replace(expectMetadata, @"\r\n\s*<", @"<");
 
             string requestUri = string.Format("{0}/odata/$metadata", this.BaseAddress);
 
@@ -112,7 +117,7 @@ namespace WebStack.QA.Test.OData.ETags
             Assert.Same(CoreVocabularyModel.ConcurrencyTerm, annotation.Term);
             Assert.Same(etagCustomers, annotation.Target);
 
-            IEdmValueAnnotation valueAnnotation = annotation as IEdmValueAnnotation;
+            IEdmVocabularyAnnotation valueAnnotation = annotation as IEdmVocabularyAnnotation;
             Assert.NotNull(valueAnnotation);
             Assert.NotNull(valueAnnotation.Value);
 
@@ -126,7 +131,7 @@ namespace WebStack.QA.Test.OData.ETags
                 "GuidProperty", "DateTimeOffsetProperty",
                 "StringWithConcurrencyCheckAttributeProperty"
             },
-                collection.Elements.Select(e => ((IEdmPathExpression) e).Path.Single()));
+                collection.Elements.Select(e => ((IEdmPathExpression) e).PathSegments.Single()));
         }
 
         [Fact]

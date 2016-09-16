@@ -4,11 +4,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -22,8 +20,8 @@ namespace System.Web.OData.Formatter.Serialization
         public void Ctor_ThrowsArgumentNull_EntityType()
         {
             Assert.ThrowsArgumentNull(
-                () => new SelectExpandNode(selectExpandClause: null, entityType: null, model: EdmCoreModel.Instance),
-                "entityType");
+                () => new SelectExpandNode(selectExpandClause: null, structuredType: null, model: EdmCoreModel.Instance),
+                "structuredType");
         }
 
         [Fact]
@@ -32,34 +30,34 @@ namespace System.Web.OData.Formatter.Serialization
             Assert.ThrowsArgumentNull(
                 () => new SelectExpandNode(
                     selectExpandClause: null,
-                    entityType: new Mock<IEdmEntityType>().Object,
+                    structuredType: new Mock<IEdmEntityType>().Object,
                     model: null),
                 "model");
         }
 
         [Theory]
-        [InlineData(null, null, false, "Account,Address,City,ID,Name,SimpleEnum")] // no select and expand -> select all
-        [InlineData(null, null, true, "Account,Address,City,ID,Name,SimpleEnum,SpecialAddress,SpecialCustomerProperty")] // no select and expand on derived type -> select all
-        [InlineData("ID", null, false, "ID")] // simple select -> select requested
-        [InlineData("ID", null, true, "ID")] // simple select on derived type -> select requested
-        [InlineData("*", null, false, "Account,Address,City,ID,Name,SimpleEnum")] // simple select with wild card -> select all, no duplication
-        [InlineData("*", null, true, "Account,Address,City,ID,Name,SimpleEnum,SpecialAddress,SpecialCustomerProperty")] // simple select with wild card on derived type -> select all, no duplication
-        [InlineData("ID,ID", null, false, "ID")] // simple select with duplicates -> select requested no duplicates
-        [InlineData("ID,*", null, false, "Account,Address,City,ID,Name,SimpleEnum")] // simple select with wild card and duplicate -> select all, no duplicates
-        [InlineData("ID,*", null, true, "Account,Address,City,ID,Name,SimpleEnum,SpecialAddress,SpecialCustomerProperty")] // simple select with wild card and duplicate -> select all, no duplicates
-        [InlineData("ID,Name", null, false, "ID,Name")] // multiple select -> select requested
-        [InlineData("ID,Name", null, true, "ID,Name")] // multiple select on derived type -> select requested
-        [InlineData("Orders", "Orders", false, "")] // only expand -> select no structural property
-        [InlineData("Orders", "Orders", true, "")] // only expand -> select no structural property
-        [InlineData(null, "Orders", false, "Account,Address,City,ID,Name,SimpleEnum")] // simple expand -> select all
-        [InlineData(null, "Orders", true, "Account,Address,City,ID,Name,SimpleEnum,SpecialAddress,SpecialCustomerProperty")] // simple expand on derived type -> select all
-        [InlineData("ID,Name,Orders", "Orders", false, "ID,Name")] // expand and select -> select requested
-        [InlineData("ID,Name,Orders", "Orders", true, "ID,Name")] // expand and select on derived type -> select requested
-        [InlineData("NS.SpecialCustomer/SpecialCustomerProperty", "", false, "")] // select derived type properties -> select none
-        [InlineData("NS.SpecialCustomer/SpecialCustomerProperty", "", true, "SpecialCustomerProperty")] // select derived type properties on derived type -> select requested
-        [InlineData("ID", "Orders($select=ID),Orders($expand=Customer($select=ID))", true, "ID")] // deep expand and selects
+        [InlineData(null, null, false, "City,ID,Name,SimpleEnum", "Account,Address")] // no select and expand -> select all
+        [InlineData(null, null, true, "City,ID,Name,SimpleEnum,SpecialCustomerProperty", "Account,Address,SpecialAddress")] // no select and expand on derived type -> select all
+        [InlineData("ID", null, false, "ID", "")] // simple select -> select requested
+        [InlineData("ID", null, true, "ID", "")] // simple select on derived type -> select requested
+        [InlineData("*", null, false, "City,ID,Name,SimpleEnum", "Account,Address")] // simple select with wild card -> select all, no duplication
+        [InlineData("*", null, true, "City,ID,Name,SimpleEnum,SpecialCustomerProperty", "Account,Address,SpecialAddress")] // simple select with wild card on derived type -> select all, no duplication
+        [InlineData("ID,ID", null, false, "ID", "")] // simple select with duplicates -> select requested no duplicates
+        [InlineData("ID,*", null, false, "City,ID,Name,SimpleEnum", "Account,Address")] // simple select with wild card and duplicate -> select all, no duplicates
+        [InlineData("ID,*", null, true, "City,ID,Name,SimpleEnum,SpecialCustomerProperty", "Account,Address,SpecialAddress")] // simple select with wild card and duplicate -> select all, no duplicates
+        [InlineData("ID,Name", null, false, "ID,Name", "")] // multiple select -> select requested
+        [InlineData("ID,Name", null, true, "ID,Name", "")] // multiple select on derived type -> select requested
+        [InlineData("Orders", "Orders", false, "", "")] // only expand -> select no structural property
+        [InlineData("Orders", "Orders", true, "", "")] // only expand -> select no structural property
+        [InlineData(null, "Orders", false, "City,ID,Name,SimpleEnum", "Account,Address")] // simple expand -> select all
+        [InlineData(null, "Orders", true, "City,ID,Name,SimpleEnum,SpecialCustomerProperty", "Account,Address,SpecialAddress")] // simple expand on derived type -> select all
+        [InlineData("ID,Name,Orders", "Orders", false, "ID,Name", "")] // expand and select -> select requested
+        [InlineData("ID,Name,Orders", "Orders", true, "ID,Name", "")] // expand and select on derived type -> select requested
+        [InlineData("NS.SpecialCustomer/SpecialCustomerProperty", "", false, "", "")] // select derived type properties -> select none
+        [InlineData("NS.SpecialCustomer/SpecialCustomerProperty", "", true, "SpecialCustomerProperty", "")] // select derived type properties on derived type -> select requested
+        [InlineData("ID", "Orders($select=ID),Orders($expand=Customer($select=ID))", true, "ID", "")] // deep expand and selects
         public void GetPropertiesToBeSelected_Selects_ExpectedProperties_OnCustomer(
-            string select, string expand, bool specialCustomer, string structuralPropertiesToSelect)
+            string select, string expand, bool specialCustomer, string structuralPropertiesToSelect, string nestedProperteisToSelect)
         {
             // Arrange
             ODataQueryOptionParser parser = new ODataQueryOptionParser(_model.Model, _model.Customer, _model.Customers,
@@ -74,6 +72,8 @@ namespace System.Web.OData.Formatter.Serialization
 
             // Assert
             Assert.Equal(structuralPropertiesToSelect, String.Join(",", result.Select(p => p.Name).OrderBy(n => n)));
+            Assert.Equal(nestedProperteisToSelect,
+                String.Join(",", selectExpandNode.SelectedComplexProperties.Select(p => p.Name).OrderBy(n => n)));
         }
 
         [Theory]

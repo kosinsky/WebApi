@@ -12,13 +12,23 @@ using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Routing;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Test
 {
     public class ODataNullValueMessageHandlerTest
     {
+        private IEdmEntitySet _entitySet;
+        public ODataNullValueMessageHandlerTest()
+        {
+            EdmEntityType entityType = new EdmEntityType("NS", "entity");
+            EdmEntityContainer container = new EdmEntityContainer("NS", "default");
+            _entitySet = new EdmEntitySet(container, "entities", entityType);
+        }
+
         [Fact]
         public void SendAsync_ThrowsIfRequestIsNull()
         {
@@ -38,7 +48,7 @@ namespace System.Web.OData.Test
                     InnerHandler = new TestMessageHandler(null)
                 };
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/any");
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("EntitySet"));
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(_entitySet));
 
             // Act 
             HttpResponseMessage response = handler.SendAsync(request).Result;
@@ -59,7 +69,7 @@ namespace System.Web.OData.Test
             };
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/any");
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("EntitySet"));
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(_entitySet));
 
             // Act 
             HttpResponseMessage response = handler.SendAsync(request).Result;
@@ -81,7 +91,7 @@ namespace System.Web.OData.Test
             };
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/any");
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("EntitySet"));
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(_entitySet));
 
             // Act 
             HttpResponseMessage response = handler.SendAsync(request).Result;
@@ -106,7 +116,7 @@ namespace System.Web.OData.Test
             };
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/any");
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("EntitySet"));
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(_entitySet));
 
             // Act 
             HttpResponseMessage response = handler.SendAsync(request).Result;
@@ -135,7 +145,7 @@ namespace System.Web.OData.Test
             };
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/any");
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("EntitySet"));
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(_entitySet));
 
             // Act
             HttpResponseMessage response = handler.SendAsync(request).Result;
@@ -164,7 +174,7 @@ namespace System.Web.OData.Test
             };
 
             HttpRequestMessage request = new HttpRequestMessage(new HttpMethod(method), "http://localhost/any");
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("EntitySet"));
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(_entitySet));
 
             // Act 
             HttpResponseMessage response = handler.SendAsync(request).Result;

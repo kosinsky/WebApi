@@ -9,9 +9,9 @@ using System.Web.OData.Builder;
 using System.Web.OData.Routing;
 using System.Web.OData.TestCommon;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
 using Customer = System.Web.OData.Formatter.Serialization.Models.Customer;
@@ -76,6 +76,7 @@ namespace System.Web.OData.Query
             string selectValue = "select";
             _model.Model.SetAnnotationValue<ClrTypeAnnotation>(_model.Customer, new ClrTypeAnnotation(typeof(Customer)));
             ODataQueryContext context = new ODataQueryContext(_model.Model, typeof(Customer));
+            context.RequestContainer = new MockContainer();
 
             // Act
             SelectExpandQueryOption result = new SelectExpandQueryOption(selectValue, expand: null, context: context);
@@ -91,6 +92,7 @@ namespace System.Web.OData.Query
             string expandValue = "expand";
             _model.Model.SetAnnotationValue<ClrTypeAnnotation>(_model.Customer, new ClrTypeAnnotation(typeof(Customer)));
             ODataQueryContext context = new ODataQueryContext(_model.Model, typeof(Customer));
+            context.RequestContainer = new MockContainer();
 
             // Act
             SelectExpandQueryOption result = new SelectExpandQueryOption(select: null, expand: expandValue, context: context);
@@ -106,6 +108,7 @@ namespace System.Web.OData.Query
             IEdmModel model = _model.Model;
             _model.Model.SetAnnotationValue<ClrTypeAnnotation>(_model.Customer, new ClrTypeAnnotation(typeof(Customer)));
             ODataQueryContext context = new ODataQueryContext(model, typeof(Customer));
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption option = new SelectExpandQueryOption("ID,Name,SimpleEnum,Orders", "Orders", context);
 
             // Act
@@ -122,8 +125,9 @@ namespace System.Web.OData.Query
             // Arrange
             IEdmModel model = _model.Model;
             _model.Model.SetAnnotationValue(_model.Customer, new ClrTypeAnnotation(typeof(Customer)));
-            ODataPath odataPath = new ODataPath(new EntitySetPathSegment(_model.Customers));
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(_model.Customers));
             ODataQueryContext context = new ODataQueryContext(model, typeof(Customer), odataPath);
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption option = new SelectExpandQueryOption("ID,Name,SimpleEnum,Orders", "Orders", context);
 
             // Act
@@ -140,8 +144,9 @@ namespace System.Web.OData.Query
             // Arrange
             IEdmModel model = _model.Model;
             _model.Model.SetAnnotationValue(_model.Customer, new ClrTypeAnnotation(typeof(Customer)));
-            ODataPath odataPath = new ODataPath(new EntitySetPathSegment(_model.Customers));
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(_model.Customers));
             ODataQueryContext context = new ODataQueryContext(model, _model.Customer, odataPath);
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption option = new SelectExpandQueryOption("ID,Name,SimpleEnum,Orders", "Orders", context);
 
             // Act
@@ -171,6 +176,7 @@ namespace System.Web.OData.Query
             IEdmModel model = builder.GetEdmModel();
 
             ODataQueryContext context = new ODataQueryContext(model, typeof(Customer));
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption option = new SelectExpandQueryOption(select, expand, context);
 
             // Act & Assert
@@ -188,6 +194,7 @@ namespace System.Web.OData.Query
             IEdmModel model = _model.Model;
             _model.Model.SetAnnotationValue<ClrTypeAnnotation>(_model.Customer, new ClrTypeAnnotation(typeof(Customer)));
             ODataQueryContext context = new ODataQueryContext(model, typeof(Customer));
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption option = new SelectExpandQueryOption(select, expand, context);
 
             // Act
@@ -202,6 +209,7 @@ namespace System.Web.OData.Query
             // Arrange
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             ODataQueryContext context = new ODataQueryContext(model.Model, model.Customer);
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption selectExpand = new SelectExpandQueryOption(select: "ID", expand: null, context: context);
 
             // Act & Assert
@@ -214,6 +222,7 @@ namespace System.Web.OData.Query
             // Arrange
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             ODataQueryContext context = new ODataQueryContext(model.Model, model.Customer);
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption selectExpand = new SelectExpandQueryOption(select: "ID", expand: null, context: context);
             IQueryable queryable = new Mock<IQueryable>().Object;
 
@@ -228,6 +237,7 @@ namespace System.Web.OData.Query
             // Arrange
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             ODataQueryContext context = new ODataQueryContext(model.Model, model.Customer);
+            context.RequestContainer = new MockContainer();
             SelectExpandQueryOption selectExpand = new SelectExpandQueryOption(select: "ID", expand: null, context: context);
             object entity = new object();
 
@@ -244,6 +254,7 @@ namespace System.Web.OData.Query
             var context = new ODataQueryContext(
                 model,
                 model.FindDeclaredType("System.Web.OData.Routing.LevelsEntity"));
+            context.RequestContainer = new MockContainer();
             var selectExpand = new SelectExpandQueryOption(
                 select: null,
                 expand: "Parent($expand=Parent($levels=2))",
@@ -299,6 +310,7 @@ namespace System.Web.OData.Query
             var context = new ODataQueryContext(
                 model,
                 model.FindDeclaredType("System.Web.OData.Routing.LevelsEntity"));
+            context.RequestContainer = new MockContainer();
             var selectExpand = new SelectExpandQueryOption(
                 select: "Name",
                 expand: "Parent($select=ID;$levels=max)",
@@ -365,6 +377,7 @@ namespace System.Web.OData.Query
             var context = new ODataQueryContext(
                 model,
                 model.FindDeclaredType("System.Web.OData.Routing.LevelsEntity"));
+            context.RequestContainer = new MockContainer();
             var selectExpand = new SelectExpandQueryOption(
                 select: null,
                 expand: "Parent($expand=Parent($levels=max),DerivedAncestors($levels=2;$select=ID)),BaseEntities($levels=2)",
@@ -473,6 +486,7 @@ namespace System.Web.OData.Query
             var context = new ODataQueryContext(
                 model,
                 model.FindDeclaredType("System.Web.OData.Routing.LevelsEntity"));
+            context.RequestContainer = new MockContainer();
             var selectExpand = new SelectExpandQueryOption(
                 select: null,
                 expand: "Parent($expand=DerivedAncestors($levels=2);$levels=max)",
@@ -558,6 +572,7 @@ namespace System.Web.OData.Query
             var context = new ODataQueryContext(
                 model,
                 model.FindDeclaredType("System.Web.OData.Routing.LevelsEntity"));
+            context.RequestContainer = new MockContainer();
             var selectExpand = new SelectExpandQueryOption(
                 select: null,
                 expand: "Parent($expand=DerivedAncestors($levels=max);$levels=2)",
@@ -606,17 +621,20 @@ namespace System.Web.OData.Query
             Assert.Equal(0, clauseOfParent.SelectedItems.Count());
         }
 
-        [Fact]
-        public void ProcessLevelsCorrectly_WithMaxLevelsAndAutoExpand()
+        [Theory]
+        [InlineData("http://test")]
+        [InlineData("http://test?$expand=Friend($levels=max)")]
+        public void ProcessLevelsCorrectly_WithAutoExpand(string url)
         {
             // Arrange
             var model = GetAutoExpandEdmModel();
             var context = new ODataQueryContext(
                 model,
                 model.FindDeclaredType("System.Web.OData.TestCommon.Models.AutoExpandCustomer"));
-            var request = new HttpRequestMessage(HttpMethod.Get, "http://test?$expand=Friend($levels=max)");
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.EnableHttpDependencyInjectionSupport();
             var queryOption = new ODataQueryOptions(context, request);
-            queryOption.AddAutoExpandProperties();
+            queryOption.AddAutoSelectExpandProperties();
             var selectExpand = queryOption.SelectExpand;
 
             // Act
@@ -630,9 +648,9 @@ namespace System.Web.OData.Query
             var cutomer = Assert.Single(
                 clause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(
                     item => item.PathToNavigationProperty.FirstSegment is NavigationPropertySegment &&
-                    ((NavigationPropertySegment)item.PathToNavigationProperty.FirstSegment).NavigationProperty.Name == "Friend")
+                            ((NavigationPropertySegment) item.PathToNavigationProperty.FirstSegment).NavigationProperty
+                                .Name == "Friend")
                 );
-            Assert.Null(cutomer.LevelsOption);
 
             var clauseOfCustomer = cutomer.SelectAndExpand;
             Assert.True(clauseOfCustomer.AllSelected);
@@ -640,9 +658,10 @@ namespace System.Web.OData.Query
 
             // Order under Customer.
             var order = Assert.Single(
-                clauseOfCustomer.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(
+                clause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(
                     item => item.PathToNavigationProperty.FirstSegment is NavigationPropertySegment &&
-                    ((NavigationPropertySegment)item.PathToNavigationProperty.FirstSegment).NavigationProperty.Name == "Order")
+                            ((NavigationPropertySegment) item.PathToNavigationProperty.FirstSegment).NavigationProperty
+                                .Name == "Order")
                 );
             Assert.Null(order.LevelsOption);
 
@@ -650,78 +669,37 @@ namespace System.Web.OData.Query
             Assert.True(clauseOfOrder.AllSelected);
             Assert.Equal(1, clauseOfOrder.SelectedItems.Count());
 
-            // ChoiceOrder under Order.
-            var choiceOrder = Assert.Single(
-                clauseOfOrder.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(
-                    item => item.PathToNavigationProperty.FirstSegment is NavigationPropertySegment &&
-                    ((NavigationPropertySegment)item.PathToNavigationProperty.FirstSegment).NavigationProperty.Name == "Choice")
-                );
+            // Choice Order under Order
+            var choiceOrder = Assert.IsType<ExpandedNavigationSelectItem>(clauseOfOrder.SelectedItems.Single());
             Assert.Null(choiceOrder.LevelsOption);
+            Assert.True(choiceOrder.SelectAndExpand.AllSelected);
+            Assert.Equal(0, choiceOrder.SelectAndExpand.SelectedItems.Count());
 
-            var clauseOfChoiceOrder = choiceOrder.SelectAndExpand;
-            Assert.True(clauseOfChoiceOrder.AllSelected);
-            Assert.Equal(0, clauseOfChoiceOrder.SelectedItems.Count());
+            // Level 2 of Order.
+            order = Assert.Single(
+                clauseOfCustomer.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(
+                    item => item.PathToNavigationProperty.FirstSegment is NavigationPropertySegment &&
+                            ((NavigationPropertySegment) item.PathToNavigationProperty.FirstSegment).NavigationProperty
+                                .Name == "Order")
+                );
+            Assert.Null(order.LevelsOption);
+
+            clauseOfOrder = order.SelectAndExpand;
+            Assert.True(clauseOfOrder.AllSelected);
+            Assert.Equal(0, clauseOfOrder.SelectedItems.Count());
 
             // Level 2 of Customer.
             cutomer = Assert.Single(
                 clauseOfCustomer.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(
                     item => item.PathToNavigationProperty.FirstSegment is NavigationPropertySegment &&
-                    ((NavigationPropertySegment)item.PathToNavigationProperty.FirstSegment).NavigationProperty.Name == "Friend")
+                            ((NavigationPropertySegment) item.PathToNavigationProperty.FirstSegment).NavigationProperty
+                                .Name == "Friend")
                 );
             Assert.Null(cutomer.LevelsOption);
 
             clauseOfCustomer = cutomer.SelectAndExpand;
             Assert.True(clauseOfCustomer.AllSelected);
-            Assert.Equal(1, clauseOfCustomer.SelectedItems.Count());
-        }
-
-        [Fact]
-        public void ProcessLevelsCorrectly_WithAutoExpand()
-        {
-            // Arrange
-            var model = GetAutoExpandEdmModel();
-            var context = new ODataQueryContext(
-                model,
-                model.FindDeclaredType("System.Web.OData.TestCommon.Models.AutoExpandCustomer"));
-            var request = new HttpRequestMessage(HttpMethod.Get, "http://test");
-            var queryOption = new ODataQueryOptions(context, request);
-            queryOption.AddAutoExpandProperties();
-            var selectExpand = queryOption.SelectExpand;
-
-            // Act
-            SelectExpandClause clause = selectExpand.ProcessLevels();
-
-            // Assert
-            Assert.True(clause.AllSelected);
-            Assert.Equal(2, clause.SelectedItems.Count());
-
-            // Level 1 of Customer.
-            var cutomer = Assert.Single(
-                clause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(
-                    item => item.PathToNavigationProperty.FirstSegment is NavigationPropertySegment &&
-                    ((NavigationPropertySegment)item.PathToNavigationProperty.FirstSegment).NavigationProperty.Name == "Friend")
-                );
-            Assert.Null(cutomer.LevelsOption);
-
-            var clauseOfCustomer = cutomer.SelectAndExpand;
-            Assert.True(clauseOfCustomer.AllSelected);
-            Assert.Equal(1, clauseOfCustomer.SelectedItems.Count());
-
-            // Order under Customer.
-            var order = Assert.IsType<ExpandedNavigationSelectItem>(clauseOfCustomer.SelectedItems.Single());
-            Assert.Null(order.LevelsOption);
-
-            var clauseOfOrder = order.SelectAndExpand;
-            Assert.True(clauseOfOrder.AllSelected);
-            Assert.Equal(1, clauseOfOrder.SelectedItems.Count());
-
-            // ChoiceOrder under Order.
-            var choiceOrder = Assert.IsType<ExpandedNavigationSelectItem>(clauseOfOrder.SelectedItems.Single());
-            Assert.Null(choiceOrder.LevelsOption);
-
-            var clauseOfChoiceOrder = choiceOrder.SelectAndExpand;
-            Assert.True(clauseOfChoiceOrder.AllSelected);
-            Assert.Equal(0, clauseOfChoiceOrder.SelectedItems.Count());
+            Assert.Equal(0, clauseOfCustomer.SelectedItems.Count());
         }
 
         private IEdmModel GetAutoExpandEdmModel()

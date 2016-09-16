@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System.Reflection;
+using System.Web.OData.Query;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -251,6 +252,34 @@ namespace System.Web.OData.Builder
             // Assert
             Assert.True(property.NotFilterable);
             Assert.True(property.NotSortable);
+        }
+
+        [Fact]
+        public void Property_QuerySettings()
+        {
+            // Arrange
+            StructuralTypeConfiguration structuralType = Mock.Of<StructuralTypeConfiguration>();
+            Mock<PropertyInfo> propertyInfo = new Mock<PropertyInfo>();
+            propertyInfo.SetupGet(p => p.PropertyType).Returns(typeof(int));
+            PropertyConfiguration property = new PrimitivePropertyConfiguration(propertyInfo.Object, structuralType);
+            
+            // Act
+            property.Count();
+            property.OrderBy("A", "B");
+            property.Filter(QueryOptionSetting.Disabled);
+            property.Page(10, 20);
+            property.Expand(5, SelectExpandType.Automatic, "a");
+
+            // Assert
+            Assert.Equal(SelectExpandType.Automatic,
+                property.QueryConfiguration.ModelBoundQuerySettings.ExpandConfigurations["a"].ExpandType);
+            Assert.Equal(5, property.QueryConfiguration.ModelBoundQuerySettings.ExpandConfigurations["a"].MaxDepth);
+            Assert.Equal(10, property.QueryConfiguration.ModelBoundQuerySettings.MaxTop);
+            Assert.Equal(20, property.QueryConfiguration.ModelBoundQuerySettings.PageSize);
+            Assert.Equal(true, property.QueryConfiguration.ModelBoundQuerySettings.Countable);
+            Assert.Equal(true, property.QueryConfiguration.ModelBoundQuerySettings.OrderByConfigurations["A"]);
+            Assert.Equal(true, property.QueryConfiguration.ModelBoundQuerySettings.OrderByConfigurations["B"]);
+            Assert.Equal(false, property.QueryConfiguration.ModelBoundQuerySettings.DefaultEnableFilter);
         }
     }
 }

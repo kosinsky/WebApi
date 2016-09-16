@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.OData.Extensions;
 using Nuwa;
 using WebStack.QA.Common.XUnit;
 using WebStack.QA.Test.OData.Common;
@@ -24,7 +25,7 @@ namespace WebStack.QA.Test.OData.QueryComposition
                     data.Add(new AttackStringBuilder().Append("$filter=").Repeat("Price div ", i).Append("Price eq 1").ToString());
                     data.Add(new AttackStringBuilder().Append("$filter=").Repeat("not ", i).Append("(1 eq 1)").ToString());
                     data.Add(new AttackStringBuilder().Append("$filter=").Repeat("substring(", i).Append("Name").Repeat(",0)", i).Append(" eq 'a'").ToString());
-                    data.Add(new AttackStringBuilder().Append("$filter=substringof('").Repeat("a", i).Append("b").Append("','").Repeat("a", i * 100).Append("')").ToString());
+                    data.Add(new AttackStringBuilder().Append("$filter=contains('").Repeat("a", i).Append("b").Append("','").Repeat("a", i * 100).Append("')").ToString());
                 }
                 return data;
             }
@@ -69,6 +70,7 @@ namespace WebStack.QA.Test.OData.QueryComposition
         {
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
             configuration.Formatters.JsonFormatter.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
         }
 
         [Theory]

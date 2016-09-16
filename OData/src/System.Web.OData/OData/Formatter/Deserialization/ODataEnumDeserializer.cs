@@ -3,7 +3,7 @@
 
 using System.Diagnostics.Contracts;
 using System.Web.Http;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Formatter.Deserialization
@@ -45,11 +45,17 @@ namespace System.Web.OData.Formatter.Deserialization
         }
 
         /// <inheritdoc />
-        public sealed override object ReadInline(object item, IEdmTypeReference edmType, ODataDeserializerContext readContext)
+        public override object ReadInline(object item, IEdmTypeReference edmType, ODataDeserializerContext readContext)
         {
             if (item == null)
             {
                 return null;
+            }
+
+            ODataProperty property = item as ODataProperty;
+            if (property != null)
+            {
+                item = property.Value;
             }
 
             if (readContext.IsUntyped)
@@ -57,6 +63,7 @@ namespace System.Web.OData.Formatter.Deserialization
                 Contract.Assert(edmType.TypeKind() == EdmTypeKind.Enum);
                 return new EdmEnumObject((IEdmEnumTypeReference)edmType, ((ODataEnumValue)item).Value);
             }
+
             Type clrType = EdmLibHelpers.GetClrType(edmType, readContext.Model);
             return EnumDeserializationHelpers.ConvertEnumValue(item, clrType);
         }

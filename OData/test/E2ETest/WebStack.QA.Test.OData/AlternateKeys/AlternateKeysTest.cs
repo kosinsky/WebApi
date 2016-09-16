@@ -1,12 +1,20 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.OData;
 using System.Web.OData.Extensions;
+using System.Web.OData.Routing.Conventions;
+using Microsoft.OData;
+using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Nuwa;
 using WebStack.QA.Common.XUnit;
 using WebStack.QA.Test.OData.Common;
@@ -39,11 +47,18 @@ namespace WebStack.QA.Test.OData.AlternateKeys
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
             configuration.Services.Replace(typeof (IAssembliesResolver), resolver);
 
-            configuration.EnableAlternateKeys(true);
+            IEdmModel model = AlternateKeysEdmModel.GetEdmModel();
 
             configuration.Routes.Clear();
 
-            configuration.MapODataServiceRoute("odata", "odata", model: AlternateKeysEdmModel.GetEdmModel());
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
+
+            configuration.MapODataServiceRoute("odata", "odata",
+                builder =>
+                    builder.AddService(ServiceLifetime.Singleton, sp => model)
+                        .AddService<IEnumerable<IODataRoutingConvention>>(ServiceLifetime.Singleton, sp =>
+                            ODataRoutingConventions.CreateDefaultWithAttributeRouting("odata", configuration))
+                        .AddService<ODataUriResolver>(ServiceLifetime.Singleton, sp => new AlternateKeysODataUriResolver(model)));
 
             configuration.EnsureInitialized();
         }
@@ -51,7 +66,7 @@ namespace WebStack.QA.Test.OData.AlternateKeys
         [Fact]
         public async Task AlteranteKeysMetadata()
         {
-            const string expect = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n" +
+            string expect = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n" +
 "<edmx:Edmx Version=\"4.0\" xmlns:edmx=\"http://docs.oasis-open.org/odata/ns/edmx\">\r\n" +
 "  <edmx:DataServices>\r\n" +
 "    <Schema Namespace=\"NS\" xmlns=\"http://docs.oasis-open.org/odata/ns/edm\">\r\n" +
@@ -174,6 +189,10 @@ namespace WebStack.QA.Test.OData.AlternateKeys
 "    </Schema>\r\n" +
 "  </edmx:DataServices>\r\n" +
 "</edmx:Edmx>";
+
+            // Remove indentation
+            expect = Regex.Replace(expect, @"\r\n\s*<", @"<");
+
             var requestUri = string.Format("{0}/odata/$metadata", this.BaseAddress);
             HttpResponseMessage response = await Client.GetAsync(requestUri);
 
@@ -187,8 +206,8 @@ namespace WebStack.QA.Test.OData.AlternateKeys
         public async Task QueryEntityWithSingleAlternateKeysWorks()
         {
             // query with alternate keys
-            string expect = "{\r\n" +
-                            "  \"@odata.context\":\"{XXXX}\",\"value\":\"special-SSN\"\r\n" +
+            string expect = "{" +
+                            "\"@odata.context\":\"{XXXX}\",\"value\":\"special-SSN\"" +
                             "}";
             expect = expect.Replace("{XXXX}", string.Format("{0}/odata/$metadata#Edm.String", BaseAddress.ToLowerInvariant()));
 
@@ -313,8 +332,8 @@ namespace WebStack.QA.Test.OData.AlternateKeys
         [Fact]
         public async Task CanUpdateEntityWithSingleAlternateKeys()
         {
-            string expect = "{\r\n" +
-                            "  \"@odata.context\":\"{XXXX}\",\"ID\":6,\"Name\":\"Updated Customer Name\",\"SSN\":\"SSN-6-T-006\"\r\n" +
+            string expect = "{" +
+                            "\"@odata.context\":\"{XXXX}\",\"ID\":6,\"Name\":\"Updated Customer Name\",\"SSN\":\"SSN-6-T-006\"" +
                             "}";
             expect = expect.Replace("{XXXX}", string.Format("{0}/odata/$metadata#Customers/$entity", BaseAddress.ToLowerInvariant()));
 

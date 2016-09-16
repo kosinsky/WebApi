@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.TestCommon;
 
 namespace System.Web.OData.Formatter
@@ -12,7 +12,6 @@ namespace System.Web.OData.Formatter
         {
             get
             {
-                ODataComplexValue complexValue = new ODataComplexValue();
                 ODataCollectionValue collectionValue = new ODataCollectionValue();
                 ODataStreamReferenceValue streamReferenceValue = new ODataStreamReferenceValue();
 
@@ -20,7 +19,6 @@ namespace System.Web.OData.Formatter
                 {
                     { new ODataPrimitiveValue(100), 100 },
                     { new ODataNullValue(), null },
-                    { complexValue,  complexValue },
                     { collectionValue, collectionValue },
                     { streamReferenceValue, streamReferenceValue },
                     { null, null } 

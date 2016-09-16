@@ -9,9 +9,9 @@ using System.Reflection;
 using System.Web.Http;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
+using System.Web.OData.Query;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
-using Microsoft.OData.Edm.Library.Values;
+using Microsoft.OData.Edm.Vocabularies;
 
 namespace System.Web.OData.Builder
 {
@@ -24,6 +24,8 @@ namespace System.Web.OData.Builder
         private readonly Dictionary<Type, IEdmType> _types = new Dictionary<Type, IEdmType>();
         private readonly Dictionary<PropertyInfo, IEdmProperty> _properties = new Dictionary<PropertyInfo, IEdmProperty>();
         private readonly Dictionary<IEdmProperty, QueryableRestrictions> _propertiesRestrictions = new Dictionary<IEdmProperty, QueryableRestrictions>();
+        private readonly Dictionary<IEdmProperty, ModelBoundQuerySettings> _propertiesQuerySettings = new Dictionary<IEdmProperty, ModelBoundQuerySettings>();
+        private readonly Dictionary<IEdmStructuredType, ModelBoundQuerySettings> _structuredTypeQuerySettings = new Dictionary<IEdmStructuredType, ModelBoundQuerySettings>();
         private readonly Dictionary<Enum, IEdmEnumMember> _members = new Dictionary<Enum, IEdmEnumMember>();
         private readonly Dictionary<IEdmStructuredType, PropertyInfo> _openTypes = new Dictionary<IEdmStructuredType, PropertyInfo>();
 
@@ -51,9 +53,9 @@ namespace System.Web.OData.Builder
                 CreateEdmTypeBody(config);
             }
 
-            foreach (EntityTypeConfiguration entity in _configurations.OfType<EntityTypeConfiguration>())
+            foreach (StructuralTypeConfiguration structrual in _configurations.OfType<StructuralTypeConfiguration>())
             {
-                CreateNavigationProperty(entity);
+                CreateNavigationProperty(structrual);
             }
 
             return _types;
@@ -61,7 +63,8 @@ namespace System.Web.OData.Builder
 
         private void CreateEdmTypeHeader(IEdmTypeConfiguration config)
         {
-            if (GetEdmType(config.ClrType) == null)
+            IEdmType edmType = GetEdmType(config.ClrType);
+            if (edmType == null)
             {
                 if (config.Kind == EdmTypeKind.Complex)
                 {
@@ -85,6 +88,7 @@ namespace System.Web.OData.Builder
                         // add a mapping between the open complex type and its dynamic property dictionary.
                         _openTypes.Add(complexType, complex.DynamicPropertyDictionary);
                     }
+                    edmType = complexType;
                 }
                 else if (config.Kind == EdmTypeKind.Entity)
                 {
@@ -109,6 +113,7 @@ namespace System.Web.OData.Builder
                         // add a mapping between the open entity type and its dynamic property dictionary.
                         _openTypes.Add(entityType, entity.DynamicPropertyDictionary);
                     }
+                    edmType = entityType;
                 }
                 else
                 {
@@ -120,6 +125,20 @@ namespace System.Web.OData.Builder
                     _types.Add(enumTypeConfiguration.ClrType,
                         new EdmEnumType(enumTypeConfiguration.Namespace, enumTypeConfiguration.Name,
                             GetTypeKind(enumTypeConfiguration.UnderlyingType), enumTypeConfiguration.IsFlags));
+                }
+            }
+
+            IEdmStructuredType structuredType = edmType as IEdmStructuredType;
+            StructuralTypeConfiguration structuralTypeConfiguration = config as StructuralTypeConfiguration;
+            if (structuredType != null && structuralTypeConfiguration != null &&
+                !_structuredTypeQuerySettings.ContainsKey(structuredType))
+            {
+                ModelBoundQuerySettings querySettings =
+                    structuralTypeConfiguration.QueryConfiguration.ModelBoundQuerySettings;
+                if (querySettings != null)
+                {
+                    _structuredTypeQuerySettings.Add(structuredType,
+                        structuralTypeConfiguration.QueryConfiguration.ModelBoundQuerySettings);
                 }
             }
         }
@@ -159,17 +178,10 @@ namespace System.Web.OData.Builder
                             typeKind,
                             primitiveProperty.OptionalProperty);
 
-                        // Set concurrency token if is entity type, and concurrency token is true
-                        EdmConcurrencyMode concurrencyMode = EdmConcurrencyMode.None;
-                        if (config.Kind == EdmTypeKind.Entity && primitiveProperty.ConcurrencyToken)
-                        {
-                            concurrencyMode = EdmConcurrencyMode.Fixed;
-                        }
                         edmProperty = type.AddStructuralProperty(
                             primitiveProperty.Name,
                             primitiveTypeReference,
-                            defaultValue: null,
-                            concurrencyMode: concurrencyMode);
+                            defaultValue: null);
                         break;
 
                     case PropertyKind.Complex:
@@ -186,7 +198,7 @@ namespace System.Web.OData.Builder
                         break;
 
                     case PropertyKind.Enum:
-                        edmProperty = CreateStructuralTypeEnumPropertyBody(type, config, (EnumPropertyConfiguration)property);
+                        edmProperty = CreateStructuralTypeEnumPropertyBody(type, (EnumPropertyConfiguration)property);
                         break;
 
                     default:
@@ -203,6 +215,11 @@ namespace System.Web.OData.Builder
                     if (property.IsRestricted)
                     {
                         _propertiesRestrictions[edmProperty] = new QueryableRestrictions(property);
+                    }
+
+                    if (property.QueryConfiguration.ModelBoundQuerySettings != null)
+                    {
+                        _propertiesQuerySettings.Add(edmProperty, property.QueryConfiguration.ModelBoundQuerySettings);
                     }
                 }
             }
@@ -248,7 +265,7 @@ namespace System.Web.OData.Builder
                 new EdmCollectionTypeReference(new EdmCollectionType(elementTypeReference)));
         }
 
-        private IEdmProperty CreateStructuralTypeEnumPropertyBody(EdmStructuredType type, StructuralTypeConfiguration config, EnumPropertyConfiguration enumProperty)
+        private IEdmProperty CreateStructuralTypeEnumPropertyBody(EdmStructuredType type, EnumPropertyConfiguration enumProperty)
         {
             Type enumPropertyType = TypeHelper.GetUnderlyingTypeOrSelf(enumProperty.RelatedClrType);
             IEdmType edmType = GetEdmType(enumPropertyType);
@@ -261,18 +278,10 @@ namespace System.Web.OData.Builder
             IEdmEnumType enumType = (IEdmEnumType)edmType;
             IEdmTypeReference enumTypeReference = new EdmEnumTypeReference(enumType, enumProperty.OptionalProperty);
 
-            // Set concurrency token if is entity type, and concurrency token is true
-            EdmConcurrencyMode enumConcurrencyMode = EdmConcurrencyMode.None;
-            if (config.Kind == EdmTypeKind.Entity && enumProperty.ConcurrencyToken)
-            {
-                enumConcurrencyMode = EdmConcurrencyMode.Fixed;
-            }
-
             return type.AddStructuralProperty(
                 enumProperty.Name,
                 enumTypeReference,
-                defaultValue: null,
-                concurrencyMode: enumConcurrencyMode);
+                defaultValue: null);
         }
 
         private void CreateComplexTypeBody(EdmComplexType type, ComplexTypeConfiguration config)
@@ -297,11 +306,11 @@ namespace System.Web.OData.Builder
             type.AddKeys(keys);
         }
 
-        private void CreateNavigationProperty(EntityTypeConfiguration config)
+        private void CreateNavigationProperty(StructuralTypeConfiguration config)
         {
             Contract.Assert(config != null);
 
-            EdmEntityType type = (EdmEntityType)(GetEdmType(config.ClrType));
+            EdmStructuredType type = (EdmStructuredType)(GetEdmType(config.ClrType));
 
             foreach (NavigationPropertyConfiguration navProp in config.NavigationProperties)
             {
@@ -332,9 +341,17 @@ namespace System.Web.OData.Builder
                     _properties[navProp.PropertyInfo] = edmProperty;
                 }
 
-                if (edmProperty != null && navProp.IsRestricted)
+                if (edmProperty != null)
                 {
-                    _propertiesRestrictions[edmProperty] = new QueryableRestrictions(navProp);
+                    if (navProp.IsRestricted)
+                    {
+                        _propertiesRestrictions[edmProperty] = new QueryableRestrictions(navProp);
+                    }
+
+                    if (navProp.QueryConfiguration.ModelBoundQuerySettings != null)
+                    {
+                        _propertiesQuerySettings.Add(edmProperty, navProp.QueryConfiguration.ModelBoundQuerySettings);
+                    }
                 }
             }
         }
@@ -391,7 +408,7 @@ namespace System.Web.OData.Builder
                 }
 
                 EdmEnumMember edmMember = new EdmEnumMember(type, member.Name,
-                    new EdmIntegerConstant(value));
+                    new EdmEnumMemberValue(value));
                 type.AddMember(edmMember);
                 _members[member.MemberInfo] = edmMember;
             }
@@ -424,6 +441,8 @@ namespace System.Web.OData.Builder
             return new EdmTypeMap(builder.GetEdmTypes(),
                 builder._properties,
                 builder._propertiesRestrictions,
+                builder._propertiesQuerySettings,
+                builder._structuredTypeQuerySettings,
                 builder._members,
                 builder._openTypes);
         }

@@ -10,7 +10,7 @@ using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Extensions;
 using System.Web.OData.Query;
 using System.Web.OData.Query.Expressions;
-using Microsoft.OData.Core.UriParser;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
 using Address = System.Web.OData.Builder.TestModels.Address;
@@ -319,7 +319,7 @@ namespace System.Web.OData.Test.OData.Query
                             .Add_Customer_EntityType_With_CollectionProperties()
                             .Add_Customers_EntitySet()
                             .GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var queryOptionParser = new ODataQueryOptionParser(
                 context.Model,
                 context.ElementType,
@@ -365,6 +365,7 @@ namespace System.Web.OData.Test.OData.Query
                             .GetEdmModel();
             var context = new ODataQueryContext(model, typeof(Customer));
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?" + filter);
+            request.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(context, request);
 
@@ -405,7 +406,7 @@ namespace System.Web.OData.Test.OData.Query
                             .Add_Customer_EntityType_With_CollectionProperties()
                             .Add_Customers_EntitySet()
                             .GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var queryOptionParser = new ODataQueryOptionParser(
                 context.Model,
                 context.ElementType,

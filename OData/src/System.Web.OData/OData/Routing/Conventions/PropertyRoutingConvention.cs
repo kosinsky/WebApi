@@ -6,7 +6,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.Http.Controllers;
+using System.Web.OData.Formatter;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Routing.Conventions
 {
@@ -34,7 +36,7 @@ namespace System.Web.OData.Routing.Conventions
             }
 
             string prefix;
-            ComplexCastPathSegment cast;
+            TypeSegment cast;
             IEdmProperty property = GetProperty(odataPath, controllerContext.Request.Method, out prefix, out cast);
             IEdmEntityType declaringType = property == null ? null : property.DeclaringType as IEdmEntityType;
 
@@ -49,18 +51,28 @@ namespace System.Web.OData.Routing.Conventions
                 }
                 else
                 {
+                    IEdmComplexType typeCast;
+                    if (cast.EdmType.TypeKind == EdmTypeKind.Collection)
+                    {
+                        typeCast = ((IEdmCollectionType)cast.EdmType).ElementType.AsComplex().ComplexDefinition();
+                    }
+                    else
+                    {
+                        typeCast = (IEdmComplexType)cast.EdmType;
+                    }
+
                     // for example: GetCityOfSubAddressFromVipCustomer or GetCityOfSubAddress
                     actionName = actionMap.FindMatchingAction(
-                        prefix + property.Name + "Of" + cast.CastType.Name + "From" + declaringType.Name,
-                        prefix + property.Name + "Of" + cast.CastType.Name);
+                        prefix + property.Name + "Of" + typeCast.Name + "From" + declaringType.Name,
+                        prefix + property.Name + "Of" + typeCast.Name);
                 }
 
                 if (actionName != null)
                 {
                     if (odataPath.PathTemplate.StartsWith("~/entityset/key", StringComparison.Ordinal))
                     {
-                        KeyValuePathSegment keyValueSegment = (KeyValuePathSegment)odataPath.Segments[1];
-                        controllerContext.RouteData.Values[ODataRouteConstants.Key] = keyValueSegment.Value;
+                        KeySegment keyValueSegment = (KeySegment)odataPath.Segments[1];
+                        controllerContext.AddKeyValueToRouteData(keyValueSegment);
                     }
 
                     return actionName;
@@ -73,19 +85,19 @@ namespace System.Web.OData.Routing.Conventions
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
             Justification = "These are simple conversion function and cannot be split up.")]
         private static IEdmProperty GetProperty(ODataPath odataPath, HttpMethod method, out string prefix,
-            out ComplexCastPathSegment cast)
+            out TypeSegment cast)
         {
             prefix = String.Empty;
             cast = null;
-            PropertyAccessPathSegment segment = null;
+            PropertySegment segment = null;
 
             if (odataPath.PathTemplate == "~/entityset/key/property" ||
                 odataPath.PathTemplate == "~/entityset/key/cast/property" ||
                 odataPath.PathTemplate == "~/singleton/property" ||
                 odataPath.PathTemplate == "~/singleton/cast/property")
             {
-                PropertyAccessPathSegment tempSegment =
-                    (PropertyAccessPathSegment)odataPath.Segments[odataPath.Segments.Count - 1];
+                PropertySegment tempSegment =
+                    (PropertySegment)odataPath.Segments[odataPath.Segments.Count - 1];
 
                 switch (method.Method.ToUpperInvariant())
                 {
@@ -117,14 +129,14 @@ namespace System.Web.OData.Routing.Conventions
                         break;
                 }
             }
-            else if (odataPath.PathTemplate == "~/entityset/key/property/complexcast" ||
-                     odataPath.PathTemplate == "~/entityset/key/cast/property/complexcast" ||
-                     odataPath.PathTemplate == "~/singleton/property/complexcast" ||
-                     odataPath.PathTemplate == "~/singleton/cast/property/complexcast")
+            else if (odataPath.PathTemplate == "~/entityset/key/property/cast" ||
+                     odataPath.PathTemplate == "~/entityset/key/cast/property/cast" ||
+                     odataPath.PathTemplate == "~/singleton/property/cast" ||
+                     odataPath.PathTemplate == "~/singleton/cast/property/cast")
             {
-                PropertyAccessPathSegment tempSegment =
-                    (PropertyAccessPathSegment)odataPath.Segments[odataPath.Segments.Count - 2];
-                ComplexCastPathSegment tempCast = (ComplexCastPathSegment)odataPath.Segments.Last();
+                PropertySegment tempSegment =
+                    (PropertySegment)odataPath.Segments[odataPath.Segments.Count - 2];
+                TypeSegment tempCast = (TypeSegment)odataPath.Segments.Last();
                 switch (method.Method.ToUpperInvariant())
                 {
                     case "GET":
@@ -157,7 +169,7 @@ namespace System.Web.OData.Routing.Conventions
                      odataPath.PathTemplate == "~/singleton/property/$count" ||
                      odataPath.PathTemplate == "~/singleton/cast/property/$count")
             {
-                PropertyAccessPathSegment tempSegment = (PropertyAccessPathSegment)odataPath.Segments[odataPath.Segments.Count - 2];
+                PropertySegment tempSegment = (PropertySegment)odataPath.Segments[odataPath.Segments.Count - 2];
                 switch (method.Method.ToUpperInvariant())
                 {
                     case "GET":

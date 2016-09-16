@@ -4,13 +4,14 @@
 using System.Linq;
 using System.Web.Http;
 using System.Web.OData.Extensions;
-using System.Web.OData.Routing;
+using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Builder.Conventions
 {
     internal class SelfLinksGenerationConvention : INavigationSourceConvention
     {
-        public void Apply(INavigationSourceConfiguration configuration, ODataModelBuilder model)
+        public void Apply(NavigationSourceConfiguration configuration, ODataModelBuilder model)
         {
             if (configuration == null)
             {
@@ -23,7 +24,7 @@ namespace System.Web.OData.Builder.Conventions
             {
                 entitySet.HasFeedSelfLink(feedContext =>
                 {
-                    string selfLink = feedContext.Url.CreateODataLink(new EntitySetPathSegment(feedContext.EntitySetBase));
+                    string selfLink = feedContext.Url.CreateODataLink(new EntitySetSegment(feedContext.EntitySetBase as IEdmEntitySet));
 
                     if (selfLink == null)
                     {

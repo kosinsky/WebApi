@@ -3,10 +3,9 @@
 
 using System.Web.Http;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Query
 {
@@ -20,6 +19,7 @@ namespace System.Web.OData.Query
         /// </summary>
         /// <param name="orderByClause">The orderby clause representing property access.</param>
         public OrderByPropertyNode(OrderByClause orderByClause)
+            : base(orderByClause)
         {
             if (orderByClause == null)
             {
@@ -34,7 +34,10 @@ namespace System.Web.OData.Query
             {
                 throw new ODataException(SRResources.OrderByClauseNotSupported);
             }
-            Property = propertyExpression.Property;
+            else
+            {
+                Property = propertyExpression.Property;
+            }
         }
 
         /// <summary>

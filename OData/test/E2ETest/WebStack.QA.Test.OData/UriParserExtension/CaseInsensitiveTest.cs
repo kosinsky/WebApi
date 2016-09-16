@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -6,6 +9,9 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.OData;
 using System.Web.OData.Extensions;
+using System.Web.OData.Routing.Conventions;
+using Microsoft.OData;
+using Microsoft.OData.UriParser;
 using Nuwa;
 using WebStack.QA.Common.XUnit;
 using WebStack.QA.Test.OData.Common;
@@ -33,12 +39,16 @@ namespace WebStack.QA.Test.OData.UriParserExtension
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
             configuration.Services.Replace(typeof(IAssembliesResolver), resolver);
 
-            configuration.EnableCaseInsensitive(true);
-
             configuration.Routes.Clear();
 
-            configuration.MapODataServiceRoute(routeName: "odata",
-                routePrefix: "odata", model: UriParserExtenstionEdmModel.GetEdmModel());
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
+
+            configuration.MapODataServiceRoute("odata", "odata",
+                builder =>
+                    builder.AddService(ServiceLifetime.Singleton, sp => UriParserExtenstionEdmModel.GetEdmModel())
+                        .AddService<IEnumerable<IODataRoutingConvention>>(ServiceLifetime.Singleton, sp =>
+                            ODataRoutingConventions.CreateDefaultWithAttributeRouting("odata", configuration))
+                        .AddService<ODataUriResolver>(ServiceLifetime.Singleton, sp => new CaseInsensitiveResolver()));
 
             configuration.EnsureInitialized();
         }

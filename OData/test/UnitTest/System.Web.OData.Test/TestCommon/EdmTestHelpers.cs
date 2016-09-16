@@ -11,7 +11,6 @@ using System.Web.OData.Formatter.Deserialization;
 using System.Xml;
 using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Csdl;
-using Microsoft.OData.Edm.Library;
 using Microsoft.OData.Edm.Validation;
 
 namespace System.Web.OData
@@ -36,13 +35,13 @@ namespace System.Web.OData
             {
                 IEdmModel edmModel;
                 IEnumerable<EdmError> edmErrors;
-                if (EdmxReader.TryParse(XmlReader.Create(new StringReader(GetEdmx())), out edmModel, out edmErrors))
+                if (CsdlReader.TryParse(XmlReader.Create(new StringReader(GetEdmx())), out edmModel, out edmErrors))
                 {
                     _model = edmModel;
-                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Product"), new ClrTypeAnnotation(typeof(ODataEntityDeserializerTests.Product)));
-                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Supplier"), new ClrTypeAnnotation(typeof(ODataEntityDeserializerTests.Supplier)));
-                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Address"), new ClrTypeAnnotation(typeof(ODataEntityDeserializerTests.Address)));
-                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Category"), new ClrTypeAnnotation(typeof(ODataEntityDeserializerTests.Category)));
+                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Product"), new ClrTypeAnnotation(typeof(ODataResourceDeserializerTests.Product)));
+                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Supplier"), new ClrTypeAnnotation(typeof(ODataResourceDeserializerTests.Supplier)));
+                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Address"), new ClrTypeAnnotation(typeof(ODataResourceDeserializerTests.Address)));
+                    _model.SetAnnotationValue<ClrTypeAnnotation>(_model.FindDeclaredType("ODataDemo.Category"), new ClrTypeAnnotation(typeof(ODataResourceDeserializerTests.Category)));
                     return _model;
                 }
                 else

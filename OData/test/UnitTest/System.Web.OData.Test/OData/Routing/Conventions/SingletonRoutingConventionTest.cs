@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using System.Web.OData.TestCommon;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -32,7 +33,8 @@ namespace System.Web.OData.Routing.Conventions
         public void SelectAction_ThrowsArgumentNull_IfMissControllerContext()
         {
             // Arrange
-            ODataPath odataPath = new ODataPath(new ODataPathSegment[] { new SingletonPathSegment("Boss") });
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+            ODataPath odataPath = new ODataPath(new SingletonSegment(model.VipCustomer));
             ILookup<string, HttpActionDescriptor> emptyMap = new HttpActionDescriptor[0].ToLookup(desc => (string)null);
 
             // Act & Assert
@@ -45,7 +47,8 @@ namespace System.Web.OData.Routing.Conventions
         public void SelectAction_ThrowsArgumentNull_IfMissActionMap()
         {
             // Arrange
-            ODataPath odataPath = new ODataPath(new ODataPathSegment[] { new SingletonPathSegment("Boss") });
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+            ODataPath odataPath = new ODataPath(new SingletonSegment(model.VipCustomer));
             Mock<HttpControllerContext> controllerContext = new Mock<HttpControllerContext>();
 
             // Act & Assert

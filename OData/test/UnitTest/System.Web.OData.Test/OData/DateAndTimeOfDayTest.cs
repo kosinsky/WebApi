@@ -11,7 +11,6 @@ using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
 
@@ -24,34 +23,35 @@ namespace System.Web.OData
         {
             // Arrange
             const string Uri = "http://localhost/odata/$metadata";
-            const string Expected = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n" +
-                                  "<edmx:Edmx Version=\"4.0\" xmlns:edmx=\"http://docs.oasis-open.org/odata/ns/edmx\">\r\n" +
-                                  "  <edmx:DataServices>\r\n" +
-                                  "    <Schema Namespace=\"System.Web.OData\" xmlns=\"http://docs.oasis-open.org/odata/ns/edm\">\r\n" +
-                                  "      <EntityType Name=\"DateAndTimeOfDayModel\">\r\n" +
-                                  "        <Key>\r\n" +
-                                  "          <PropertyRef Name=\"Id\" />\r\n" +
-                                  "        </Key>\r\n" +
-                                  "        <Property Name=\"Id\" Type=\"Edm.Int32\" Nullable=\"false\" />\r\n" +
-                                  "        <Property Name=\"Birthday\" Type=\"Edm.Date\" Nullable=\"false\" />\r\n" +
-                                  "        <Property Name=\"PublishDay\" Type=\"Edm.Date\" />\r\n" +
-                                  "        <Property Name=\"CreatedTime\" Type=\"Edm.TimeOfDay\" Nullable=\"false\" />\r\n" +
-                                  "        <Property Name=\"EdmTime\" Type=\"Edm.TimeOfDay\" />\r\n" +
-                                  "        <Property Name=\"ResumeTime\" Type=\"Edm.Duration\" Nullable=\"false\" />\r\n" +
-                                  "      </EntityType>\r\n" +
-                                  "    </Schema>\r\n" +
-                                  "    <Schema Namespace=\"Default\" xmlns=\"http://docs.oasis-open.org/odata/ns/edm\">\r\n" +
-                                  "      <EntityContainer Name=\"Container\">\r\n" +
-                                  "        <EntitySet Name=\"DateAndTimeOfDayModels\" EntityType=\"System.Web.OData.DateAndTimeOfDayModel\" />\r\n" +
-                                  "      </EntityContainer>\r\n" +
-                                  "    </Schema>\r\n" +
-                                  "  </edmx:DataServices>\r\n" +
+            const string Expected = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+                                  "<edmx:Edmx Version=\"4.0\" xmlns:edmx=\"http://docs.oasis-open.org/odata/ns/edmx\">" +
+                                  "<edmx:DataServices>" +
+                                  "<Schema Namespace=\"System.Web.OData\" xmlns=\"http://docs.oasis-open.org/odata/ns/edm\">" +
+                                    "<EntityType Name=\"DateAndTimeOfDayModel\">" +
+                                          "<Key>" +
+                                              "<PropertyRef Name=\"Id\" />" +
+                                          "</Key>" +
+                                          "<Property Name=\"Id\" Type=\"Edm.Int32\" Nullable=\"false\" />" +
+                                          "<Property Name=\"Birthday\" Type=\"Edm.Date\" Nullable=\"false\" />" +
+                                          "<Property Name=\"PublishDay\" Type=\"Edm.Date\" />" +
+                                          "<Property Name=\"CreatedTime\" Type=\"Edm.TimeOfDay\" Nullable=\"false\" />" +
+                                          "<Property Name=\"EdmTime\" Type=\"Edm.TimeOfDay\" />" +
+                                          "<Property Name=\"ResumeTime\" Type=\"Edm.Duration\" Nullable=\"false\" />" +
+                                      "</EntityType>" +
+                                  "</Schema>" +
+                                  "<Schema Namespace=\"Default\" xmlns=\"http://docs.oasis-open.org/odata/ns/edm\">" +
+                                  "<EntityContainer Name=\"Container\">" +
+                                      "<EntitySet Name=\"DateAndTimeOfDayModels\" EntityType=\"System.Web.OData.DateAndTimeOfDayModel\" />" +
+                                  "</EntityContainer>" +
+                                  "</Schema>" +
+                                  "</edmx:DataServices>" +
                                   "</edmx:Edmx>";
 
             HttpClient client = GetClient();
 
             // Act
             HttpResponseMessage response = client.GetAsync(Uri).Result;
+            Console.WriteLine(response.Content.ReadAsStringAsync().Result);
 
             // Assert
             Assert.True(response.IsSuccessStatusCode);
@@ -188,9 +188,7 @@ namespace System.Web.OData
         {
             // Arrange
             const string Uri = "http://localhost/odata/DateAndTimeOfDayModels(3)/Birthday";
-            const string Expect = @"{
-  ""@odata.context"":""http://localhost/odata/$metadata#DateAndTimeOfDayModels(3)/Birthday"",""value"":""2017-12-31""
-}";
+            const string Expect = @"{""@odata.context"":""http://localhost/odata/$metadata#DateAndTimeOfDayModels(3)/Birthday"",""value"":""2017-12-31""}";
 
             HttpClient client = GetClient();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, Uri);
@@ -207,6 +205,7 @@ namespace System.Web.OData
         {
             HttpConfiguration config =
                 new[] { typeof(MetadataController), typeof(DateAndTimeOfDayModelsController) }.GetHttpConfiguration();
+            config.Count().OrderBy().Filter().Expand().MaxTop(null).Select();
             config.MapODataServiceRoute("odata", "odata", GetEdmModel());
             return new HttpClient(new HttpServer(config));
         }

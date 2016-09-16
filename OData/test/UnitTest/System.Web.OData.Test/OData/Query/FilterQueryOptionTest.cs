@@ -10,11 +10,9 @@ using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Query.Expressions;
 using System.Web.OData.Query.Validators;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
-using Microsoft.OData.Core.UriParser.TreeNodeKinds;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Microsoft.TestCommon.Types;
 using Moq;
@@ -504,7 +502,7 @@ namespace System.Web.OData.Query
         public void CanConstructValidFilterQuery(string filterValue)
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var filter = new FilterQueryOption(filterValue, context);
 
             Assert.Same(context, filter.Context);
@@ -515,7 +513,7 @@ namespace System.Web.OData.Query
         public void GetQueryNodeParsesQuery()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var filter = new FilterQueryOption("Name eq 'MSFT'", context);
             var node = filter.FilterClause;
 
@@ -533,7 +531,7 @@ namespace System.Web.OData.Query
         public void CanConstructValidAnyQueryOverPrimitiveCollectionProperty()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_CollectionProperties().Add_Customers_EntitySet().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var filter = new FilterQueryOption("Aliases/any(a: a eq 'alias')", context);
             var node = filter.FilterClause;
             var anyNode = node.Expression as AnyNode;
@@ -550,7 +548,7 @@ namespace System.Web.OData.Query
         public void CanConstructValidAnyQueryOverComplexCollectionProperty()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_CollectionProperties().Add_Customers_EntitySet().Add_Address_ComplexType().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var filter = new FilterQueryOption("Addresses/any(a: a/HouseNumber eq 1)", context);
             var node = filter.FilterClause;
             var anyNode = node.Expression as AnyNode;
@@ -583,7 +581,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_CollectionProperties().Add_Customers_EntitySet().Add_Address_ComplexType().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var filter = new FilterQueryOption("Addresses/any(a: a/HouseNumber eq 1)", context);
 
             // Act & Assert
@@ -595,23 +593,11 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_CollectionProperties().Add_Customers_EntitySet().Add_Address_ComplexType().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var filter = new FilterQueryOption("Addresses/any(a: a/HouseNumber eq 1)", context);
 
             // Act & Assert
             Assert.ThrowsArgumentNull(() => filter.ApplyTo(new Customer[0].AsQueryable(), null), "querySettings");
-        }
-
-        [Fact]
-        public void ApplyTo_Throws_Null_AssembliesResolver()
-        {
-            // Arrange
-            var model = new ODataModelBuilder().Add_Customer_EntityType_With_CollectionProperties().Add_Customers_EntitySet().Add_Address_ComplexType().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
-            var filter = new FilterQueryOption("Addresses/any(a: a/HouseNumber eq 1)", context);
-
-            // Act & Assert
-            Assert.ThrowsArgumentNull(() => filter.ApplyTo(new Customer[0].AsQueryable(), new ODataQuerySettings(), null), "assembliesResolver");
         }
 
         [Theory]
@@ -626,7 +612,7 @@ namespace System.Web.OData.Query
                             .Add_Customer_EntityType_With_CollectionProperties()
                             .Add_Customers_EntitySet()
                             .GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<Customer> customers = CustomerFilterTestData;
 
@@ -647,7 +633,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetEnumModel();
-            var context = new ODataQueryContext(model, typeof(EnumModel));
+            var context = new ODataQueryContext(model, typeof(EnumModel)) { RequestContainer = new MockContainer(model) };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<EnumModel> enumModels = EnumModelTestData;
 
@@ -668,7 +654,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetEnumModel();
-            var context = new ODataQueryContext(model, typeof(EnumModel));
+            var context = new ODataQueryContext(model, typeof(EnumModel)) { RequestContainer = new MockContainer(model) };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<EnumModel> enumModels = EnumModelTestData;
 
@@ -698,7 +684,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetEnumModel();
-            var context = new ODataQueryContext(model, typeof(EnumModel));
+            var context = new ODataQueryContext(model, typeof(EnumModel)) { RequestContainer = new MockContainer() };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<EnumModel> enumModels = EnumModelTestData;
 
@@ -717,7 +703,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetEnumModel();
-            var context = new ODataQueryContext(model, typeof(EnumModel));
+            var context = new ODataQueryContext(model, typeof(EnumModel)) { RequestContainer = new MockContainer() };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<EnumModel> enumModels = EnumModelTestData;
 
@@ -737,7 +723,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetCastModel();
-            var context = new ODataQueryContext(model, typeof(DataTypes));
+            var context = new ODataQueryContext(model, typeof(DataTypes)) { RequestContainer = new MockContainer(model) };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<DataTypes> castModels = CastModelTestData;
 
@@ -762,7 +748,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetCastModel();
-            var context = new ODataQueryContext(model, typeof(DataTypes));
+            var context = new ODataQueryContext(model, typeof(DataTypes)) { RequestContainer = new MockContainer() };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<DataTypes> castModels = CastModelTestData;
 
@@ -821,7 +807,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetEnumModel();
-            var context = new ODataQueryContext(model, typeof(EnumModel));
+            var context = new ODataQueryContext(model, typeof(EnumModel)) { RequestContainer = new MockContainer() };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<EnumModel> enumModels = EnumModelTestData;
 
@@ -838,7 +824,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetParameterAliasModel();
-            var context = new ODataQueryContext(model, typeof(DataTypes));
+            var context = new ODataQueryContext(model, typeof(DataTypes)) { RequestContainer = new MockContainer(model) };
             IEdmType targetEdmType = model.FindType("System.Web.OData.Query.Expressions.DataTypes");
             IEdmNavigationSource targetNavigationSource = model.FindDeclaredEntitySet("System.Web.OData.Query.Expressions.Products");
 
@@ -868,7 +854,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = GetPropertyAliasModel();
-            var context = new ODataQueryContext(model, typeof(PropertyAlias));
+            var context = new ODataQueryContext(model, typeof(PropertyAlias)) { RequestContainer = new MockContainer(model) };
             var filterOption = new FilterQueryOption(filter, context);
             IEnumerable<PropertyAlias> propertyAliases = PropertyAliasTestData;
 
@@ -891,6 +877,7 @@ namespace System.Web.OData.Query
             // Arrange
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             ODataQueryContext context = new ODataQueryContext(model.Model, model.Customer);
+            context.RequestContainer = new MockContainer();
             FilterQueryOption filter = new FilterQueryOption("ID eq 42", context);
 
             // Act & Assert
@@ -902,6 +889,7 @@ namespace System.Web.OData.Query
         {
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             ODataQueryContext context = new ODataQueryContext(model.Model, model.Customer);
+            context.RequestContainer = new MockContainer();
             FilterQueryOption filter = new FilterQueryOption("Id eq 42", context);
             IQueryable queryable = new Mock<IQueryable>().Object;
 

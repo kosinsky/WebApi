@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,7 +12,7 @@ using System.Web.Http.Dispatcher;
 using System.Web.OData;
 using System.Web.OData.Batch;
 using System.Web.OData.Extensions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json.Linq;
 using Nuwa;
@@ -45,6 +48,7 @@ namespace WebStack.QA.Test.OData.DateTimeSupport
 
             configuration.Routes.Clear();
             HttpServer httpServer = configuration.GetHttpServer();
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null).Select();
             configuration.MapODataServiceRoute(
                 routeName: "convention",
                 routePrefix: "convention",
@@ -99,10 +103,10 @@ namespace WebStack.QA.Test.OData.DateTimeSupport
         {
             await ResetDatasource();
 
-            string expect = "{\r\n" + 
-                            "  \"@odata.context\":\"{XXXX}\",\"FileId\":6,\"Name\":\"FileName\",\"CreatedDate\":\"2014-12-30T15:01:03-08:00\",\"DeleteDate\":null,\"ModifiedDates\":[\r\n" + 
-                            "    \"2014-12-24T01:02:03-08:00\"\r\n" + 
-                            "  ]\r\n" +  
+            string expect = "{" + 
+                            "\"@odata.context\":\"{XXXX}\",\"FileId\":6,\"Name\":\"FileName\",\"CreatedDate\":\"2014-12-30T15:01:03-08:00\",\"DeleteDate\":null,\"ModifiedDates\":[" + 
+                            "\"2014-12-24T01:02:03-08:00\"" + 
+                            "]" +  
                             "}";
             expect = expect.Replace("{XXXX}", string.Format("{0}/{1}/$metadata#Files/$entity", BaseAddress.ToLowerInvariant(), mode));
 

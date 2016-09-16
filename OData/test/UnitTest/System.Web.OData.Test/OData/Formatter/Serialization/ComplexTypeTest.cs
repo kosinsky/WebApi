@@ -2,11 +2,10 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System.Net.Http;
-using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.TestCommon;
 
@@ -18,7 +17,7 @@ namespace System.Web.OData.Formatter.Serialization
 
         public ComplexTypeTest()
         {
-            _formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.Property }) { Request = GetSampleRequest() };
+            _formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.Resource }) { Request = GetSampleRequest() };
             _formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadata);
             _formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationXml);
         }
@@ -37,11 +36,8 @@ namespace System.Web.OData.Formatter.Serialization
         private static HttpRequestMessage GetSampleRequest()
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/property");
-            request.ODataProperties().Model = GetSampleModel();
-            HttpConfiguration configuration = new HttpConfiguration();
-            configuration.Routes.MapFakeODataRoute();
-            request.SetConfiguration(configuration);
-            request.SetFakeODataRouteName();
+            request.EnableODataDependencyInjectionSupport(GetSampleModel());
+            request.GetConfiguration().Routes.MapFakeODataRoute();
             return request;
         }
 

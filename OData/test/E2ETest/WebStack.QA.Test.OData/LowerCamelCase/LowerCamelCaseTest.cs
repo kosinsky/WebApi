@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -7,7 +10,7 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.OData;
 using System.Web.OData.Extensions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json.Linq;
 using Nuwa;
@@ -39,6 +42,7 @@ namespace WebStack.QA.Test.OData.LowerCamelCase
             configuration.Services.Replace(typeof(IAssembliesResolver), resolver);
 
             configuration.Routes.Clear();
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null).Select();
             configuration.MapODataServiceRoute("OData", "odata", LowerCamelCaseEdmModel.GetConventionModel());
             configuration.EnsureInitialized();
         }
@@ -193,7 +197,7 @@ namespace WebStack.QA.Test.OData.LowerCamelCase
             var result = await response.Content.ReadAsAsync<JObject>();
             Assert.Contains("The request includes a $expand path which is " +
                 "too deep. The maximum depth allowed is 3. To increase the limit, set the 'MaxExpansionDepth' property " +
-                "on EnableQueryAttribute or ODataValidationSettings.",
+                "on EnableQueryAttribute or ODataValidationSettings, or set the 'MaxDepth' property in ExpandAttribute.",
                 result["error"]["message"].Value<string>());
         }
 

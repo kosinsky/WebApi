@@ -15,7 +15,7 @@ namespace System.Web.OData.Builder.Conventions
     public class FunctionLinkGenerationConventionTest
     {
         [Fact]
-        public void Apply_SetFunctionLinkBuilder_ForFunctionBoundToEntity()
+        public void Apply_SetOperationLinkBuilder_ForFunctionBoundToEntity()
         {
             // Arrange
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
@@ -32,7 +32,7 @@ namespace System.Web.OData.Builder.Conventions
             // Assert
             var functionLink = function.GetFunctionLink();
             Assert.NotNull(functionLink);
-            Assert.IsType<Func<EntityInstanceContext, Uri>>(functionLink);
+            Assert.IsType<Func<ResourceContext, Uri>>(functionLink);
 
             Assert.Null(function.GetFeedFunctionLink());
         }
@@ -53,19 +53,19 @@ namespace System.Web.OData.Builder.Conventions
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost:123");
             request.SetConfiguration(configuration);
-            request.ODataProperties().RouteName = "odata";
+            request.EnableODataDependencyInjectionSupport("odata");
 
             IEdmEntitySet customers = model.EntityContainer.FindEntitySet("Customers");
             var edmType = model.SchemaElements.OfType<IEdmEntityType>().First(e => e.Name == "Customer");
             var serializerContext = new ODataSerializerContext { Model = model, NavigationSource = customers, Url = request.GetUrlHelper() };
-            var entityContext = new EntityInstanceContext(serializerContext, edmType.AsReference(), new Customer { Id = 109 });
+            var entityContext = new ResourceContext(serializerContext, edmType.AsReference(), new Customer { Id = 109 });
 
             // Assert
             var edmFunction = model.SchemaElements.OfType<IEdmFunction>().First(f => f.Name == "MyFunction");
             Assert.NotNull(edmFunction);
 
-            FunctionLinkBuilder functionLinkBuilder = model.GetFunctionLinkBuilder(edmFunction);
-            Uri link = functionLinkBuilder.BuildFunctionLink(entityContext);
+            OperationLinkBuilder functionLinkBuilder = model.GetOperationLinkBuilder(edmFunction);
+            Uri link = functionLinkBuilder.BuildLink(entityContext);
 
             Assert.Equal("http://localhost:123/odata/Customers(109)/Default.MyFunction(param=@param)",
                 link.AbsoluteUri);
@@ -89,7 +89,7 @@ namespace System.Web.OData.Builder.Conventions
             // Assert
             var functionLink = function.GetFeedFunctionLink();
             Assert.NotNull(functionLink);
-            Assert.IsType<Func<FeedContext, Uri>>(functionLink);
+            Assert.IsType<Func<ResourceSetContext, Uri>>(functionLink);
 
             Assert.Null(function.GetFunctionLink());
         }
@@ -110,17 +110,17 @@ namespace System.Web.OData.Builder.Conventions
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost:123");
             request.SetConfiguration(configuration);
-            request.ODataProperties().RouteName = "odata";
+            request.EnableODataDependencyInjectionSupport("odata");
 
             IEdmEntitySet customers = model.EntityContainer.FindEntitySet("Customers");
-            var entityContext = new FeedContext { EntitySetBase = customers, Request = request, Url = request.GetUrlHelper() };
+            var entityContext = new ResourceSetContext { EntitySetBase = customers, Request = request, Url = request.GetUrlHelper() };
 
             // Assert
             var edmFunction = model.SchemaElements.OfType<IEdmFunction>().First(f => f.Name == "MyFunction");
             Assert.NotNull(edmFunction);
 
-            FunctionLinkBuilder functionLinkBuilder = model.GetFunctionLinkBuilder(edmFunction);
-            Uri link = functionLinkBuilder.BuildFunctionLink(entityContext);
+            OperationLinkBuilder functionLinkBuilder = model.GetOperationLinkBuilder(edmFunction);
+            Uri link = functionLinkBuilder.BuildLink(entityContext);
 
             Assert.Equal("http://localhost:123/odata/Customers/Default.MyFunction(param=@param)",
                 link.AbsoluteUri);
@@ -150,18 +150,18 @@ namespace System.Web.OData.Builder.Conventions
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost");
             request.SetConfiguration(configuration);
 
-            FunctionLinkBuilder fuinctionLinkBuilder = model.GetFunctionLinkBuilder(edmFunction);
+            OperationLinkBuilder fuinctionLinkBuilder = model.GetOperationLinkBuilder(edmFunction);
 
             var serializerContext = new ODataSerializerContext { Model = model, NavigationSource = edmCustomers, Url = request.GetUrlHelper() };
-            var entityContext = new EntityInstanceContext(serializerContext, edmType.AsReference(), new Customer { Id = 109 });
+            var entityContext = new ResourceContext(serializerContext, edmType.AsReference(), new Customer { Id = 109 });
 
             // Assert
-            Uri link = fuinctionLinkBuilder.BuildFunctionLink(entityContext);
+            Uri link = fuinctionLinkBuilder.BuildLink(entityContext);
             Assert.Equal("http://localhost/FunctionTestWorks", link.AbsoluteUri);
         }
 
         [Fact]
-        public void Apply_SetsFunctionLinkBuilder_OnlyIfFunctionIsBindable()
+        public void Apply_SetsOperationLinkBuilder_OnlyIfFunctionIsBindable()
         {
             // Arrange
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
@@ -176,7 +176,7 @@ namespace System.Web.OData.Builder.Conventions
             var edmFunction = model.EntityContainer.Elements.OfType<IEdmFunctionImport>().Single();
             Assert.NotNull(edmFunction);
 
-            FunctionLinkBuilder linkBuilder = model.GetAnnotationValue<FunctionLinkBuilder>(edmFunction);
+            OperationLinkBuilder linkBuilder = model.GetAnnotationValue<OperationLinkBuilder>(edmFunction);
             Assert.Null(linkBuilder);
         }
 

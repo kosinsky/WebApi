@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,11 +16,9 @@ using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Extensions;
 using System.Web.OData.Query.Expressions;
 using System.Web.OData.Query.Validators;
-using System.Web.OData.Test;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Microsoft.TestCommon.Types;
 using Newtonsoft.Json.Linq;
@@ -204,6 +203,7 @@ namespace System.Web.OData.Query
                    HttpMethod.Get,
                    new Uri("http://server/service/Customers/?" + queryName + "=")
                );
+            message.EnableHttpDependencyInjectionSupport();
 
             // Act & Assert
             Assert.Throws<ODataException>(() => new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message),
@@ -219,6 +219,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers/?$filter=Filter&$select=Select&$orderby=OrderBy&$expand=Expand&$top=10&$skip=20&$count=true&$skiptoken=SkipToken&$deltatoken=DeltaToken")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             Assert.Equal("Filter", queryOptions.RawValues.Filter);
@@ -247,6 +248,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers/?$filter=Filter&$select=Select&$orderby=OrderBy&$expand=Expand&$top=10&$skip=20&$count=true&$skiptoken=SkipToken&$deltatoken=DeltaToken")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
 
@@ -264,6 +266,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers/?$filter=Filter&$select=Select&$orderby=OrderBy&$expand=Expand&$top=10&$skip=20&$count=true&$skiptoken=SkipToken&$deltatoken=DeltaToken")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
 
@@ -281,6 +284,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers/?$filter=Filter&$select=Select&$orderby=OrderBy&$expand=Expand&$top=10&$skip=20&$count=true&$skiptoken=SkipToken&$deltatoken=DeltaToken")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
 
@@ -300,6 +304,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?" + oDataQuery)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             ODataQuerySettings querySettings = new ODataQuerySettings
@@ -329,6 +334,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?" + oDataQuery)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             ODataQuerySettings querySettings = new ODataQuerySettings
@@ -357,6 +363,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?$orderby=Name")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             // Act
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
@@ -375,6 +382,7 @@ namespace System.Web.OData.Query
             // Arrange
             var model = new ODataModelBuilder().Add_Customers_EntitySet().GetEdmModel();
             var request = new HttpRequestMessage(HttpMethod.Get, new Uri("http://server/service/Customers?$select=Name"));
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryOptions queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), request);
 
             // Act
@@ -394,6 +402,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers")
             );
+            message.EnableHttpDependencyInjectionSupport();
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             var entityType = queryOptions.Context.ElementClrType;
             Assert.NotNull(entityType);
@@ -423,6 +432,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri(uri)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             // Act && Assert
             if (String.IsNullOrWhiteSpace(queryValue))
@@ -469,6 +479,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri(uri)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             // Act
             var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
@@ -489,6 +500,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?$orderby=UnknownProperty")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var option = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             Assert.Throws<ODataException>(() =>
@@ -506,6 +518,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?$top=NotANumber")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             Assert.Throws<ODataException>(() =>
@@ -517,6 +530,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?$top=''")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             Assert.Throws<ODataException>(() =>
@@ -524,7 +538,6 @@ namespace System.Web.OData.Query
                  "Invalid value '''' for $top query option found. " +
                  "The $top query option requires a non-negative integer value.");
         }
-
 
         [Fact]
         public void CannotConvertBadSkipQueryThrows()
@@ -535,6 +548,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?$skip=NotANumber")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             Assert.Throws<ODataException>(() =>
@@ -546,6 +560,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?$skip=''")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             Assert.Throws<ODataException>(() =>
@@ -575,6 +590,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/entityset?" + oDataQuery)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, elementType), message);
             IQueryable finalQuery = options.ApplyTo(query);
@@ -596,6 +612,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?" + oDataQuery)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             IQueryable finalQuery = options.ApplyTo(Customers);
@@ -617,6 +634,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?" + oDataQuery)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             IQueryable finalQuery = options.ApplyTo(Customers);
@@ -640,6 +658,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?" + oDataQuery)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             ODataQuerySettings querySettings = new ODataQuerySettings
@@ -668,6 +687,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?" + oDataQuery)
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             ODataQuerySettings querySettings = new ODataQuerySettings
@@ -692,6 +712,7 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://server/service/Customers?$orderby=CustomerId,Name")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), message);
             ODataValidationSettings validationSettings = new ODataValidationSettings { MaxOrderByNodeCount = 1 };
@@ -724,7 +745,7 @@ namespace System.Web.OData.Query
         public void LimitResults_LimitsResults(int limit, bool resultsLimitedExpected)
         {
             IQueryable queryable = new List<Customer>() {
-                new Customer() { CustomerId = 0 }, 
+                new Customer() { CustomerId = 0 },
                 new Customer() { CustomerId = 1 },
                 new Customer() { CustomerId = 2 },
                 new Customer() { CustomerId = 3 }
@@ -737,7 +758,7 @@ namespace System.Web.OData.Query
 
             Assert.Equal(Math.Min(limit, 4), result.Count());
             Assert.Equal(resultsLimitedExpected, resultsLimited);
-        }        
+        }
 
         [Fact]
         public void CanTurnOffAllValidation()
@@ -747,8 +768,9 @@ namespace System.Web.OData.Query
                 HttpMethod.Get,
                 new Uri("http://localhost/?$filter=Name eq 'abc'")
             );
+            message.EnableHttpDependencyInjectionSupport();
 
-            ODataQueryContext context = ValidationTestHelper.CreateCustomerContext();
+            ODataQueryContext context = ValidationTestHelper.CreateCustomerContext(false);
             ODataQueryOptions option = new ODataQueryOptions(context, message);
             ODataValidationSettings settings = new ODataValidationSettings()
             {
@@ -782,7 +804,7 @@ namespace System.Web.OData.Query
                     { e.Select(i => (decimal)i), "$filter=$it ge 5&$orderby=$it desc&$skip=3&$top=1", (decimal)6 },
                     { e.Select(i => new DateTimeOffset(new DateTime(i, 1, 1), TimeSpan.Zero)), "$filter=year($it) ge 5&$orderby=$it desc&$skip=3&$top=1", new DateTimeOffset(new DateTime(year: 6, month: 1, day: 1), TimeSpan.Zero) },
                     { e.Select(i => i.ToString()), "$filter=$it ge '5'&$orderby=$it desc&$skip=3&$top=1", "6" },
-                  
+
                     { e.Select(i => (i % 2 != 0 ? null : (short?)i)), "$filter=$it ge 5&$orderby=$it desc&$skip=1&$top=1", (short?)6 },
                     { e.Select(i => (i % 2 != 0 ? null : (int?)i)), "$filter=$it ge 5&$orderby=$it desc&$skip=1&$top=1", (int?)6 },
                     { e.Select(i => (i % 2 != 0 ? null : (long?)i)), "$filter=$it ge 5&$orderby=$it desc&$skip=1&$top=1", (long?)6 },
@@ -814,6 +836,7 @@ namespace System.Web.OData.Query
         public void Querying_Primitive_Collections(IQueryable queryable, string query, object result)
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?" + query);
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryContext context = new ODataQueryContext(EdmCoreModel.Instance, queryable.ElementType);
             ODataQueryOptions options = new ODataQueryOptions(context, request);
 
@@ -832,6 +855,7 @@ namespace System.Web.OData.Query
             ODataModelBuilder odataModel = new ODataModelBuilder().Add_SimpleEnum_EnumType();
             IEdmModel model = odataModel.GetEdmModel();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?" + query);
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryContext context = new ODataQueryContext(model, queryable.ElementType);
             ODataQueryOptions options = new ODataQueryOptions(context, request);
 
@@ -848,6 +872,7 @@ namespace System.Web.OData.Query
         public void ODataQueryOptions_IgnoresUnknownOperatorStartingWithDollar()
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?$filter=$it eq 6&$unknown=value");
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryContext context = new ODataQueryContext(EdmCoreModel.Instance, typeof(int));
             ODataQueryOptions options = new ODataQueryOptions(context, request);
 
@@ -861,8 +886,11 @@ namespace System.Web.OData.Query
         [Fact]
         public void ApplyTo_Entity_ThrowsArgumentNull_Entity()
         {
+            HttpRequestMessage message = new HttpRequestMessage();
+            message.EnableHttpDependencyInjectionSupport();
+
             ODataQueryContext context = new ODataQueryContext(EdmCoreModel.Instance, typeof(int));
-            ODataQueryOptions queryOptions = new ODataQueryOptions(context, new HttpRequestMessage());
+            ODataQueryOptions queryOptions = new ODataQueryOptions(context, message);
 
             Assert.ThrowsArgumentNull(
                 () => queryOptions.ApplyTo(entity: null, querySettings: new ODataQuerySettings()),
@@ -875,6 +903,7 @@ namespace System.Web.OData.Query
             // Arrange
             long count = 42;
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?$count=true");
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryContext context = new ODataQueryContext(EdmCoreModel.Instance, typeof(int));
             ODataQueryOptions options = new ODataQueryOptions(context, request);
             request.ODataProperties().TotalCount = count;
@@ -889,8 +918,11 @@ namespace System.Web.OData.Query
         [Fact]
         public void ApplyTo_Entity_ThrowsArgumentNull_QuerySettings()
         {
+            HttpRequestMessage message = new HttpRequestMessage();
+            message.EnableHttpDependencyInjectionSupport();
+
             ODataQueryContext context = new ODataQueryContext(EdmCoreModel.Instance, typeof(int));
-            ODataQueryOptions queryOptions = new ODataQueryOptions(context, new HttpRequestMessage());
+            ODataQueryOptions queryOptions = new ODataQueryOptions(context, message);
 
             Assert.ThrowsArgumentNull(
                 () => queryOptions.ApplyTo(entity: 42, querySettings: null),
@@ -908,6 +940,7 @@ namespace System.Web.OData.Query
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             model.Model.SetAnnotationValue(model.Customer, new ClrTypeAnnotation(typeof(Customer)));
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost?" + parameter);
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryContext context = new ODataQueryContext(model.Model, typeof(Customer));
             ODataQueryOptions queryOptions = new ODataQueryOptions(context, request);
 
@@ -923,6 +956,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost" + queryOption);
+            request.EnableHttpDependencyInjectionSupport();
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<Customer>("Customers");
             ODataQueryContext context = new ODataQueryContext(builder.GetEdmModel(), typeof(Customer));
@@ -955,15 +989,16 @@ namespace System.Web.OData.Query
         {
             // Arrange
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost" + queryOption);
+            request.EnableHttpDependencyInjectionSupport();
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<Customer>("Customers");
             ODataQueryContext context = new ODataQueryContext(builder.GetEdmModel(), typeof(Customer));
             ODataQueryOptions options = new ODataQueryOptions(context, request);
-            IQueryable<Customer> customers = 
+            IQueryable<Customer> customers =
                 Enumerable.Range(1, 10).Select(
                     i => new Customer
                     {
-                        CustomerId = i, 
+                        CustomerId = i,
                         Orders = new List<Order>
                         {
                             new Order {OrderId = i}
@@ -984,6 +1019,7 @@ namespace System.Web.OData.Query
             // Arrange
             Uri nextPageLink = new Uri("http://localhost/nextpagelink");
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/");
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryContext context = new ODataQueryContext(EdmCoreModel.Instance, typeof(int));
             ODataQueryOptions options = new ODataQueryOptions(context, request);
             request.ODataProperties().NextLink = nextPageLink;
@@ -1004,6 +1040,7 @@ namespace System.Web.OData.Query
             ODataQueryContext context = new ODataQueryContext(model.Model, model.Customer);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get,
                 "http://localhost/?$filter=Id eq 42&$orderby=Id&$skip=42&$top=42&$count=true&$select=Id&$expand=Orders");
+            request.EnableHttpDependencyInjectionSupport();
 
             // Act
             ODataQueryOptions queryOptions = new ODataQueryOptions(context, request);
@@ -1046,6 +1083,7 @@ namespace System.Web.OData.Query
             HttpServer server = CreateServer();
             HttpClient client = new HttpClient(server);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+
             request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
             // Act
@@ -1090,6 +1128,44 @@ namespace System.Web.OData.Query
             Assert.Equal(expandProp[1]["ID2"], 1);
         }
 
+        [Fact]
+        public void DuplicateUnsupportedQueryParametersIgnored()
+        {
+            // Arrange
+            var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
+
+            // a simple query with duplicate ignored parameters (key=test)
+            string uri = "http://server/service/Customers?$top=10&test=1&test=2";
+            var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                new Uri(uri)
+                );
+            request.EnableHttpDependencyInjectionSupport();
+
+            // Act
+            var queryOptions = new ODataQueryOptions(new ODataQueryContext(model, typeof(Customer)), request);
+
+            // Assert
+            Assert.Equal(queryOptions.RawValues.Top, "10");
+        }
+
+        [Fact]
+        public void DuplicateUnsupportedQueryParametersIgnoredWithNoException()
+        {
+            // Arrange
+            string url = "http://localhost/odata/Products?$top=1&test=1&test=2";
+            HttpServer server = CreateServer();
+            HttpClient client = new HttpClient(server);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
         private static HttpServer CreateServer()
         {
             HttpConfiguration configuration = new HttpConfiguration();
@@ -1105,12 +1181,13 @@ namespace System.Web.OData.Query
             builder.EntitySet<MyProduct>("Products");
             builder.EntitySet<ODataQueryOptionTest_EntityModelMultipleKeys>("ODataQueryOptionTest_EntityModelMultipleKeys");
             IEdmModel model = builder.GetEdmModel();
+            configuration.Count().OrderBy().Filter().Expand().MaxTop(null);
             configuration.MapODataServiceRoute("odata", "odata", model);
             return new HttpServer(configuration);
         }
 
     }
-    
+
     public class EntityModelsController : ApiController
     {
         private static readonly IQueryable<ODataQueryOptionTest_EntityModel> _entityModels;

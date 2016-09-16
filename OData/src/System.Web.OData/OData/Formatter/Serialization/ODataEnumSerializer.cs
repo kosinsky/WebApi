@@ -4,7 +4,7 @@
 using System.Diagnostics.Contracts;
 using System.Web.Http;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Formatter.Serialization
@@ -17,8 +17,8 @@ namespace System.Web.OData.Formatter.Serialization
         /// <summary>
         /// Initializes a new instance of <see cref="ODataEnumSerializer"/>.
         /// </summary>
-        public ODataEnumSerializer()
-            : base(ODataPayloadKind.Property)
+        public ODataEnumSerializer(ODataSerializerProvider serializerProvider)
+            : base(ODataPayloadKind.Property, serializerProvider)
         {
         }
 
@@ -123,10 +123,7 @@ namespace System.Web.OData.Formatter.Serialization
                     typeName = enumType.FullName();
                 }
 
-                enumValue.SetAnnotation(new SerializationTypeNameAnnotation
-                {
-                    TypeName = typeName
-                });
+                enumValue.TypeAnnotation = new ODataTypeAnnotation(typeName);
             }
         }
 

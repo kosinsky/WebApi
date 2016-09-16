@@ -11,9 +11,10 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Web.Http;
 using System.Web.OData.Properties;
-using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter.Deserialization
 {
@@ -105,49 +106,41 @@ namespace System.Web.OData.Formatter.Deserialization
                         payload[parameterName] = collectionDeserializer.ReadInline(value, collectionType, readContext);
                         break;
 
-                    case ODataParameterReaderState.Entry:
+                    case ODataParameterReaderState.Resource:
                         parameterName = reader.Name;
                         parameter = action.Parameters.SingleOrDefault(p => p.Name == parameterName);
                         Contract.Assert(parameter != null, String.Format(CultureInfo.InvariantCulture, "Parameter '{0}' not found.", parameterName));
+                        Contract.Assert(parameter.Type.IsStructured());
 
-                        IEdmEntityTypeReference entityTypeReference = parameter.Type as IEdmEntityTypeReference;
-                        Contract.Assert(entityTypeReference != null);
-
-                        ODataReader entryReader = reader.CreateEntryReader();
-                        object item = ODataEntityDeserializer.ReadEntryOrFeed(entryReader);
-                        ODataEntityDeserializer entityDeserializer = (ODataEntityDeserializer)DeserializerProvider.GetEdmTypeDeserializer(entityTypeReference);
-                        payload[parameterName] = entityDeserializer.ReadInline(item, entityTypeReference, readContext);
+                        ODataReader resourceReader = reader.CreateResourceReader();
+                        object item = resourceReader.ReadResourceOrResourceSet();
+                        ODataResourceDeserializer resourceDeserializer = (ODataResourceDeserializer)DeserializerProvider.GetEdmTypeDeserializer(parameter.Type);
+                        payload[parameterName] = resourceDeserializer.ReadInline(item, parameter.Type, readContext);
                         break;
 
-                    case ODataParameterReaderState.Feed:
+                    case ODataParameterReaderState.ResourceSet:
                         parameterName = reader.Name;
                         parameter = action.Parameters.SingleOrDefault(p => p.Name == parameterName);
                         Contract.Assert(parameter != null, String.Format(CultureInfo.InvariantCulture, "Parameter '{0}' not found.", parameterName));
 
-                        IEdmCollectionTypeReference feedType = parameter.Type as IEdmCollectionTypeReference;
-                        Contract.Assert(feedType != null);
+                        IEdmCollectionTypeReference resourceSetType = parameter.Type as IEdmCollectionTypeReference;
+                        Contract.Assert(resourceSetType != null);
 
-                        ODataReader feedReader = reader.CreateFeedReader();
-                        object feed = ODataEntityDeserializer.ReadEntryOrFeed(feedReader);
-                        ODataFeedDeserializer feedDeserializer = (ODataFeedDeserializer)DeserializerProvider.GetEdmTypeDeserializer(feedType);
+                        ODataReader resourceSetReader = reader.CreateResourceSetReader();
+                        object feed = resourceSetReader.ReadResourceOrResourceSet();
+                        ODataResourceSetDeserializer resourceSetDeserializer = (ODataResourceSetDeserializer)DeserializerProvider.GetEdmTypeDeserializer(resourceSetType);
 
-                        object result = feedDeserializer.ReadInline(feed, feedType, readContext);
+                        object result = resourceSetDeserializer.ReadInline(feed, resourceSetType, readContext);
 
-                        IEdmTypeReference elementTypeReference = feedType.ElementType();
-                        Contract.Assert(elementTypeReference.IsEntity());
+                        IEdmTypeReference elementTypeReference = resourceSetType.ElementType();
+                        Contract.Assert(elementTypeReference.IsStructured());
 
                         IEnumerable enumerable = result as IEnumerable;
                         if (enumerable != null)
                         {
                             if (readContext.IsUntyped)
                             {
-                                EdmEntityObjectCollection entityCollection = new EdmEntityObjectCollection(feedType);
-                                foreach (EdmEntityObject entityObject in enumerable)
-                                {
-                                    entityCollection.Add(entityObject);
-                                }
-
-                                payload[parameterName] = entityCollection;
+                                payload[parameterName] = enumerable.ConvertToEdmObject(resourceSetType);
                             }
                             else
                             {
@@ -182,19 +175,23 @@ namespace System.Web.OData.Formatter.Deserialization
             if (path.PathTemplate == "~/unboundaction")
             {
                 // only one segment, it may be an unbound action
-                UnboundActionPathSegment unboundActionSegment = path.Segments.Last() as UnboundActionPathSegment;
+                OperationImportSegment unboundActionSegment = path.Segments.Last() as OperationImportSegment;
                 if (unboundActionSegment != null)
                 {
-                    action = unboundActionSegment.Action.Action;
+                    IEdmActionImport actionImport = unboundActionSegment.OperationImports.First() as IEdmActionImport;
+                    if (actionImport != null)
+                    {
+                        action = actionImport.Action;
+                    }
                 }
             }
             else
             {
                 // otherwise, it may be a bound action
-                BoundActionPathSegment actionSegment = path.Segments.Last() as BoundActionPathSegment;
+                OperationSegment actionSegment = path.Segments.Last() as OperationSegment;
                 if (actionSegment != null)
                 {
-                    action = actionSegment.Action;
+                    action = actionSegment.Operations.First() as IEdmAction;
                 }
             }
 

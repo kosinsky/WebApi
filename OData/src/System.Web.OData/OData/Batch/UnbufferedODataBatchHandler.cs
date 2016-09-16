@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Batch;
 using System.Web.OData.Extensions;
-using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 
 namespace System.Web.OData.Batch
 {
@@ -37,21 +37,17 @@ namespace System.Web.OData.Batch
 
             ValidateRequest(request);
 
-            ODataMessageReaderSettings oDataReaderSettings = new ODataMessageReaderSettings
-            {
-                DisableMessageStreamDisposal = true,
-                MessageQuotas = MessageQuotas,
-                BaseUri = GetBaseUri(request)
-            };
+            // This container is for the overall batch request.
+            IServiceProvider requestContainer = request.CreateRequestContainer(ODataRouteName);
+            requestContainer.GetRequiredService<ODataMessageReaderSettings>().BaseUri = GetBaseUri(request);
 
-            ODataMessageReader reader = await request.Content.GetODataMessageReaderAsync(oDataReaderSettings, cancellationToken);
+            ODataMessageReader reader = await request.Content.GetODataMessageReaderAsync(requestContainer, cancellationToken);
             request.RegisterForDispose(reader);
 
             ODataBatchReader batchReader = reader.CreateODataBatchReader();
             List<ODataBatchResponseItem> responses = new List<ODataBatchResponseItem>();
             Guid batchId = Guid.NewGuid();
-            List<IDisposable> resourcesToDispose = new List<IDisposable>();
-            
+
             string preferHeader = RequestPreferenceHelpers.GetRequestPreferHeader(request);
             if ((preferHeader != null && preferHeader.Contains(PreferenceContinueOnError)) || (!request.GetConfiguration().HasEnabledContinueOnErrorHeader()))
             {
@@ -122,6 +118,7 @@ namespace System.Web.OData.Batch
             HttpRequestMessage operationRequest = await batchReader.ReadOperationRequestAsync(batchId, bufferContentStream: false);
 
             operationRequest.CopyBatchRequestProperties(originalRequest);
+            operationRequest.DeleteRequestContainer(false);
             OperationRequestItem operation = new OperationRequestItem(operationRequest);
             try
             {
@@ -165,6 +162,7 @@ namespace System.Web.OData.Batch
                     {
                         HttpRequestMessage changeSetOperationRequest = await batchReader.ReadChangeSetOperationRequestAsync(batchId, changeSetId, bufferContentStream: false);
                         changeSetOperationRequest.CopyBatchRequestProperties(originalRequest);
+                        changeSetOperationRequest.DeleteRequestContainer(false);
                         try
                         {
                             HttpResponseMessage response = await ODataBatchRequestItem.SendMessageAsync(Invoker, changeSetOperationRequest, cancellationToken, contentIdToLocationMapping);

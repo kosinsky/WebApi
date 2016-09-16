@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -15,12 +18,14 @@ using System.Web.OData.Formatter.Deserialization;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Routing;
 using System.Web.OData.Routing.Conventions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Newtonsoft.Json.Linq;
 using Nuwa;
 using WebStack.QA.Test.OData.Common;
 using Xunit;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace WebStack.QA.Test.OData.Formatter.Extensibility
 {
@@ -50,10 +55,13 @@ namespace WebStack.QA.Test.OData.Formatter.Extensibility
 
         public HttpResponseMessage GetLinksForChildren(int key)
         {
+            IEdmModel model = Request.GetModel();
+            IEdmEntitySet childEntity = model.EntityContainer.FindEntitySet("ChildEntity");
+
             return Request.CreateResponse(HttpStatusCode.OK,
                 PARENT_ENTITY.Children.Select(x => Url.CreateODataLink(
-                    new EntitySetPathSegment("ChildEntity"),
-                    new KeyValuePathSegment(x.Id.ToString())
+                    new EntitySetSegment(childEntity),
+                    new KeySegment(new[] { new KeyValuePair<string, object>("Id", x.Id)}, childEntity.EntityType(), null)
                 )).ToArray());
         }
     }
@@ -95,12 +103,13 @@ namespace WebStack.QA.Test.OData.Formatter.Extensibility
 
     public class CustomODataSerializerProvider : DefaultODataSerializerProvider
     {
-        public override ODataSerializer GetODataPayloadSerializer(IEdmModel model, Type type, HttpRequestMessage request)
+        public CustomODataSerializerProvider(IServiceProvider rootContainer)
+            : base(rootContainer)
         {
-            if (model == null)
-            {
-                throw new ArgumentNullException("model");
-            }
+        }
+
+        public override ODataSerializer GetODataPayloadSerializer(Type type, HttpRequestMessage request)
+        {
             if (type == null)
             {
                 throw new ArgumentNullException("type");
@@ -113,7 +122,7 @@ namespace WebStack.QA.Test.OData.Formatter.Extensibility
             {
                 return new ODataEntityReferenceLinksSerializer();
             }
-            return base.GetODataPayloadSerializer(model, type, request);
+            return base.GetODataPayloadSerializer(type, request);
         }
     }
 
@@ -139,10 +148,10 @@ namespace WebStack.QA.Test.OData.Formatter.Extensibility
             HttpMethod requestMethod = controllerContext.Request.Method;
             if (odataPath.PathTemplate == "~/entityset/key/navigation/$ref" && requestMethod == HttpMethod.Get)
             {
-                KeyValuePathSegment keyValueSegment = odataPath.Segments[1] as KeyValuePathSegment;
-                controllerContext.RouteData.Values[ODataRouteConstants.Key] = keyValueSegment.Value;
-                NavigationPathSegment navigationSegment = odataPath.Segments[2] as NavigationPathSegment;
-                IEdmNavigationProperty navigationProperty = navigationSegment.NavigationProperty;
+                KeySegment keyValueSegment = odataPath.Segments[1] as KeySegment;
+                controllerContext.AddKeyValueToRouteData(keyValueSegment);
+                NavigationPropertyLinkSegment navigationLinkSegment = odataPath.Segments[2] as NavigationPropertyLinkSegment;
+                IEdmNavigationProperty navigationProperty = navigationLinkSegment.NavigationProperty;
                 IEdmEntityType declaredType = navigationProperty.DeclaringType as IEdmEntityType;
 
                 string action = requestMethod + "LinksFor" + navigationProperty.Name + "From" + declaredType.Name;
@@ -179,7 +188,10 @@ namespace WebStack.QA.Test.OData.Formatter.Extensibility
         public static void UpdateConfiguration(HttpConfiguration configuration)
         {
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
-            configuration.Formatters.InsertRange(0, ODataMediaTypeFormatters.Create(new CustomODataSerializerProvider(), new DefaultODataDeserializerProvider()));
+            configuration.Formatters.InsertRange(0,
+                ODataMediaTypeFormatters.Create(
+                    new CustomODataSerializerProvider(new MockContainer()),
+                    new DefaultODataDeserializerProvider(new MockContainer())));
             var routingConventions = ODataRoutingConventions.CreateDefault();
             routingConventions.Insert(4, new GetRefRoutingConvention());
             configuration.MapODataServiceRoute(
@@ -208,5 +220,38 @@ namespace WebStack.QA.Test.OData.Formatter.Extensibility
             JsonAssert.ArrayLength(10, "value", result);
         }
 
+        private class MockContainer : IServiceProvider
+        {
+            private readonly ODataSerializerProvider serializerProvider;
+            private readonly ODataCollectionSerializer collectionSerializer;
+            private readonly ODataPrimitiveSerializer primitiveSerializer;
+
+            public MockContainer()
+            {
+                serializerProvider = new DefaultODataSerializerProvider(this);
+                collectionSerializer = new ODataCollectionSerializer(serializerProvider);
+                primitiveSerializer = new ODataPrimitiveSerializer();
+            }
+
+            public object GetService(Type serviceType)
+            {
+                if (serviceType == typeof(ODataSerializerProvider))
+                {
+                    return serializerProvider;
+                }
+
+                if (serviceType == typeof(ODataCollectionSerializer))
+                {
+                    return collectionSerializer;
+                }
+
+                if (serviceType == typeof(ODataPrimitiveSerializer))
+                {
+                    return primitiveSerializer;
+                }
+
+                throw new NotImplementedException();
+            }
+        }
     }
 }

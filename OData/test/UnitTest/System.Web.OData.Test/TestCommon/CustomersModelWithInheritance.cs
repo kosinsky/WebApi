@@ -4,8 +4,6 @@
 using System.Web.OData.Builder;
 using System.Web.OData.Formatter;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
-using Microsoft.OData.Edm.Library.Values;
 
 namespace System.Web.OData.TestCommon
 {
@@ -17,9 +15,9 @@ namespace System.Web.OData.TestCommon
 
             // Enum type simpleEnum
             EdmEnumType simpleEnum = new EdmEnumType("NS", "SimpleEnum");
-            simpleEnum.AddMember(new EdmEnumMember(simpleEnum, "First", new EdmIntegerConstant(0)));
-            simpleEnum.AddMember(new EdmEnumMember(simpleEnum, "Second", new EdmIntegerConstant(1)));
-            simpleEnum.AddMember(new EdmEnumMember(simpleEnum, "Third", new EdmIntegerConstant(2)));
+            simpleEnum.AddMember(new EdmEnumMember(simpleEnum, "First", new EdmEnumMemberValue(0)));
+            simpleEnum.AddMember(new EdmEnumMember(simpleEnum, "Second", new EdmEnumMemberValue(1)));
+            simpleEnum.AddMember(new EdmEnumMember(simpleEnum, "Third", new EdmEnumMemberValue(2)));
             model.AddElement(simpleEnum);
 
             // complex type address
@@ -35,6 +33,7 @@ namespace System.Web.OData.TestCommon
             EdmComplexType account = new EdmComplexType("NS", "Account", null, false, true);
             account.AddStructuralProperty("Bank", EdmPrimitiveTypeKind.String);
             account.AddStructuralProperty("CardNum", EdmPrimitiveTypeKind.Int64);
+            account.AddStructuralProperty("BankAddress", new EdmComplexTypeReference(address, isNullable: true));
             model.AddElement(account);
 
             EdmComplexType specialAccount = new EdmComplexType("NS", "SpecialAccount", account, false, true);
@@ -54,8 +53,7 @@ namespace System.Web.OData.TestCommon
             var city = customer.AddStructuralProperty(
                 "City",
                 primitiveTypeReference,
-                defaultValue: null,
-                concurrencyMode: EdmConcurrencyMode.Fixed);
+                defaultValue: null);
             model.AddElement(customer);
 
             // derived entity type special customer
@@ -334,7 +332,7 @@ namespace System.Web.OData.TestCommon
                      Target = customer
                  }),
                 customers);
-            model.SetAnnotationValue<BindableProcedureFinder>(model, new BindableProcedureFinder(model));
+            model.SetAnnotationValue<BindableOperationFinder>(model, new BindableOperationFinder(model));
 
             // set properties
             Model = model;

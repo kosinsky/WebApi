@@ -8,12 +8,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
 using System.Web.OData.Formatter;
-using System.Web.OData.Routing;
 using System.Web.OData.Routing.Conventions;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser.Aggregation;
-using Microsoft.OData.Core.UriParser.Semantic;
-using Microsoft.OData.Edm;
+using Microsoft.OData;
+using Microsoft.OData.UriParser;
+using Microsoft.OData.UriParser.Aggregation;
 
 namespace System.Web.OData.Extensions
 {
@@ -25,9 +23,7 @@ namespace System.Web.OData.Extensions
     {
         // Maintain the System.Web.OData. prefix in any new properties to avoid conflicts with user properties
         // and those of the v3 assembly.
-        private const string ModelKey = "System.Web.OData.Model";
         private const string NextLinkKey = "System.Web.OData.NextLink";
-        private const string PathHandlerKey = "System.Web.OData.PathHandler";
         private const string PathKey = "System.Web.OData.Path";
         private const string RouteNameKey = "System.Web.OData.RouteName";
         private const string RoutingConventionsStoreKey = "System.Web.OData.RoutingConventionsStore";
@@ -69,21 +65,6 @@ namespace System.Web.OData.Extensions
         }
 
         /// <summary>
-        /// Gets or sets the EDM model associated with the request.
-        /// </summary>
-        public IEdmModel Model
-        {
-            get
-            {
-                return GetValueOrNull<IEdmModel>(ModelKey);
-            }
-            set
-            {
-                _request.Properties[ModelKey] = value;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the route name for generating OData links.
         /// </summary>
         public string RouteName
@@ -95,44 +76,6 @@ namespace System.Web.OData.Extensions
             set
             {
                 _request.Properties[RouteNameKey] = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the OData routing conventions for controller and action selection.
-        /// </summary>
-        public IEnumerable<IODataRoutingConvention> RoutingConventions
-        {
-            get
-            {
-                return GetValueOrNull<IEnumerable<IODataRoutingConvention>>(RoutingConventionsKey);
-            }
-            set
-            {
-                _request.Properties[RoutingConventionsKey] = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the <see cref="IODataPathHandler"/> for generating links.
-        /// </summary>
-        /// <value>A default <see cref="IODataPathHandler"/> implementation if previously <c>null</c>.</value>
-        public IODataPathHandler PathHandler
-        {
-            get
-            {
-                IODataPathHandler pathHandler = GetValueOrNull<IODataPathHandler>(PathHandlerKey);
-                if (pathHandler == null)
-                {
-                    pathHandler = new DefaultODataPathHandler();
-                    PathHandler = pathHandler;
-                }
-
-                return pathHandler;
-            }
-            set
-            {
-                _request.Properties[PathHandlerKey] = value;
             }
         }
 

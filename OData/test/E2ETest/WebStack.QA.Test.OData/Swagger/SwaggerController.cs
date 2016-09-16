@@ -15,7 +15,7 @@ namespace WebStack.QA.Test.OData.Swagger
         [EnableQuery]
         public JObject GetSwagger()
         {
-            IEdmModel model = Request.ODataProperties().Model;
+            IEdmModel model = Request.GetModel();
             model.SetEdmxVersion(_defaultEdmxVersion);
             ODataSwaggerConverter converter = new ODataSwaggerConverter(model);
             return converter.GetSwaggerModel();

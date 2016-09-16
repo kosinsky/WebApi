@@ -11,9 +11,8 @@ using System.Web.OData.Builder;
 using System.Web.OData.Routing;
 using System.Web.OData.TestCommon;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -23,6 +22,7 @@ namespace System.Web.OData.Formatter.Deserialization
     {
         private static IEdmModel _model;
         private static IEdmEntityContainer _container;
+        private static ODataDeserializerProvider _deserializerProvider;
         private static ODataActionPayloadDeserializer _deserializer;
         private const string _serviceRoot = "http://any/";
 
@@ -30,7 +30,8 @@ namespace System.Web.OData.Formatter.Deserialization
         {
             _model = GetModel();
             _container = _model.EntityContainer;
-            _deserializer = new ODataActionPayloadDeserializer(new DefaultODataDeserializerProvider());
+            _deserializerProvider = DependencyInjectionHelper.GetDefaultODataDeserializerProvider();
+            _deserializer = new ODataActionPayloadDeserializer(_deserializerProvider);
         }
 
         [Fact]
@@ -71,7 +72,7 @@ namespace System.Web.OData.Formatter.Deserialization
         public void Read_ThrowsArgumentNull_MessageReader()
         {
             // Arrange
-            ODataActionPayloadDeserializer deserializer = new ODataActionPayloadDeserializer(new DefaultODataDeserializerProvider());
+            ODataActionPayloadDeserializer deserializer = new ODataActionPayloadDeserializer(_deserializerProvider);
 
             // Act & Assert
             Assert.ThrowsArgumentNull(
@@ -83,7 +84,7 @@ namespace System.Web.OData.Formatter.Deserialization
         public void Read_ThrowsArgumentNull_ReadContext()
         {
             // Arrange
-            ODataActionPayloadDeserializer deserializer = new ODataActionPayloadDeserializer(new DefaultODataDeserializerProvider());
+            ODataActionPayloadDeserializer deserializer = new ODataActionPayloadDeserializer(_deserializerProvider);
             ODataMessageReader messageReader = ODataTestUtil.GetMockODataMessageReader();
 
             // Act & Assert
@@ -96,7 +97,7 @@ namespace System.Web.OData.Formatter.Deserialization
         public void Read_Throws_SerializationException_ODataPathMissing()
         {
             // Arrange
-            ODataActionPayloadDeserializer deserializer = new ODataActionPayloadDeserializer(new DefaultODataDeserializerProvider());
+            ODataActionPayloadDeserializer deserializer = new ODataActionPayloadDeserializer(_deserializerProvider);
             ODataMessageReader messageReader = ODataTestUtil.GetMockODataMessageReader();
 
             // Act & Assert
@@ -483,7 +484,7 @@ namespace System.Web.OData.Formatter.Deserialization
             Assert.Equal(98052, address.ZipCode);
         }
 
-        private const string EntityPayload = 
+        private const string EntityPayload =
             "{" +
                 "\"Id\": 1, " +
                 "\"Customer\": {\"@odata.type\":\"#System.Web.OData.TestCommon.Models.Customer\", \"Id\":109,\"Name\":\"Avatar\" } " +
@@ -550,7 +551,7 @@ namespace System.Web.OData.Formatter.Deserialization
             Assert.False(payload.ContainsKey("NullableCustomer"));
         }
 
-        private const string EntityCollectionPayload = 
+        private const string EntityCollectionPayload =
             "{" +
                 "\"Id\": 1, " +
                 "\"Customers\": [" +

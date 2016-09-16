@@ -14,7 +14,20 @@ namespace System.Web.OData.Query.Validators
     {
         internal static ODataQueryContext CreateCustomerContext()
         {
-            return new ODataQueryContext(GetCustomersModel(), typeof(QueryCompositionCustomer));
+            return CreateCustomerContext(true);
+        }
+
+        internal static ODataQueryContext CreateCustomerContext(bool setRequestContainer)
+        {
+            ODataQueryContext context = new ODataQueryContext(GetCustomersModel(), typeof(QueryCompositionCustomer), null);
+            if (setRequestContainer)
+            {
+                context.RequestContainer = new MockContainer();
+            }
+
+            context.DefaultQuerySettings.EnableOrderBy = true;
+            context.DefaultQuerySettings.MaxTop = null;
+            return context;
         }
 
         internal static ODataQueryContext CreateProductContext()
@@ -24,7 +37,10 @@ namespace System.Web.OData.Query.Validators
 
         internal static ODataQueryContext CreateDerivedProductsContext()
         {
-            return new ODataQueryContext(GetDerivedProductsModel(), typeof(Product));
+            ODataQueryContext context = new ODataQueryContext(GetDerivedProductsModel(), typeof(Product), null);
+            context.RequestContainer = new MockContainer();
+            context.DefaultQuerySettings.EnableFilter = true;
+            return context;
         }
 
         private static IEdmModel GetCustomersModel()

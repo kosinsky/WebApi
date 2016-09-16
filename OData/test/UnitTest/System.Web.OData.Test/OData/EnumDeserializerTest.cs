@@ -6,9 +6,8 @@ using System.Web.OData.Builder;
 using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Formatter;
 using System.Web.OData.Formatter.Deserialization;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -16,6 +15,9 @@ namespace System.Web.OData
 {
     public class EnumDeserializerTest
     {
+        private readonly ODataDeserializerProvider _deserializerProvider =
+            DependencyInjectionHelper.GetDefaultODataDeserializerProvider();
+
         [Fact]
         public void GetEdmTypeDeserializer_ReturnODataEnumDeserializer_ForEnumType()
         {
@@ -23,7 +25,7 @@ namespace System.Web.OData
             IEdmTypeReference edmType = new EdmEnumTypeReference(new EdmEnumType("TestModel", "Color"), isNullable: false);
 
             // Act
-            ODataEdmTypeDeserializer deserializer = new DefaultODataDeserializerProvider().GetEdmTypeDeserializer(edmType);
+            ODataEdmTypeDeserializer deserializer = _deserializerProvider.GetEdmTypeDeserializer(edmType);
 
             // Assert
             Assert.NotNull(deserializer);
@@ -140,11 +142,11 @@ namespace System.Web.OData
         {
             // Arrange
             var deserializerProvider = new Mock<ODataDeserializerProvider>().Object;
-            var deserializer = new ODataComplexTypeDeserializer(deserializerProvider);
-            ODataComplexValue complexValue = new ODataComplexValue
+            var deserializer = new ODataResourceDeserializer(deserializerProvider);
+            ODataResource resourceValue = new ODataResource
             {
                 Properties = new[]
-                { 
+                {
                     new ODataProperty { Name = "NullableColor", Value = null}
                 },
                 TypeName = "System.Web.OData.EnumComplexWithNullableEnum"
@@ -155,7 +157,9 @@ namespace System.Web.OData
             IEdmComplexTypeReference enumComplexTypeReference = model.GetEdmTypeReference(typeof(EnumComplexWithNullableEnum)).AsComplex();
 
             // Act
-            var enumComplexWithNullableEnum = deserializer.ReadComplexValue(complexValue, enumComplexTypeReference, readContext) as EnumComplexWithNullableEnum;
+            var enumComplexWithNullableEnum =
+                deserializer.ReadResource(new ODataResourceWrapper(resourceValue), enumComplexTypeReference, readContext)
+                    as EnumComplexWithNullableEnum;
 
             // Assert
             Assert.NotNull(enumComplexWithNullableEnum);
@@ -166,13 +170,12 @@ namespace System.Web.OData
         public void UndefinedEnumValueDeserializerTest()
         {
             // Arrange
-            var deserializerProvider = new Mock<ODataDeserializerProvider>().Object;
-            var deserializer = new ODataComplexTypeDeserializer(deserializerProvider);
-            ODataComplexValue complexValue = new ODataComplexValue
+            var deserializer = new ODataResourceDeserializer(_deserializerProvider);
+            ODataResource resourceValue = new ODataResource
             {
                 Properties = new[]
-                { 
-                    new ODataProperty { Name = "RequiredColor", Value = (Color)123}
+                {
+                    new ODataProperty { Name = "RequiredColor", Value = new ODataEnumValue("123") }
                 },
                 TypeName = "System.Web.OData.EnumComplexWithRequiredEnum"
             };
@@ -182,7 +185,7 @@ namespace System.Web.OData
             IEdmComplexTypeReference enumComplexTypeReference = model.GetEdmTypeReference(typeof(EnumComplexWithRequiredEnum)).AsComplex();
 
             // Act
-            var enumComplexWithRequiredEnum = deserializer.ReadComplexValue(complexValue, enumComplexTypeReference, readContext) as EnumComplexWithRequiredEnum;
+            var enumComplexWithRequiredEnum = deserializer.ReadResource(new ODataResourceWrapper(resourceValue), enumComplexTypeReference, readContext) as EnumComplexWithRequiredEnum;
 
             // Assert
             Assert.NotNull(enumComplexWithRequiredEnum);
@@ -197,23 +200,27 @@ namespace System.Web.OData
         public void EnumValueDeserializerTest(Color color)
         {
             // Arrange
-            var deserializerProvider = new Mock<ODataDeserializerProvider>().Object;
-            var deserializer = new ODataComplexTypeDeserializer(deserializerProvider);
-            ODataComplexValue complexValue = new ODataComplexValue
+            IEdmModel model = GetEdmModel();
+
+            var deserializer = new ODataResourceDeserializer(_deserializerProvider);
+            ODataResource resourceValue = new ODataResource
             {
                 Properties = new[]
-                { 
-                    new ODataProperty { Name = "RequiredColor", Value = color}
+                {
+                    new ODataProperty
+                    {
+                        Name = "RequiredColor",
+                        Value = new ODataEnumValue(color.ToString())
+                    }
                 },
                 TypeName = "System.Web.OData.EnumComplexWithRequiredEnum"
             };
 
-            IEdmModel model = GetEdmModel();
             ODataDeserializerContext readContext = new ODataDeserializerContext() { Model = model };
             IEdmComplexTypeReference enumComplexTypeReference = model.GetEdmTypeReference(typeof(EnumComplexWithRequiredEnum)).AsComplex();
 
             // Act
-            var enumComplexWithRequiredEnum = deserializer.ReadComplexValue(complexValue, enumComplexTypeReference, readContext) as EnumComplexWithRequiredEnum;
+            var enumComplexWithRequiredEnum = deserializer.ReadResource(new ODataResourceWrapper(resourceValue), enumComplexTypeReference, readContext) as EnumComplexWithRequiredEnum;
 
             // Assert
             Assert.NotNull(enumComplexWithRequiredEnum);

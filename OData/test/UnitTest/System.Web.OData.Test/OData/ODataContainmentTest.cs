@@ -31,6 +31,7 @@ namespace System.Web.OData
             _configuration = new HttpConfiguration { IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always };
             _configuration.Services.Replace(typeof(IAssembliesResolver), resolver);
 
+            _configuration.Count().OrderBy().Filter().Expand().MaxTop(null);
             _configuration.MapODataServiceRoute("odata", "odata", GetEdmModel());
             var server = new HttpServer(_configuration);
             _client = new HttpClient(server);
@@ -71,9 +72,9 @@ namespace System.Web.OData
         }
 
         [Theory]
-        [InlineData("/odata/MyOrders(2)/System.Web.OData.Builder.TestModels.MySpecialOrder", "http://localhost/odata/$metadata#MyOrders/System.Web.OData.Builder.TestModels.MySpecialOrder/$entity")]
-        [InlineData("/odata/MyOrders(2)", "http://localhost/odata/$metadata#MyOrders/$entity")]
-        public void GetMyOrder_WithOrWithoutCastType_Containment(string url, string expectedContext)
+        [InlineData("/odata/MyOrders(2)/System.Web.OData.Builder.TestModels.MySpecialOrder")]
+        [InlineData("/odata/MyOrders(2)")]
+        public void GetMyOrder_WithOrWithoutCastType_Containment(string url)
         {
             // Arrange
             var requestUri = BaseAddress + url;
@@ -86,7 +87,7 @@ namespace System.Web.OData
             // Assert
             Assert.True(response.IsSuccessStatusCode);
             Assert.Contains(
-                expectedContext,
+                "http://localhost/odata/$metadata#MyOrders/System.Web.OData.Builder.TestModels.MySpecialOrder/$entity",
                 (string)result["@odata.context"]);
         }
         

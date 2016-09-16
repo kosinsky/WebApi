@@ -8,7 +8,8 @@ using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Csdl;
 
@@ -104,7 +105,7 @@ namespace System.Web.OData
 
         private IEdmModel GetModel()
         {
-            IEdmModel model = Request.ODataProperties().Model;
+            IEdmModel model = Request.GetModel();
             if (model == null)
             {
                 throw Error.InvalidOperation(SRResources.RequestMustHaveModel);

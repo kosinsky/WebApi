@@ -4,7 +4,8 @@
 using System.Web.Http;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 
 namespace System.Web.OData.Query.Validators
 {
@@ -33,7 +34,10 @@ namespace System.Web.OData.Query.Validators
             // Validate each query options
             if (options.Apply != null)
             {
-                ValidateQueryOptionAllowed(AllowedQueryOptions.Apply, validationSettings.AllowedQueryOptions);
+                if (options.Apply.ApplyClause != null)
+                {
+                    ValidateQueryOptionAllowed(AllowedQueryOptions.Apply, validationSettings.AllowedQueryOptions);
+                }
             }
 
             if (options.Skip != null)
@@ -99,6 +103,16 @@ namespace System.Web.OData.Query.Validators
             {
                 ValidateQueryOptionAllowed(AllowedQueryOptions.DeltaToken, validationSettings.AllowedQueryOptions);
             }
+        }
+
+        internal static ODataQueryValidator GetODataQueryValidator(ODataQueryContext context)
+        {
+            if (context == null || context.RequestContainer == null)
+            {
+                return new ODataQueryValidator();
+            }
+
+            return context.RequestContainer.GetRequiredService<ODataQueryValidator>();
         }
 
         private static void ValidateQueryOptionAllowed(AllowedQueryOptions queryOption, AllowedQueryOptions allowed)

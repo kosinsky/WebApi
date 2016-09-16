@@ -5,8 +5,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http.Routing;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core.UriParser.Semantic;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
 using ODataPath = System.Web.OData.Routing.ODataPath;
@@ -22,13 +22,15 @@ namespace System.Web.OData.Formatter.Serialization
         }
 
         [Fact]
-        public void Ctor_ForNestedContext_ThrowsArgumentNull_Entity()
+        public void Ctor_ForNestedContext_ThrowsArgumentNull_Resource()
         {
+            // Arrange
             SelectExpandClause selectExpand = new SelectExpandClause(new SelectItem[0], allSelected: true);
             IEdmNavigationProperty navProp = new Mock<IEdmNavigationProperty>().Object;
 
+            // Act & Assert
             Assert.ThrowsArgumentNull(
-                () => new ODataSerializerContext(entity: null, selectExpandClause: selectExpand, navigationProperty: navProp), "entity");
+                () => new ODataSerializerContext(resource: null, selectExpandClause: selectExpand, edmProperty: navProp), "resource");
         }
 
         [Fact]
@@ -48,12 +50,12 @@ namespace System.Web.OData.Formatter.Serialization
                 SkipExpensiveAvailabilityChecks = true,
                 Url = new UrlHelper()
             };
-            EntityInstanceContext entity = new EntityInstanceContext { SerializerContext = context };
+            ResourceContext resource = new ResourceContext { SerializerContext = context };
             SelectExpandClause selectExpand = new SelectExpandClause(new SelectItem[0], allSelected: true);
             IEdmNavigationProperty navProp = model.Customer.NavigationProperties().First();
 
             // Act
-            ODataSerializerContext nestedContext = new ODataSerializerContext(entity, selectExpand, navProp);
+            ODataSerializerContext nestedContext = new ODataSerializerContext(resource, selectExpand, navProp);
 
             // Assert
             Assert.Equal(context.MetadataLevel, nestedContext.MetadataLevel);
@@ -73,16 +75,38 @@ namespace System.Web.OData.Formatter.Serialization
             SelectExpandClause selectExpand = new SelectExpandClause(new SelectItem[0], allSelected: true);
             IEdmNavigationProperty navProp = model.Customer.NavigationProperties().First();
             ODataSerializerContext context = new ODataSerializerContext { NavigationSource = model.Customers, Model = model.Model };
-            EntityInstanceContext entity = new EntityInstanceContext { SerializerContext = context };
+            ResourceContext resource = new ResourceContext { SerializerContext = context };
 
             // Act
-            ODataSerializerContext nestedContext = new ODataSerializerContext(entity, selectExpand, navProp);
+            ODataSerializerContext nestedContext = new ODataSerializerContext(resource, selectExpand, navProp);
 
             // Assert
-            Assert.Same(entity, nestedContext.ExpandedEntity);
+            Assert.Same(resource, nestedContext.ExpandedResource);
             Assert.Same(navProp, nestedContext.NavigationProperty);
             Assert.Same(selectExpand, nestedContext.SelectExpandClause);
             Assert.Same(model.Orders, nestedContext.NavigationSource);
+            Assert.Same(navProp, nestedContext.EdmProperty);
+        }
+
+        [Fact]
+        public void Ctor_ThatBuildsNestedContext_InitializesRightValues_ForComplex()
+        {
+            // Arrange
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+            SelectExpandClause selectExpand = new SelectExpandClause(new SelectItem[0], allSelected: true);
+            IEdmProperty complexProperty = model.Customer.Properties().First(p => p.Name == "Address");
+            ODataSerializerContext context = new ODataSerializerContext { NavigationSource = model.Customers, Model = model.Model };
+            ResourceContext resource = new ResourceContext { SerializerContext = context };
+
+            // Act
+            ODataSerializerContext nestedContext = new ODataSerializerContext(resource, selectExpand, complexProperty);
+
+            // Assert
+            Assert.Same(resource, nestedContext.ExpandedResource);
+            Assert.Null(nestedContext.NavigationProperty);
+            Assert.Same(selectExpand, nestedContext.SelectExpandClause);
+            Assert.Null(nestedContext.NavigationSource);
+            Assert.Same(complexProperty, nestedContext.EdmProperty);
         }
 
         [Fact]

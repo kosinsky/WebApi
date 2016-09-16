@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,7 +10,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Microsoft.OData.Edm.Library;
+using System.Web.OData.Extensions;
+using Microsoft.OData.Edm;
 using Nuwa;
 using WebStack.QA.Common.XUnit;
 using WebStack.QA.Test.OData.Common;
@@ -81,7 +85,7 @@ namespace WebStack.QA.Test.OData.QueryComposition
         //        var products = ModelHelper.CreateRandomProducts().OrderBy(p => p.ID);
         //        var data = new TheoryDataSet<string, IEnumerable<Product>>();
         //        string name = products.First().Supplier.Name;
-        //        data.Add("substringof('a', Name) eq true", products.Where(p => p.Name == null ? false : p.Name.Contains("a")));
+        //        data.Add("contains('a', Name) eq true", products.Where(p => p.Name == null ? false : p.Name.Contains("a")));
         //    }
         //}
 
@@ -213,6 +217,8 @@ namespace WebStack.QA.Test.OData.QueryComposition
         {
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
             configuration.Formatters.JsonFormatter.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
+            configuration.EnableDependencyInjection();
         }
 
         [Theory]

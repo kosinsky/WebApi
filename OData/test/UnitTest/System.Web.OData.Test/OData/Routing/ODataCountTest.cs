@@ -11,7 +11,7 @@ using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Extensions;
 using System.Web.OData.Query;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
 
@@ -25,6 +25,7 @@ namespace System.Web.OData.Routing
         {
             IEdmModel model = GetEdmModel();
             HttpConfiguration configuration = new[] { typeof(DollarCountEntitiesController) }.GetHttpConfiguration();
+            configuration.Count().OrderBy().Filter().Expand().MaxTop(null);
             configuration.MapODataServiceRoute("odata", "odata", model);
             var server = new HttpServer(configuration);
             _client = new HttpClient(server);
@@ -257,7 +258,7 @@ namespace System.Web.OData.Routing
                     result = options.Filter.ApplyTo(result, new ODataQuerySettings()).Cast<string>();
                 }
 
-                if (Request.ODataProperties().Path.Segments.OfType<CountPathSegment>().Any())
+                if (Request.ODataProperties().Path.Segments.OfType<CountSegment>().Any())
                 {
                     return Ok(result.Count());
                 }

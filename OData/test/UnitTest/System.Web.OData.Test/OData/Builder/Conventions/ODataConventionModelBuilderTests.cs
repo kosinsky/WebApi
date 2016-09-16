@@ -15,9 +15,7 @@ using System.Web.OData.Formatter;
 using System.Web.OData.Query;
 using System.Web.OData.TestCommon;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Annotations;
-using Microsoft.OData.Edm.Expressions;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.Edm.Vocabularies;
 using Microsoft.OData.Edm.Vocabularies.V1;
 using Microsoft.TestCommon;
 using Moq;
@@ -356,7 +354,7 @@ namespace System.Web.OData.Builder.Conventions
         {
             // Arrange
             var modelBuilder = new ODataConventionModelBuilder();
-            modelBuilder.EntitySet<ProductWithETagAttribute>("Products");
+            modelBuilder.EntitySet<ProductWithConcurrencyCheckAttribute>("Products");
 
             // Act
             var model = modelBuilder.GetEdmModel();
@@ -364,16 +362,21 @@ namespace System.Web.OData.Builder.Conventions
             // Assert
             Assert.Equal(model.SchemaElements.OfType<IEdmSchemaType>().Count(), 1);
 
-            var product = model.AssertHasEntitySet(entitySetName: "Products", mappedEntityClrType: typeof(ProductWithETagAttribute));
+            var product = model.AssertHasEntitySet(entitySetName: "Products",
+                mappedEntityClrType: typeof(ProductWithConcurrencyCheckAttribute));
             Assert.Equal(2, product.StructuralProperties().Count());
             Assert.Equal(0, product.NavigationProperties().Count());
             product.AssertHasKey(model, "ID", EdmPrimitiveTypeKind.Int32);
-            IEdmStructuralProperty idProperty =
-                product.AssertHasPrimitiveProperty(model, "ID", EdmPrimitiveTypeKind.Int32, isNullable: false);
-            Assert.Equal(EdmConcurrencyMode.None, idProperty.ConcurrencyMode);
+
             IEdmStructuralProperty nameProperty =
                 product.AssertHasPrimitiveProperty(model, "Name", EdmPrimitiveTypeKind.String, isNullable: true);
-            Assert.Equal(EdmConcurrencyMode.Fixed, nameProperty.ConcurrencyMode);
+
+            IEdmEntitySet products = model.EntityContainer.FindEntitySet("Products");
+            Assert.NotNull(products);
+
+            IEnumerable<IEdmStructuralProperty> currencyProperties = model.GetConcurrencyProperties(products);
+            IEdmStructuralProperty currencyProperty = Assert.Single(currencyProperties);
+            Assert.Same(currencyProperty, nameProperty);
         }
 
         [Fact]
@@ -381,7 +384,7 @@ namespace System.Web.OData.Builder.Conventions
         {
             // Arrange
             var modelBuilder = new ODataConventionModelBuilder();
-            modelBuilder.EntitySet<ProductWithETagAttribute>("Products");
+            modelBuilder.EntitySet<ProductWithConcurrencyCheckAttribute>("Products");
 
             // Act
             var model = modelBuilder.GetEdmModel();
@@ -392,8 +395,8 @@ namespace System.Web.OData.Builder.Conventions
             var entitySet = model.FindDeclaredEntitySet("Products");
             Assert.NotNull(entitySet);
 
-            var annotations = model.FindVocabularyAnnotations<IEdmValueAnnotation>(entitySet, CoreVocabularyModel.ConcurrencyTerm);
-            IEdmValueAnnotation concurrencyAnnotation = Assert.Single(annotations);
+            var annotations = model.FindVocabularyAnnotations<IEdmVocabularyAnnotation>(entitySet, CoreVocabularyModel.ConcurrencyTerm);
+            IEdmVocabularyAnnotation concurrencyAnnotation = Assert.Single(annotations);
 
             IEdmCollectionExpression properties = concurrencyAnnotation.Value as IEdmCollectionExpression;
             Assert.NotNull(properties);
@@ -402,7 +405,7 @@ namespace System.Web.OData.Builder.Conventions
             var element = properties.Elements.First() as IEdmPathExpression;
             Assert.NotNull(element);
 
-            string path = Assert.Single(element.Path);
+            string path = Assert.Single(element.PathSegments);
             Assert.Equal("Name", path);
         }
 
@@ -421,7 +424,13 @@ namespace System.Web.OData.Builder.Conventions
             var product = model.AssertHasEntitySet(entitySetName: "Products", mappedEntityClrType: typeof(ProductWithTimestampAttribute));
             IEdmStructuralProperty nameProperty =
                 product.AssertHasPrimitiveProperty(model, "Name", EdmPrimitiveTypeKind.String, isNullable: true);
-            Assert.Equal(EdmConcurrencyMode.Fixed, nameProperty.ConcurrencyMode);
+
+            IEdmEntitySet products = model.EntityContainer.FindEntitySet("Products");
+            Assert.NotNull(products);
+
+            IEnumerable<IEdmStructuralProperty> currencyProperties = model.GetConcurrencyProperties(products);
+            IEdmStructuralProperty currencyProperty = Assert.Single(currencyProperties);
+            Assert.Same(currencyProperty, nameProperty);
         }
 
         [Fact]
@@ -440,8 +449,8 @@ namespace System.Web.OData.Builder.Conventions
             var entitySet = model.FindDeclaredEntitySet("Products");
             Assert.NotNull(entitySet);
 
-            var annotations = model.FindVocabularyAnnotations<IEdmValueAnnotation>(entitySet, CoreVocabularyModel.ConcurrencyTerm);
-            IEdmValueAnnotation concurrencyAnnotation = Assert.Single(annotations);
+            var annotations = model.FindVocabularyAnnotations<IEdmVocabularyAnnotation>(entitySet, CoreVocabularyModel.ConcurrencyTerm);
+            IEdmVocabularyAnnotation concurrencyAnnotation = Assert.Single(annotations);
 
             IEdmCollectionExpression properties = concurrencyAnnotation.Value as IEdmCollectionExpression;
             Assert.NotNull(properties);
@@ -450,7 +459,7 @@ namespace System.Web.OData.Builder.Conventions
             var element = properties.Elements.First() as IEdmPathExpression;
             Assert.NotNull(element);
 
-            string path = Assert.Single(element.Path);
+            string path = Assert.Single(element.PathSegments);
             Assert.Equal("Name", path);
         }
 
@@ -764,8 +773,8 @@ namespace System.Web.OData.Builder.Conventions
             Assert.False(model.AssertHasComplexType(typeof(Motorcycle)).IsAbstract);
             Assert.False(model.AssertHasComplexType(typeof(Car)).IsAbstract);
             Assert.False(model.AssertHasComplexType(typeof(SportBike)).IsAbstract);
-            Assert.False(model.AssertHasComplexType(typeof(CarManufacturer)).IsAbstract);
-            Assert.False(model.AssertHasComplexType(typeof(MotorcycleManufacturer)).IsAbstract);
+            Assert.False(model.AssertHasEntityType(typeof(CarManufacturer)).IsAbstract);
+            Assert.False(model.AssertHasEntityType(typeof(MotorcycleManufacturer)).IsAbstract);
             Assert.False(model.AssertHasComplexType(typeof(ManufacturerAddress)).IsAbstract);
             Assert.False(model.AssertHasComplexType(typeof(CarManufacturerAddress)).IsAbstract);
             Assert.False(model.AssertHasComplexType(typeof(MotorcycleManufacturerAddress)).IsAbstract);
@@ -806,9 +815,9 @@ namespace System.Web.OData.Builder.Conventions
             // Assert
             Assert.Equal(5, model.SchemaElements.Count());
             model.AssertHasComplexType(typeof(Zoo));
-            model.AssertHasComplexType(typeof(Animal));
-            model.AssertHasComplexType(typeof(Human), typeof(Animal));
-            model.AssertHasComplexType(typeof(Horse), typeof(Animal));
+            model.AssertHasEntityType(typeof(Animal));
+            model.AssertHasEntityType(typeof(Human), typeof(Animal));
+            model.AssertHasEntityType(typeof(Horse), typeof(Animal));
 
             IEdmStructuredType creatureType = model.SchemaElements.OfType<IEdmStructuredType>()
                 .SingleOrDefault(t => model.GetEdmType(typeof(Creature)).IsEquivalentTo(t));
@@ -850,13 +859,143 @@ namespace System.Web.OData.Builder.Conventions
             // Assert
             Assert.Equal(5, model.SchemaElements.Count());
             model.AssertHasComplexType(typeof(Park));
-            model.AssertHasComplexType(typeof(Animal));
-            model.AssertHasComplexType(typeof(Human), typeof(Animal));
-            model.AssertHasComplexType(typeof(Horse), typeof(Animal));
+            model.AssertHasEntityType(typeof(Animal));
+            model.AssertHasEntityType(typeof(Human), typeof(Animal));
+            model.AssertHasEntityType(typeof(Horse), typeof(Animal));
 
             IEdmStructuredType creatureType = model.SchemaElements.OfType<IEdmStructuredType>()
                 .SingleOrDefault(t => model.GetEdmType(typeof(Creature)).IsEquivalentTo(t));
             Assert.Null(creatureType);
+        }
+
+        #region ClassInheritance
+        //    Zoo {  Id (int), SpecialAnimal (Animal) }
+        //
+        //                 Creature
+        //                    |
+        //                  Animal
+        //                   /  \
+        //               Human   Horse
+        #endregion
+
+        [Fact]
+        public void ModelBuilder_Figures_EntityType_AndBaseTypeMappedAsEntityTypeExplicitly()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.EntityType<Zoo>();
+            builder.EntityType<Creature>();
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            Assert.Equal(6, model.SchemaElements.Count()); // 5 types + entity container
+            model.AssertHasEntityType(typeof(Zoo));
+            model.AssertHasEntityType(typeof(Creature));
+            model.AssertHasEntityType(typeof(Animal), typeof(Creature));
+            model.AssertHasEntityType(typeof(Human), typeof(Animal));
+            model.AssertHasEntityType(typeof(Horse), typeof(Animal));
+        }
+
+        [Fact]
+        public void ModelBuilder_Figures_EntityType_AndBaseTypeMappedAsComplexTypeExplicitly()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.EntityType<Zoo>();
+            builder.ComplexType<Creature>();
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            Assert.Equal(6, model.SchemaElements.Count());  // 5 types + entity container
+            model.AssertHasEntityType(typeof(Zoo));
+            model.AssertHasComplexType(typeof(Creature));
+            model.AssertHasComplexType(typeof(Animal), typeof(Creature));
+            model.AssertHasComplexType(typeof(Human), typeof(Animal));
+            model.AssertHasComplexType(typeof(Horse), typeof(Animal));
+        }
+
+        [Fact]
+        public void ModelBuilder_Figures_EntityType_AndBaseTypeMappedAsComplexTypeExplicitly_InReverseOrder()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.ComplexType<Creature>();
+            builder.EntityType<Zoo>();
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            Assert.Equal(6, model.SchemaElements.Count());
+            model.AssertHasEntityType(typeof(Zoo));
+            model.AssertHasComplexType(typeof(Creature));
+            model.AssertHasComplexType(typeof(Animal), typeof(Creature));
+            model.AssertHasComplexType(typeof(Human), typeof(Animal));
+            model.AssertHasComplexType(typeof(Horse), typeof(Animal));
+        }
+
+        [Fact]
+        public void ModelBuilder_Figures_Complex_AndBaseTypeMappedAsEntityTypeExplicitly()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.ComplexType<Zoo>();
+            builder.EntityType<Creature>();
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            Assert.Equal(6, model.SchemaElements.Count());  // 5 types + entity container
+            model.AssertHasComplexType(typeof(Zoo));
+            model.AssertHasEntityType(typeof(Creature));
+            model.AssertHasEntityType(typeof(Animal), typeof(Creature));
+            model.AssertHasEntityType(typeof(Human), typeof(Animal));
+            model.AssertHasEntityType(typeof(Horse), typeof(Animal));
+        }
+
+        [Fact]
+        public void ModelBuilder_Figures_Complex_AndBaseTypeMappedAsEntityTypeExplicitly_InReverseOrder()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.EntityType<Creature>();
+            builder.ComplexType<Zoo>();
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            Assert.Equal(6, model.SchemaElements.Count());  // 5 types + entity container
+            model.AssertHasComplexType(typeof(Zoo));
+            model.AssertHasEntityType(typeof(Creature));
+            model.AssertHasEntityType(typeof(Animal), typeof(Creature));
+            model.AssertHasEntityType(typeof(Human), typeof(Animal));
+            model.AssertHasEntityType(typeof(Horse), typeof(Animal));
+        }
+
+        [Fact]
+        public void ModelBuilder_Figures_Complex_AndBaseTypeMappedAsComplexTypeExplicitly()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.ComplexType<Zoo>();
+            builder.ComplexType<Creature>();
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            Assert.Equal(6, model.SchemaElements.Count());  // 5 types + entity container
+            model.AssertHasComplexType(typeof(Zoo));
+            model.AssertHasComplexType(typeof(Creature));
+            model.AssertHasComplexType(typeof(Animal), typeof(Creature));
+            model.AssertHasComplexType(typeof(Human), typeof(Animal));
+            model.AssertHasComplexType(typeof(Horse), typeof(Animal));
         }
 
         [Fact]
@@ -963,108 +1102,41 @@ namespace System.Web.OData.Builder.Conventions
         }
 
         [Fact]
-        public void ModelBuilder_Figures_EntityType_AndBaseTypeMappedAsEntityTypeExplicitly()
+        public void ModelBuilder_Figures_ComplexType_AndDerivedTypeMappedAsEntityTypeExplicitly()
         {
             // Arrange
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.EntityType<Zoo>();
-            builder.EntityType<Creature>();
+            builder.ComplexType<Zoo>();
+            builder.EntityType<Human>();
 
             // Act
             IEdmModel model = builder.GetEdmModel();
 
-            // Assert
-            Assert.Equal(6, model.SchemaElements.Count());
-            model.AssertHasEntityType(typeof(Zoo));
-            model.AssertHasEntityType(typeof(Creature));
-            model.AssertHasEntityType(typeof(Animal), typeof(Creature));
+            // Act & Assert
+            Assert.Equal(5, model.SchemaElements.Count()); // 4 types + entity container
+            model.AssertHasComplexType(typeof(Zoo));
+            model.AssertHasEntityType(typeof(Animal));
             model.AssertHasEntityType(typeof(Human), typeof(Animal));
             model.AssertHasEntityType(typeof(Horse), typeof(Animal));
         }
 
         [Fact]
-        public void ModelBuilder_Figures_EntityType_AndBaseTypeMappedAsComplexTypeExplicitly()
-        {
-            // Arrange
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.EntityType<Zoo>();
-            builder.ComplexType<Creature>();
-
-            // Act
-            IEdmModel model = builder.GetEdmModel();
-
-            // Assert
-            Assert.Equal(6, model.SchemaElements.Count());
-            model.AssertHasEntityType(typeof(Zoo));
-            model.AssertHasComplexType(typeof(Creature));
-            model.AssertHasComplexType(typeof(Animal), typeof(Creature));
-            model.AssertHasComplexType(typeof(Human), typeof(Animal));
-            model.AssertHasComplexType(typeof(Horse), typeof(Animal));
-        }
-
-        [Fact]
-        public void ModelBuilder_Figures_EntityType_AndBaseTypeMappedAsComplexTypeExplicitly_InReverseOrder()
-        {
-            // Arrange
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.ComplexType<Creature>();
-            builder.EntityType<Zoo>();
-
-            // Act
-            IEdmModel model = builder.GetEdmModel();
-
-            // Assert
-            Assert.Equal(6, model.SchemaElements.Count());
-            model.AssertHasEntityType(typeof(Zoo));
-            model.AssertHasComplexType(typeof(Creature));
-            model.AssertHasComplexType(typeof(Animal), typeof(Creature));
-            model.AssertHasComplexType(typeof(Human), typeof(Animal));
-            model.AssertHasComplexType(typeof(Horse), typeof(Animal));
-        }
-
-        [Fact]
-        public void ModelBuilder_ThrowsException_ComplexType_AndDerivedTypeMappedAsEntityTypeExplicitly()
-        {
-            // Arrange
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.ComplexType<Zoo>();
-            builder.EntityType<Human>();
-
-            // Act & Assert
-            Assert.ThrowsArgument(() => builder.GetEdmModel(),
-                "type",
-                "The type 'System.Web.OData.Builder.TestModels.Human' cannot be configured as a ComplexType. " +
-                "It was previously configured as an EntityType.");
-        }
-
-        [Fact]
-        public void ModelBuilder_ThrowsException_ComplexType_AndDerivedTypeMappedAsEntityTypeExplicitly_InReverseOrder()
+        public void ModelBuilder_Figures_ComplexType_AndDerivedTypeMappedAsEntityTypeExplicitly_InReverseOrder()
         {
             // Arrange
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
             builder.EntityType<Human>();
             builder.ComplexType<Zoo>();
 
-            // Act & Assert
-            Assert.ThrowsArgument(() => builder.GetEdmModel(),
-                "type",
-                "The type 'System.Web.OData.Builder.TestModels.Human' cannot be configured as a ComplexType. " +
-                "It was previously configured as an EntityType.");
-        }
-
-        [Fact]
-        public void ModelBuilder_ThrowsException_ComplexType_AndDerivedTypeMappedAsEntityTypeExplicitly_TheDerivedTypeWithoutKey()
-        {
-            // Arrange
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.ComplexType<Zoo>();
-            builder.EntityType<Human>().Ignore(c => c.HumanId);
+            // Act
+            IEdmModel model = builder.GetEdmModel();
 
             // Act & Assert
-            Assert.ThrowsArgument(() => builder.GetEdmModel(),
-                "type",
-                "The type 'System.Web.OData.Builder.TestModels.Human' cannot be configured as a ComplexType. " +
-                "It was previously configured as an EntityType.");
+            Assert.Equal(5, model.SchemaElements.Count()); // 4 types + entity container
+            model.AssertHasComplexType(typeof(Zoo));
+            model.AssertHasEntityType(typeof(Animal));
+            model.AssertHasEntityType(typeof(Human), typeof(Animal));
+            model.AssertHasEntityType(typeof(Horse), typeof(Animal));
         }
 
         [Fact]
@@ -1084,21 +1156,6 @@ namespace System.Web.OData.Builder.Conventions
             model.AssertHasComplexType(typeof(Animal));
             model.AssertHasComplexType(typeof(Human), typeof(Animal));
             model.AssertHasComplexType(typeof(Horse), typeof(Animal));
-        }
-
-        [Fact]
-        public void ModelBuilder_ThrowsException_ComplexType_AndBaseTypeMappedAsEntityTypeExplicitly()
-        {
-            // Arrange
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.ComplexType<Zoo>();
-            builder.EntityType<Creature>();
-
-            // Act & Assert
-            Assert.ThrowsArgument(() => builder.GetEdmModel(),
-                "type",
-                "The type 'System.Web.OData.Builder.TestModels.Animal' cannot be configured as an EntityType. " +
-                 "It was previously configured as a ComplexType.");
         }
 
         [Fact]
@@ -1205,17 +1262,17 @@ namespace System.Web.OData.Builder.Conventions
             // Verify the properties
             IEdmEntityType entityType = model.AssertHasEntityType(typeof(PlantParkWithOceanPlantAndJasmine));
 
-            IEdmProperty oceanProperty = entityType.FindProperty("OceanPant");
+            IEdmProperty oceanProperty = entityType.FindProperty("OceanPlant");
             Assert.NotNull(oceanProperty);
             Assert.Equal(EdmPropertyKind.Structural, oceanProperty.PropertyKind);
             Assert.IsType<EdmComplexType>(oceanProperty.Type.Definition);
-            Assert.False(entityType.NavigationProperties().Any(c => c.Name == "OceanPant"));
+            Assert.False(entityType.NavigationProperties().Any(c => c.Name == "OceanPlant"));
 
-            IEdmProperty jaemineProperty = entityType.FindProperty("Jaemine");
+            IEdmProperty jaemineProperty = entityType.FindProperty("Jasmine");
             Assert.NotNull(jaemineProperty);
             Assert.Equal(EdmPropertyKind.Navigation, jaemineProperty.PropertyKind);
             Assert.IsType<EdmEntityType>(jaemineProperty.Type.Definition);
-            Assert.True(entityType.NavigationProperties().Any(c => c.Name == "Jaemine"));
+            Assert.True(entityType.NavigationProperties().Any(c => c.Name == "Jasmine"));
         }
 
         [Fact]
@@ -1421,13 +1478,16 @@ namespace System.Web.OData.Builder.Conventions
         [Fact]
         public void ModelBuilder_Figures_Bindings_For_DerivedNavigationProperties()
         {
+            // Arrange
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
             builder.EntitySet<Vehicle>("vehicles");
             builder.Singleton<Vehicle>("MyVehicle");
             builder.EntitySet<Manufacturer>("manufacturers");
 
+            // Act
             IEdmModel model = builder.GetEdmModel();
 
+            // Assert
             model.AssertHasEntitySet("vehicles", typeof(Vehicle));
             IEdmEntitySet vehicles = model.EntityContainer.FindEntitySet("vehicles");
 
@@ -1442,38 +1502,41 @@ namespace System.Web.OData.Builder.Conventions
             Assert.Equal(2, vehicles.NavigationPropertyBindings.Count());
             vehicles.AssertHasNavigationTarget(
                 car.AssertHasNavigationProperty(model, "Manufacturer", typeof(CarManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "manufacturers");
+                "manufacturers", "System.Web.OData.Builder.TestModels.Car/Manufacturer");
             vehicles.AssertHasNavigationTarget(
                 motorcycle.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "manufacturers");
+                "manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
             vehicles.AssertHasNavigationTarget(
                 sportbike.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "manufacturers");
+                "manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
 
             // for singleton
             Assert.Equal(2, singleton.NavigationPropertyBindings.Count());
             singleton.AssertHasNavigationTarget(
                 car.AssertHasNavigationProperty(model, "Manufacturer", typeof(CarManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "manufacturers");
+                "manufacturers", "System.Web.OData.Builder.TestModels.Car/Manufacturer");
             singleton.AssertHasNavigationTarget(
                 motorcycle.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "manufacturers");
+                "manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
             singleton.AssertHasNavigationTarget(
                 sportbike.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "manufacturers");
+                "manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
         }
 
         [Fact]
         public void ModelBuilder_BindsToTheClosestEntitySet_ForNavigationProperties()
         {
+            // Arrange
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
             builder.EntitySet<Vehicle>("vehicles");
             builder.Singleton<Vehicle>("MyVehicle");
             builder.EntitySet<CarManufacturer>("car_manufacturers");
             builder.EntitySet<MotorcycleManufacturer>("motorcycle_manufacturers");
 
+            // Act
             IEdmModel model = builder.GetEdmModel();
 
+            // Assert
             model.AssertHasEntitySet("vehicles", typeof(Vehicle));
             IEdmEntitySet vehicles = model.EntityContainer.FindEntitySet("vehicles");
 
@@ -1488,30 +1551,31 @@ namespace System.Web.OData.Builder.Conventions
             Assert.Equal(2, vehicles.NavigationPropertyBindings.Count());
             vehicles.AssertHasNavigationTarget(
                 car.AssertHasNavigationProperty(model, "Manufacturer", typeof(CarManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "car_manufacturers");
+                "car_manufacturers", "System.Web.OData.Builder.TestModels.Car/Manufacturer");
             vehicles.AssertHasNavigationTarget(
                 motorcycle.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "motorcycle_manufacturers");
+                "motorcycle_manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
             vehicles.AssertHasNavigationTarget(
                 sportbike.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "motorcycle_manufacturers");
+                "motorcycle_manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
 
             // for singleton
             Assert.Equal(2, singleton.NavigationPropertyBindings.Count());
             singleton.AssertHasNavigationTarget(
                 car.AssertHasNavigationProperty(model, "Manufacturer", typeof(CarManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "car_manufacturers");
+                "car_manufacturers", "System.Web.OData.Builder.TestModels.Car/Manufacturer");
             singleton.AssertHasNavigationTarget(
                 motorcycle.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "motorcycle_manufacturers");
+                "motorcycle_manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
             singleton.AssertHasNavigationTarget(
                 sportbike.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne),
-                "motorcycle_manufacturers");
+                "motorcycle_manufacturers", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer");
         }
 
         [Fact]
         public void ModelBuilder_BindsToAllEntitySets()
         {
+            // Arrange
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
 
             builder.EntitySet<Vehicle>("vehicles");
@@ -1521,31 +1585,38 @@ namespace System.Web.OData.Builder.Conventions
             builder.EntitySet<CarManufacturer>("car_manufacturers");
             builder.EntitySet<MotorcycleManufacturer>("motorcycle_manufacturers");
 
+            // Act
             IEdmModel model = builder.GetEdmModel();
 
+            // Assert
             // one for motorcycle manufacturer and one for car manufacturer
             IEdmEntitySet vehicles = model.EntityContainer.FindEntitySet("vehicles");
             Assert.Equal(2, vehicles.NavigationPropertyBindings.Count());
+            Assert.Equal("System.Web.OData.Builder.TestModels.Car/Manufacturer", vehicles.NavigationPropertyBindings.First().Path.Path);
+            Assert.Equal("System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer", vehicles.NavigationPropertyBindings.Last().Path.Path);
 
             // one for car manufacturer
             IEdmEntitySet cars = model.EntityContainer.FindEntitySet("cars");
-            Assert.Equal(1, cars.NavigationPropertyBindings.Count());
+            IEdmNavigationPropertyBinding binding = Assert.Single(cars.NavigationPropertyBindings);
+            Assert.Equal("Manufacturer", binding.Path.Path);
 
             // one for motorcycle manufacturer
             IEdmEntitySet motorcycles = model.EntityContainer.FindEntitySet("motorcycles");
-            Assert.Equal(1, motorcycles.NavigationPropertyBindings.Count());
+            binding = Assert.Single(motorcycles.NavigationPropertyBindings);
+            Assert.Equal("Manufacturer", binding.Path.Path);
 
             // one for motorcycle manufacturer
             IEdmEntitySet sportbikes = model.EntityContainer.FindEntitySet("sportbikes");
-            Assert.Equal(1, sportbikes.NavigationPropertyBindings.Count());
+            binding = Assert.Single(sportbikes.NavigationPropertyBindings);
+            Assert.Equal("Manufacturer", binding.Path.Path);
 
             // no navigations
             IEdmEntitySet carManufacturers = model.EntityContainer.FindEntitySet("car_manufacturers");
-            Assert.Equal(0, carManufacturers.NavigationPropertyBindings.Count());
+            Assert.Empty(carManufacturers.NavigationPropertyBindings);
 
             //  no navigations
             IEdmEntitySet motorcycleManufacturers = model.EntityContainer.FindEntitySet("motorcycle_manufacturers");
-            Assert.Equal(0, motorcycleManufacturers.NavigationPropertyBindings.Count());
+            Assert.Empty(motorcycleManufacturers.NavigationPropertyBindings);
         }
 
         [Fact]
@@ -1569,26 +1640,134 @@ namespace System.Web.OData.Builder.Conventions
             // one for motorcycle manufacturer and one for car manufacturer
             IEdmSingleton vehicle = model.EntityContainer.FindSingleton("MyVehicle");
             Assert.Equal(2, vehicle.NavigationPropertyBindings.Count());
+            Assert.Equal("System.Web.OData.Builder.TestModels.Car/Manufacturer", vehicle.NavigationPropertyBindings.First().Path.Path);
+            Assert.Equal("System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer", vehicle.NavigationPropertyBindings.Last().Path.Path);
 
             // one for car manufacturer
             IEdmSingleton car = model.EntityContainer.FindSingleton("Contoso");
-            Assert.Equal(1, car.NavigationPropertyBindings.Count());
+            IEdmNavigationPropertyBinding binding = Assert.Single(car.NavigationPropertyBindings);
+            Assert.Equal("Manufacturer", binding.Path.Path);
 
             // one for motorcycle manufacturer
             IEdmSingleton motorcycle = model.EntityContainer.FindSingleton("MyMotorcycle");
-            Assert.Equal(1, motorcycle.NavigationPropertyBindings.Count());
+            binding = Assert.Single(motorcycle.NavigationPropertyBindings);
+            Assert.Equal("Manufacturer", binding.Path.Path);
 
             // one for motorcycle manufacturer
             IEdmSingleton sportbike = model.EntityContainer.FindSingleton("Gianta");
-            Assert.Equal(1, sportbike.NavigationPropertyBindings.Count());
+            binding = Assert.Single(sportbike.NavigationPropertyBindings);
+            Assert.Equal("Manufacturer", binding.Path.Path);
 
             // no navigation
             IEdmSingleton carManufacturer = model.EntityContainer.FindSingleton("Fordo");
-            Assert.Equal(0, carManufacturer.NavigationPropertyBindings.Count());
+            Assert.Empty(carManufacturer.NavigationPropertyBindings);
 
             //  no navigation
             IEdmSingleton motorcycleManufacturer = model.EntityContainer.FindSingleton("Yayaham");
-            Assert.Equal(0, motorcycleManufacturer.NavigationPropertyBindings.Count());
+            Assert.Empty(motorcycleManufacturer.NavigationPropertyBindings);
+        }
+
+        [Fact]
+        public void ModelBuilder_BindingsTo_WithComplexTypePath()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.EntityType<ManufacturerAddress>().HasKey(a => a.City);
+            builder.ComplexType<Manufacturer>(); // Manufacturer is a complex type
+
+            builder.EntitySet<Vehicle>("Vehicles");
+            builder.Singleton<Vehicle>("MyVehicle");
+            builder.EntitySet<ManufacturerAddress>("Addresses");
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            model.AssertHasEntitySet("Vehicles", typeof(Vehicle));
+            IEdmEntitySet vehicles = model.EntityContainer.FindEntitySet("Vehicles");
+
+            model.AssertHasSingleton("MyVehicle", typeof(Vehicle));
+            IEdmSingleton singleton = model.EntityContainer.FindSingleton("MyVehicle");
+
+            model.AssertHasEntityType(typeof(Car), typeof(Vehicle));
+            model.AssertHasEntityType(typeof(Motorcycle), typeof(Vehicle));
+            model.AssertHasEntityType(typeof(SportBike), typeof(Motorcycle));
+
+            model.AssertHasEntityType(typeof(ManufacturerAddress));
+            IEdmComplexType manufacturer = model.AssertHasComplexType(typeof(Manufacturer));
+
+            IEdmNavigationProperty addressNav = manufacturer.AssertHasNavigationProperty(model, "Address", typeof(ManufacturerAddress), isNullable: true,
+                multiplicity: EdmMultiplicity.ZeroOrOne);
+
+            // for entity set
+            Assert.Equal(2, vehicles.NavigationPropertyBindings.Count());
+            vehicles.AssertHasNavigationTarget(addressNav, "Addresses", "System.Web.OData.Builder.TestModels.Car/Manufacturer/Address");
+            vehicles.AssertHasNavigationTarget(addressNav, "Addresses", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer/Address");
+
+            // for singleton
+            Assert.Equal(2, singleton.NavigationPropertyBindings.Count());
+            singleton.AssertHasNavigationTarget(addressNav, "Addresses", "System.Web.OData.Builder.TestModels.Car/Manufacturer/Address");
+            singleton.AssertHasNavigationTarget(addressNav, "Addresses", "System.Web.OData.Builder.TestModels.Motorcycle/Manufacturer/Address");
+        }
+
+        [Fact]
+        public void ModelBuilder_BindingsTo_WithComplexTypePath_BindAllPathToEntitySet()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.EntitySet<BindingCustomer>("Customers");
+            builder.EntitySet<BindingCity>("Cities");
+
+            // Act
+            IEdmModel model = builder.GetEdmModel();
+
+            // Assert
+            model.AssertHasEntitySet("Customers", typeof(BindingCustomer));
+            IEdmEntitySet customers = model.EntityContainer.FindEntitySet("Customers");
+
+            model.AssertHasEntitySet("Cities", typeof(BindingCity));
+
+            IEdmComplexType address = model.AssertHasComplexType(typeof(BindingAddress));
+            IEdmComplexType usAddress = model.AssertHasComplexType(typeof(BindingUsAddress), typeof(BindingAddress));
+
+            IEdmNavigationProperty cityNav = address.AssertHasNavigationProperty(model, "City", typeof(BindingCity), isNullable: true,
+                multiplicity: EdmMultiplicity.ZeroOrOne);
+
+            IEdmNavigationProperty citiesNav = address.AssertHasNavigationProperty(model, "Cities", typeof(BindingCity), isNullable: true,
+                multiplicity: EdmMultiplicity.Many);
+
+            IEdmNavigationProperty usCityNav = usAddress.AssertHasNavigationProperty(model, "UsCity", typeof(BindingCity), isNullable: true,
+                multiplicity: EdmMultiplicity.ZeroOrOne);
+
+            IEdmNavigationProperty usCitiesNav = usAddress.AssertHasNavigationProperty(model, "UsCities", typeof(BindingCity), isNullable: true,
+                multiplicity: EdmMultiplicity.Many);
+
+            Assert.Equal(20, customers.NavigationPropertyBindings.Count());
+            foreach (var edmNavigationPropertyBinding in customers.NavigationPropertyBindings)
+            {
+                Console.WriteLine(edmNavigationPropertyBinding.NavigationProperty.Name + "," + edmNavigationPropertyBinding.Target.Name + ", " +
+                    edmNavigationPropertyBinding.Path.Path);
+            }
+
+            foreach (var navigation in new[] { "City", "Cities" })
+            {
+                IEdmNavigationProperty nav = navigation == "City" ? cityNav : citiesNav;
+                customers.AssertHasNavigationTarget(nav, "Cities", "Location/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "Address/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "Addresses/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "System.Web.OData.Formatter.BindingVipCustomer/VipLocation/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "System.Web.OData.Formatter.BindingVipCustomer/VipAddresses/" + navigation);
+            }
+
+            foreach (var navigation in new[] { "UsCity", "UsCities" })
+            {
+                IEdmNavigationProperty nav = navigation == "UsCity" ? usCityNav : usCitiesNav;
+                customers.AssertHasNavigationTarget(nav, "Cities", "Location/System.Web.OData.Formatter.BindingUsAddress/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "Address/System.Web.OData.Formatter.BindingUsAddress/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "Addresses/System.Web.OData.Formatter.BindingUsAddress/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "System.Web.OData.Formatter.BindingVipCustomer/VipLocation/System.Web.OData.Formatter.BindingUsAddress/" + navigation);
+                customers.AssertHasNavigationTarget(nav, "Cities", "System.Web.OData.Formatter.BindingVipCustomer/VipAddresses/System.Web.OData.Formatter.BindingUsAddress/" + navigation);
+            }
         }
 
         [Fact]
@@ -1607,6 +1786,7 @@ namespace System.Web.OData.Builder.Conventions
             Assert.NotNull(singleton);
             Assert.Single(singleton.NavigationPropertyBindings);
             Assert.Equal("Boss", singleton.NavigationPropertyBindings.Single().NavigationProperty.Name);
+            Assert.Equal("Boss", singleton.NavigationPropertyBindings.Single().Path.Path);
         }
 
         [Fact]
@@ -1627,7 +1807,7 @@ namespace System.Web.OData.Builder.Conventions
             Assert.Equal(2, singleton.NavigationPropertyBindings.Count());
             var employeeType = model.AssertHasEntityType(typeof(Employee));
             var salePersonType = model.AssertHasEntityType(typeof(SalesPerson));
-            var customerType = model.AssertHasEntityType(typeof(Customer));
+            model.AssertHasEntityType(typeof(Customer));
             var bossProperty = employeeType.AssertHasNavigationProperty(model, "Boss", typeof(Employee), true, EdmMultiplicity.ZeroOrOne);
             var customerProperty = salePersonType.AssertHasNavigationProperty(model, "Customers", typeof(Customer), true, EdmMultiplicity.Many);
 
@@ -1940,22 +2120,87 @@ namespace System.Web.OData.Builder.Conventions
             Assert.NotNull(model.FindType("DefaultNamespace.ComplexType3") as IEdmComplexType);
         }
 
-        [Fact]
-        public void ComplexType_Containing_EntityCollection_Throws()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ComplexType_Containing_EntityNavigation_Works(bool optional)
         {
-            MockType entityType = new MockType("EntityType");
+            // Arrange
+            MockType entityType = new MockType("EntityType").Property<int>("Id");
 
-            MockType complexType =
-                new MockType("ComplexTypeWithEntityCollection")
-                .Property(entityType.AsCollection(), "CollectionProperty");
+            MockType complexType = new MockType("ComplexType");
+            if (optional)
+            {
+                complexType.Property(entityType, "NavProperty");
+            }
+            else
+            {
+                complexType.Property(entityType, "NavProperty", new RequiredAttribute());
+            }
 
             var modelBuilder = new ODataConventionModelBuilder();
             modelBuilder.AddEntityType(entityType);
             modelBuilder.AddComplexType(complexType);
 
-            Assert.Throws<InvalidOperationException>(
-                () => modelBuilder.GetEdmModel(),
-                "The complex type 'DefaultNamespace.ComplexTypeWithEntityCollection' refers to the entity type 'DefaultNamespace.EntityType' through the property 'CollectionProperty'.");
+            // Act
+            IEdmModel model = modelBuilder.GetEdmModel();
+
+            // Assert
+            // entity
+            IEdmEntityType entity = Assert.Single(model.SchemaElements.OfType<IEdmEntityType>());
+            Assert.Equal("EntityType", entity.Name);
+            IEdmStructuralProperty key = Assert.Single(entity.DeclaredKey);
+            Assert.Equal("Id", key.Name);
+            Assert.Equal("Edm.Int32", key.Type.FullName());
+            IEdmProperty property = Assert.Single(entity.DeclaredProperties);
+            Assert.Same(key, property);
+
+            // complex
+            IEdmComplexType complex = Assert.Single(model.SchemaElements.OfType<IEdmComplexType>());
+            Assert.Equal("ComplexType", complex.Name);
+
+            property = Assert.Single(complex.DeclaredProperties);
+            Assert.Equal(EdmPropertyKind.Navigation, property.PropertyKind); // navigation property
+            EdmNavigationProperty navProperty = Assert.IsType<EdmNavigationProperty>(property);
+            Assert.Equal("NavProperty", navProperty.Name);
+            Assert.Equal(optional, navProperty.Type.IsNullable);
+            Assert.Same(entity, navProperty.Type.Definition);
+        }
+
+        [Fact]
+        public void ComplexType_Containing_EntityCollectionNavigation_Works()
+        {
+            // Arrange
+            MockType entityType = new MockType("EntityType").Property<int>("Id");
+            MockType complexType = new MockType("ComplexType").Property(entityType.AsCollection(), "CollectionProperty");
+
+            var modelBuilder = new ODataConventionModelBuilder();
+            modelBuilder.AddEntityType(entityType);
+            modelBuilder.AddComplexType(complexType);
+
+            // Act
+            IEdmModel model = modelBuilder.GetEdmModel();
+
+            // Assert
+            // entity
+            IEdmEntityType entity = Assert.Single(model.SchemaElements.OfType<IEdmEntityType>());
+            Assert.Equal("EntityType", entity.Name);
+            IEdmStructuralProperty key = Assert.Single(entity.DeclaredKey);
+            Assert.Equal("Id", key.Name);
+            Assert.Equal("Edm.Int32", key.Type.FullName());
+            IEdmProperty property = Assert.Single(entity.DeclaredProperties);
+            Assert.Same(key, property);
+
+            // complex
+            IEdmComplexType complex = Assert.Single(model.SchemaElements.OfType<IEdmComplexType>());
+            Assert.Equal("ComplexType", complex.Name);
+
+            property = Assert.Single(complex.DeclaredProperties);
+            Assert.Equal(EdmPropertyKind.Navigation, property.PropertyKind); // navigation property
+            EdmNavigationProperty navProperty = Assert.IsType<EdmNavigationProperty>(property);
+            Assert.Equal("CollectionProperty", navProperty.Name);
+            Assert.True(navProperty.Type.IsCollection());
+            Assert.Same(entity, navProperty.Type.AsCollection().ElementType().Definition);
         }
 
         [Fact]
@@ -2130,12 +2375,13 @@ namespace System.Web.OData.Builder.Conventions
         [Fact]
         public void ComplexTypes_In_Inheritance_AreFlattened()
         {
+            // Arrange
             MockType complexBase =
                 new MockType("ComplexBase")
                 .Property<int>("BaseProperty");
 
             MockType complexDerived =
-                new MockType("ComplexBase")
+                new MockType("ComplexDerived")
                 .BaseType(complexBase)
                 .Property<int>("DerivedProperty");
 
@@ -2146,11 +2392,14 @@ namespace System.Web.OData.Builder.Conventions
                 .Property(complexDerived, "ComplexDerived");
 
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            var entityType = builder.AddEntityType(entity);
+            builder.AddEntityType(entity);
 
+            // Act
             IEdmModel model = builder.GetEdmModel();
+
+            // Assert
             Assert.Equal(4, model.SchemaElements.Count());
-            var entityEdmType = model.AssertHasEntityType(entity);
+            model.AssertHasEntityType(entity);
 
             var complexBaseEdmType = model.AssertHasComplexType(complexBase);
             complexBaseEdmType.AssertHasPrimitiveProperty(model, "BaseProperty", EdmPrimitiveTypeKind.Int32, isNullable: false);
@@ -2481,8 +2730,8 @@ namespace System.Web.OData.Builder.Conventions
             IEdmEntityType entityType = model.AssertHasEntityType(typeof(QueryLimitEmployee));
             IEdmProperty property = Assert.Single(entityType.DeclaredProperties.Where(e => e.Name == "Address"));
 
-            Assert.True(EdmLibHelpers.IsNotFilterable(property, model));
-            Assert.True(EdmLibHelpers.IsNotSortable(property, model));
+            Assert.True(EdmLibHelpers.IsNotFilterable(property, null, null, model, true));
+            Assert.True(EdmLibHelpers.IsNotSortable(property, null, null, model, true));
         }
 
         [Fact]
@@ -3094,7 +3343,7 @@ namespace System.Web.OData.Builder.Conventions
         public string[] Aliases { get; set; }
     }
 
-    public class ProductWithETagAttribute
+    public class ProductWithConcurrencyCheckAttribute
     {
         public int ID { get; set; }
 

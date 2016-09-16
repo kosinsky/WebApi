@@ -39,8 +39,10 @@ namespace System.Web.OData.Test
         public void CreateResponseMessageAsync_Throws_IfResponsesAreNull()
         {
             DefaultODataBatchHandler batchHandler = new DefaultODataBatchHandler(new HttpServer());
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.EnableHttpDependencyInjectionSupport();
             Assert.ThrowsArgumentNull(
-                () => batchHandler.CreateResponseMessageAsync(null, new HttpRequestMessage(), CancellationToken.None).Wait(),
+                () => batchHandler.CreateResponseMessageAsync(null, request, CancellationToken.None).Wait(),
                 "responses");
         }
 
@@ -61,8 +63,10 @@ namespace System.Web.OData.Test
             {
                 new OperationResponseItem(new HttpResponseMessage(HttpStatusCode.OK))
             };
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.EnableHttpDependencyInjectionSupport();
 
-            HttpResponseMessage response = batchHandler.CreateResponseMessageAsync(responses, new HttpRequestMessage(), CancellationToken.None).Result;
+            HttpResponseMessage response = batchHandler.CreateResponseMessageAsync(responses, request, CancellationToken.None).Result;
 
             var batchContent = Assert.IsType<ODataBatchContent>(response.Content);
             Assert.Equal(1, batchContent.Responses.Count());
@@ -97,7 +101,7 @@ namespace System.Web.OData.Test
                     ODataBatchRequestHelper.CreateODataRequestContent(new HttpRequestMessage(HttpMethod.Get, "http://example.com/"))
                 }
             };
-            batchRequest.SetConfiguration(new HttpConfiguration());
+            batchRequest.EnableHttpDependencyInjectionSupport();
 
             // Act
             var response = batchHandler.ProcessBatchAsync(batchRequest, CancellationToken.None).Result;
@@ -155,8 +159,10 @@ namespace System.Web.OData.Test
                 }
             };
             var enableContinueOnErrorconfig = new HttpConfiguration();
+            enableContinueOnErrorconfig.EnableODataDependencyInjectionSupport();
             enableContinueOnErrorconfig.EnableContinueOnErrorHeader();
             batchRequest.SetConfiguration(enableContinueOnErrorconfig);
+            batchRequest.EnableHttpDependencyInjectionSupport();
             HttpRequestMessage batchRequestWithPrefContinueOnError = new HttpRequestMessage(HttpMethod.Post, "http://example.com/$batch")
             {
                 Content = new MultipartContent("mixed")
@@ -175,14 +181,11 @@ namespace System.Web.OData.Test
                     }),
                 }
             };
+            batchRequestWithPrefContinueOnError.EnableHttpDependencyInjectionSupport();
             if (enableContinueOnError)
             {
                 batchRequestWithPrefContinueOnError.SetConfiguration(enableContinueOnErrorconfig);
                 batchRequestWithPrefContinueOnError.Headers.Add("prefer", "odata.continue-on-error");
-            }
-            else
-            {
-                batchRequestWithPrefContinueOnError.SetConfiguration(new HttpConfiguration());
             }
 
             // Act
@@ -299,6 +302,7 @@ namespace System.Web.OData.Test
                     }
                 }
             };
+            batchRequest.EnableHttpDependencyInjectionSupport();
 
             IList<ODataBatchRequestItem> requests = batchHandler.ParseBatchRequestsAsync(batchRequest, CancellationToken.None).Result;
 
@@ -331,6 +335,7 @@ namespace System.Web.OData.Test
             batchRequest.Properties.Add("foo", "bar");
             batchRequest.SetRouteData(new HttpRouteData(new HttpRoute()));
             batchRequest.RegisterForDispose(new StringContent(String.Empty));
+            batchRequest.EnableHttpDependencyInjectionSupport();
 
             IList<ODataBatchRequestItem> requests = batchHandler.ParseBatchRequestsAsync(batchRequest, CancellationToken.None).Result;
 

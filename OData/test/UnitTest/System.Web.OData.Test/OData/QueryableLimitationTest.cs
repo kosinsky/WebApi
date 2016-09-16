@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
@@ -31,6 +32,8 @@ namespace System.Web.OData
             }.GetHttpConfiguration();
 
             _model = GetEdmModel();
+
+            _configuration.Count().OrderBy().Filter().Expand().MaxTop(null);
             _configuration.MapODataServiceRoute("odata", "odata", _model);
             HttpServer server = new HttpServer(_configuration);
             _client = new HttpClient(server);
@@ -60,7 +63,7 @@ namespace System.Web.OData
         public void QueryableLimitation_ExposedAsQueryCapabilitesVocabularyAnnotations_InMetadataDocument()
         {
             // Arrange
-            const string expect = @"<?xml version=""1.0"" encoding=""utf-8""?>
+            string expect = @"<?xml version=""1.0"" encoding=""utf-8""?>
 <edmx:Edmx Version=""4.0"" xmlns:edmx=""http://docs.oasis-open.org/odata/ns/edmx"">
   <edmx:DataServices>
     <Schema Namespace=""System.Web.OData"" xmlns=""http://docs.oasis-open.org/odata/ns/edm"">
@@ -183,6 +186,9 @@ namespace System.Web.OData
   </edmx:DataServices>
 </edmx:Edmx>";
 
+            // Remove indentation
+            expect = Regex.Replace(expect, @"\r\n\s*<", @"<");
+
             string requestUri = BaseAddress + "/odata/$metadata";
 
             // Act
@@ -191,7 +197,7 @@ namespace System.Web.OData
 
             // Assert
             // Remove the following condition after updating to ODL 6.13.
-            if (_model.FindValueTerm(CapabilitiesVocabularyConstants.CountRestrictions) != null)
+            if (_model.FindTerm(CapabilitiesVocabularyConstants.CountRestrictions) != null)
             {
                 Assert.Equal(expect, responseString);
             }

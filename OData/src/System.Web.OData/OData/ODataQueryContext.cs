@@ -9,15 +9,18 @@ using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
 using System.Web.OData.Query;
 using System.Web.OData.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData
 {
     /// <summary>
-    /// This defines some context information used to perform query composition. 
+    /// This defines some context information used to perform query composition.
     /// </summary>
     public class ODataQueryContext
     {
+        private DefaultQuerySettings _defaultQuerySettings;
+
         /// <summary>
         /// Constructs an instance of <see cref="ODataQueryContext"/> with <see cref="IEdmModel" />, element CLR type,
         /// and <see cref="ODataPath" />.
@@ -49,6 +52,7 @@ namespace System.Web.OData
             Model = model;
             Path = path;
             NavigationSource = GetNavigationSource(Model, ElementType, path);
+            GetPathContext();
         }
 
         /// <summary>
@@ -73,6 +77,7 @@ namespace System.Web.OData
             ElementType = elementType;
             Path = path;
             NavigationSource = GetNavigationSource(Model, ElementType, path);
+            GetPathContext();
         }
 
         internal ODataQueryContext(IEdmModel model, Type elementClrType)
@@ -83,6 +88,24 @@ namespace System.Web.OData
         internal ODataQueryContext(IEdmModel model, IEdmType elementType)
             : this(model, elementType, path: null)
         {
+        }
+
+        /// <summary>
+        /// Gets the given <see cref="DefaultQuerySettings"/>.
+        /// </summary>
+        public DefaultQuerySettings DefaultQuerySettings
+        {
+            get
+            {
+                if (_defaultQuerySettings == null)
+                {
+                    _defaultQuerySettings = RequestContainer != null
+                        ? RequestContainer.GetRequiredService<DefaultQuerySettings>()
+                        : new DefaultQuerySettings();
+                }
+
+                return _defaultQuerySettings;
+            }
         }
 
         /// <summary>
@@ -110,6 +133,17 @@ namespace System.Web.OData
         /// </summary>
         public ODataPath Path { get; private set; }
 
+        /// <summary>
+        /// Gets the request container.
+        /// </summary>
+        public IServiceProvider RequestContainer { get; internal set; }
+
+        internal IEdmProperty TargetProperty { get; private set; }
+
+        internal IEdmStructuredType TargetStructuredType { get; private set; }
+
+        internal string TargetName { get; private set; }
+
         private static IEdmNavigationSource GetNavigationSource(IEdmModel model, IEdmType elementType, ODataPath odataPath)
         {
             Contract.Assert(model != null);
@@ -131,6 +165,29 @@ namespace System.Web.OData
                 entityContainer.EntitySets().Where(e => e.EntityType() == elementType).ToList();
 
             return (matchedNavigationSources.Count != 1) ? null : matchedNavigationSources[0];
+        }
+
+        private void GetPathContext()
+        {
+            if (Path != null)
+            {
+                IEdmProperty property;
+                IEdmStructuredType structuredType;
+                string name;
+                EdmLibHelpers.GetPropertyAndStructuredTypeFromPath(
+                    Path.Segments,
+                    out property,
+                    out structuredType,
+                    out name);
+
+                TargetProperty = property;
+                TargetStructuredType = structuredType;
+                TargetName = name;
+            }
+            else
+            {
+                TargetStructuredType = ElementType as IEdmStructuredType;
+            }
         }
     }
 }

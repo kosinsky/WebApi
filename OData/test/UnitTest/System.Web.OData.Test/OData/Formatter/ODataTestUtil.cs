@@ -12,9 +12,9 @@ using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter.Deserialization;
 using System.Web.OData.Formatter.Serialization;
-using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Moq;
 
 namespace System.Web.OData.Formatter
@@ -65,13 +65,15 @@ namespace System.Web.OData.Formatter
                 color.Member(Color.Blue);
 
                 var people = model.EntitySet<FormatterPerson>("People");
-                people.HasFeedSelfLink(context => new Uri(context.Url.CreateODataLink(new EntitySetPathSegment(
-                    context.EntitySetBase))));
+
+                people.HasFeedSelfLink(context => new Uri(context.Url.CreateODataLink(new EntitySetSegment(
+                    context.EntitySetBase as IEdmEntitySet))));
                 people.HasIdLink(context =>
-                    {
+                {
+                    var keys = new[] {new KeyValuePair<string, object>("PerId", context.GetPropertyValue("PerId"))};
                         return new Uri(context.Url.CreateODataLink(
-                            new EntitySetPathSegment(context.NavigationSource as IEdmEntitySet),
-                            new KeyValuePathSegment(context.GetPropertyValue("PerId").ToString())));
+                            new EntitySetSegment(context.NavigationSource as IEdmEntitySet),
+                            new KeySegment(keys, context.StructuredType as IEdmEntityType, context.NavigationSource)));
                     },
                     followsConventions: false);
 
@@ -143,7 +145,7 @@ namespace System.Web.OData.Formatter
                 var president = model.Singleton<FormatterPerson>("President");
                 president.HasIdLink(context =>
                     {
-                        return new Uri(context.Url.CreateODataLink(new SingletonPathSegment((IEdmSingleton)context.NavigationSource)));
+                        return new Uri(context.Url.CreateODataLink(new SingletonSegment((IEdmSingleton)context.NavigationSource)));
                     },
                     followsConventions: false);
 
@@ -386,4 +388,45 @@ namespace System.Web.OData.Formatter
         [Timestamp]
         public DateTimeOffset Birthday { get; set; }
     }
+
+    #region Navigation property binding
+
+    public class BindingCustomer
+    {
+        public int Id { get; set; }
+
+        public BindingAddress Location { get; set; }
+
+        public BindingAddress Address { get; set; }
+
+        public IList<BindingAddress> Addresses { get; set; }
+    }
+
+    public class BindingVipCustomer : BindingCustomer
+    {
+        public BindingAddress VipLocation { get; set; }
+
+        public IList<BindingAddress> VipAddresses { get; set; }
+    }
+
+    public class BindingCity
+    {
+        public int Id { get; set; }
+    }
+
+    public class BindingAddress
+    {
+        public BindingCity City { get; set; }
+
+        public IList<BindingCity> Cities { get; set; }
+    }
+
+    public class BindingUsAddress : BindingAddress
+    {
+        public BindingCity UsCity { get; set; }
+
+        public ICollection<BindingCity> UsCities { get; set; }
+    }
+
+    #endregion
 }

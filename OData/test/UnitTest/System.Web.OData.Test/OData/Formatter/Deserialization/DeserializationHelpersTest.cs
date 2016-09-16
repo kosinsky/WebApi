@@ -6,9 +6,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Web.Http;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Microsoft.TestCommon.Types;
 using Moq;
@@ -268,7 +267,7 @@ namespace System.Web.OData.Formatter.Deserialization
                 EdmLibHelpers.GetEdmPrimitiveTypeReferenceOrNull(typeof(string))));
 
             EdmEntityTypeReference entityTypeReference = new EdmEntityTypeReference(entityType, isNullable: false);
-            ODataDeserializerProvider provider = new DefaultODataDeserializerProvider();
+            ODataDeserializerProvider provider = DependencyInjectionHelper.GetDefaultODataDeserializerProvider();
 
             var resource = new Mock<IDelta>(MockBehavior.Strict);
             Type propertyType = typeof(string);

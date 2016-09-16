@@ -14,12 +14,12 @@ using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
-using System.Web.OData.Routing;
 using System.Web.OData.TestCommon;
 using System.Web.OData.TestCommon.Models;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData
 {
@@ -32,7 +32,7 @@ namespace System.Web.OData
                 MethodInfo getDefaultValue = typeof(DeltaTest).GetMethod("GetDefaultValue");
 
                 var defaultValues = typeof(DeltaModel).GetProperties().Select(p => new[] { p.Name, getDefaultValue.MakeGenericMethod(p.PropertyType).Invoke(obj: null, parameters: null) });
-                return defaultValues.Concat(new object[][] 
+                return defaultValues.Concat(new object[][]
                 {
                     new object[] { "StringProperty" , "42" },
                     new object[] { "ComplexModelProperty", new ComplexModel { ComplexIntProperty = 42, ComplexNullableIntProperty = null } },
@@ -44,7 +44,7 @@ namespace System.Web.OData
         [Fact]
         public void Ctor_ThrowsArgumentNull_entityType()
         {
-            Assert.ThrowsArgumentNull(() => new Delta<Base>(entityType: null), "entityType");
+            Assert.ThrowsArgumentNull(() => new Delta<Base>(structuralType: null), "structuralType");
         }
 
         [Fact]
@@ -251,7 +251,7 @@ namespace System.Web.OData
         public void CanCreateDeltaOfDerivedTypes()
         {
             var delta = new Delta<Base>(typeof(Derived));
-            Assert.IsType(typeof(Derived), delta.GetEntity());
+            Assert.IsType(typeof(Derived), delta.GetInstance());
         }
 
         [Fact]
@@ -483,10 +483,9 @@ namespace System.Web.OData
                 IEdmEntitySet entitySet = model.EntityContainer.EntitySets().Single();
                 HttpConfiguration config = new HttpConfiguration();
                 config.MapODataServiceRoute("default", "", model);
-                request.ODataProperties().RouteName = "default";
                 request.SetConfiguration(config);
-                request.ODataProperties().Model = model;
-                request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment(entitySet));
+                request.EnableODataDependencyInjectionSupport("default");
+                request.ODataProperties().Path = new ODataPath(new EntitySetSegment(entitySet));
                 IEnumerable<MediaTypeFormatter> perRequestFormatters = odataFormatters.Select(
                     (f) => f.GetPerRequestFormatterInstance(typeof(Delta<DeltaModel>), request, null));
 
@@ -536,10 +535,9 @@ namespace System.Web.OData
                 IEdmEntitySet entitySet = model.EntityContainer.EntitySets().Single();
                 HttpConfiguration config = new HttpConfiguration();
                 config.MapODataServiceRoute("default", "", model);
-                request.ODataProperties().RouteName = "default";
                 request.SetConfiguration(config);
-                request.ODataProperties().Model = model;
-                request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment(entitySet));
+                request.EnableODataDependencyInjectionSupport("default");
+                request.ODataProperties().Path = new ODataPath(new EntitySetSegment(entitySet));
                 IEnumerable<MediaTypeFormatter> perRequestFormatters = odataFormatters.Select(
                     (f) => f.GetPerRequestFormatterInstance(typeof(Delta<DeltaModelWithAlias>), request, null));
 
@@ -564,7 +562,7 @@ namespace System.Web.OData
                 return new TheoryDataSet<Type>()
                 {
                     { typeof(Customer) },
-                    { typeof(BellevueCustomer) } 
+                    { typeof(BellevueCustomer) }
                 };
             }
         }
@@ -573,7 +571,7 @@ namespace System.Web.OData
         [PropertyData("TypedDelta_Returns_Correct_ExpectedClrType_And_ActualType_DataSet")]
         public void TypedDelta_Returns_Correct_ExpectedClrType_And_ActualType(Type actualType)
         {
-            // Arrange 
+            // Arrange
             TypedDelta delta = new Delta<Customer>(actualType);
 
             // Act

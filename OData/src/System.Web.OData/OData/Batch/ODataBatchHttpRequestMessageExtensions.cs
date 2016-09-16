@@ -12,10 +12,12 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Routing;
+using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
 using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 
 namespace System.Web.OData.Batch
 {
@@ -182,16 +184,14 @@ namespace System.Web.OData.Batch
             Contract.Assert(request != null);
 
             ODataVersion odataVersion = ODataMediaTypeFormatter.GetODataResponseVersion(request);
-            ODataMessageWriterSettings writerSettings = new ODataMessageWriterSettings()
-            {
-                Version = odataVersion,
-                Indent = true,
-                DisableMessageStreamDisposal = true,
-                MessageQuotas = messageQuotas
-            };
+            IServiceProvider requestContainer = request.GetRequestContainer();
+            ODataMessageWriterSettings writerSettings =
+                requestContainer.GetRequiredService<ODataMessageWriterSettings>();
+            writerSettings.Version = odataVersion;
+            writerSettings.MessageQuotas = messageQuotas;
 
             HttpResponseMessage response = request.CreateResponse(HttpStatusCode.OK);
-            response.Content = new ODataBatchContent(responses, writerSettings);
+            response.Content = new ODataBatchContent(responses, requestContainer);
             return Task.FromResult(response);
         }
 

@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -8,7 +11,7 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.OData;
 using System.Web.OData.Extensions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json.Linq;
 using Nuwa;
@@ -46,6 +49,7 @@ namespace WebStack.QA.Test.OData.UnboundOperation
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
             configuration.Routes.Clear();
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null).Select();
             configuration.MapODataServiceRoute("unboundFunctionConvention", "odata", UnboundFunctionEdmModel.GetEdmModel());
 
             configuration.EnsureInitialized();
@@ -293,7 +297,6 @@ namespace WebStack.QA.Test.OData.UnboundOperation
             ConventionCustomer expectCustomer = (new ConventionCustomersController()).GetConventionCustomerById(CustomerId); // expect customer instance
             Assert.NotNull(expectCustomer);
 
-
             // Act
             var requestUri = String.Format("{0}/odata/{1}?$filter=ID eq {2}", this.BaseAddress, functionImport, CustomerId);
             var response = await Client.GetAsync(requestUri);
@@ -362,7 +365,7 @@ namespace WebStack.QA.Test.OData.UnboundOperation
                 "{\"Street\":\"Zi Xin Rd.\",\"City\":\"Shanghai\",\"ZipCode\":\"2001100\"}",
                 "[{\"Street\":\"Zi Xin Rd.\",\"City\":\"Shanghai\",\"ZipCode\":\"2001100\"}]",
                 "{\"@odata.type\":\"%23{NAMESPACE}.ConventionCustomer\",\"ID\":7,\"Name\":\"Tony\"}",
-                "{\"value\":[{\"@odata.type\":\"%23{NAMESPACE}.ConventionCustomer\",\"ID\":7,\"Name\":\"Tony\"}]}"
+                "[{\"@odata.type\":\"%23{NAMESPACE}.ConventionCustomer\",\"ID\":7,\"Name\":\"Tony\"}]"
                 );
             requestUri = requestUri.Replace("{NAMESPACE}", EdmSchemaNamespace);
 

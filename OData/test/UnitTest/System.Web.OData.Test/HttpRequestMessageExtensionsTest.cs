@@ -3,79 +3,25 @@
 
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Net.Http.Headers;
 using System.Web.Http;
 using System.Web.Http.Hosting;
+using System.Web.OData;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using System.Web.OData.Formatter.Serialization.Models;
-using System.Web.OData.Routing;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
-using Moq;
 using ODataPath = System.Web.OData.Routing.ODataPath;
-using ODataPathSegment = System.Web.OData.Routing.ODataPathSegment;
 
 namespace System.Net.Http
 {
     public class HttpRequestMessageExtensionsTest
     {
-        [Fact]
-        public void ModelGetter_ReturnsNullByDefault()
-        {
-            HttpRequestMessage request = new HttpRequestMessage();
-            IEdmModel model = request.ODataProperties().Model;
-
-            Assert.Null(model);
-        }
-
-        [Fact]
-        public void ModelGetter_Returns_ModelSetter()
-        {
-            // Arrange
-            HttpRequestMessage request = new HttpRequestMessage();
-            IEdmModel model = new EdmModel();
-
-            // Act
-            request.ODataProperties().Model = model;
-            IEdmModel newModel = request.ODataProperties().Model;
-
-            // Assert
-            Assert.Same(model, newModel);
-        }
-
-        [Fact]
-        public void PathHandlerGetter_ReturnsDefaultPathHandlerByDefault()
-        {
-            HttpRequestMessage request = new HttpRequestMessage();
-            IEdmModel model = new EdmModel();
-            request.ODataProperties().Model = model;
-
-            var pathHandler = request.ODataProperties().PathHandler;
-
-            Assert.NotNull(pathHandler);
-            Assert.IsType<DefaultODataPathHandler>(pathHandler);
-        }
-
-        [Fact]
-        public void PathHandlerGetter_Returns_PathHandlerSetter()
-        {
-            HttpRequestMessage request = new HttpRequestMessage();
-            IODataPathHandler parser = new Mock<IODataPathHandler>().Object;
-
-            // Act
-            request.ODataProperties().PathHandler = parser;
-
-            // Assert
-            Assert.Same(parser, request.ODataProperties().PathHandler);
-        }
-
         [Theory]
         [InlineData(IncludeErrorDetailPolicy.Default, null, null, false)]
         [InlineData(IncludeErrorDetailPolicy.Default, null, true, true)]
@@ -262,20 +208,16 @@ namespace System.Net.Http
         public void GetETag_Returns_ETagInHeader()
         {
             // Arrange
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+
             HttpRequestMessage request = new HttpRequestMessage();
-            HttpConfiguration cofiguration = new HttpConfiguration();
-            request.SetConfiguration(cofiguration);
+            request.EnableHttpDependencyInjectionSupport(model.Model);
+
             Dictionary<string, object> properties = new Dictionary<string, object> { { "City", "Foo" } };
             EntityTagHeaderValue etagHeaderValue = new DefaultODataETagHandler().CreateETag(properties);
 
-            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
-
-            Mock<ODataPathSegment> mockSegment = new Mock<ODataPathSegment> { CallBase = true };
-            mockSegment.Setup(s => s.GetEdmType(null)).Returns(model.Customer);
-            mockSegment.Setup(s => s.GetNavigationSource(null)).Returns((IEdmNavigationSource)model.Customers);
-            ODataPath odataPath = new ODataPath(new[] { mockSegment.Object });
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(model.Customers));
             request.ODataProperties().Path = odataPath;
-            request.ODataProperties().Model = model.Model;
 
             // Act
             ETag result = request.GetETag(etagHeaderValue);
@@ -290,20 +232,16 @@ namespace System.Net.Http
         public void GetETagTEntity_Returns_ETagInHeader()
         {
             // Arrange
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+
             HttpRequestMessage request = new HttpRequestMessage();
-            HttpConfiguration cofiguration = new HttpConfiguration();
-            request.SetConfiguration(cofiguration);
+            request.EnableHttpDependencyInjectionSupport(model.Model);
+
             Dictionary<string, object> properties = new Dictionary<string, object> { { "City", "Foo" } };
             EntityTagHeaderValue etagHeaderValue = new DefaultODataETagHandler().CreateETag(properties);
 
-            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
-
-            Mock<ODataPathSegment> mockSegment = new Mock<ODataPathSegment> { CallBase = true };
-            mockSegment.Setup(s => s.GetEdmType(null)).Returns(model.Customer);
-            mockSegment.Setup(s => s.GetNavigationSource(null)).Returns((IEdmNavigationSource)model.Customers);
-            ODataPath odataPath = new ODataPath(new[] { mockSegment.Object });
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(model.Customers));
             request.ODataProperties().Path = odataPath;
-            request.ODataProperties().Model = model.Model;
 
             // Act
             ETag<Customer> result = request.GetETag<Customer>(etagHeaderValue);
@@ -382,18 +320,12 @@ namespace System.Net.Http
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<MyEtagCustomer>("Customers");
             IEdmModel model = builder.GetEdmModel();
-            IEdmEntityType customer = model.SchemaElements.OfType<IEdmEntityType>().FirstOrDefault(e => e.Name == "MyEtagCustomer");
             IEdmEntitySet customers = model.FindDeclaredEntitySet("Customers");
-            Mock<ODataPathSegment> mockSegment = new Mock<ODataPathSegment> { CallBase = true };
-            mockSegment.Setup(s => s.GetEdmType(null)).Returns(customer);
-            mockSegment.Setup(s => s.GetNavigationSource(null)).Returns(customers);
-            ODataPath odataPath = new ODataPath(new[] { mockSegment.Object });
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(customers));
 
             HttpRequestMessage request = new HttpRequestMessage();
-            HttpConfiguration cofiguration = new HttpConfiguration();
-            request.SetConfiguration(cofiguration);
+            request.EnableHttpDependencyInjectionSupport(model);
             request.ODataProperties().Path = odataPath;
-            request.ODataProperties().Model = model;
 
             // Act
             ETag result = request.GetETag(etagHeaderValue);
@@ -441,18 +373,11 @@ namespace System.Net.Http
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<MyEtagOrder>("Orders");
             IEdmModel model = builder.GetEdmModel();
-            IEdmEntityType order = model.SchemaElements.OfType<IEdmEntityType>().FirstOrDefault(e => e.Name == "MyEtagOrder");
             IEdmEntitySet orders = model.FindDeclaredEntitySet("Orders");
-            Mock<ODataPathSegment> mockSegment = new Mock<ODataPathSegment> { CallBase = true };
-            mockSegment.Setup(s => s.GetEdmType(null)).Returns(order);
-            mockSegment.Setup(s => s.GetNavigationSource(null)).Returns(orders);
-            ODataPath odataPath = new ODataPath(new[] { mockSegment.Object });
-
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(orders));
             HttpRequestMessage request = new HttpRequestMessage();
-            HttpConfiguration cofiguration = new HttpConfiguration();
-            request.SetConfiguration(cofiguration);
+            request.EnableHttpDependencyInjectionSupport(model);
             request.ODataProperties().Path = odataPath;
-            request.ODataProperties().Model = model;
 
             // Act
             ETag result = request.GetETag(etagHeaderValue);
@@ -485,6 +410,20 @@ namespace System.Net.Http
 
             [ConcurrencyCheck]
             public long LongVal { get; set; }
+        }
+
+        [Fact]
+        public void RequestContainer_Throws_WhenRouteNameIsNotSet()
+        {
+            // Arrange
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.SetConfiguration(new HttpConfiguration());
+
+            // Act
+            Action action = () => request.GetRequestContainer();
+
+            // Assert
+            Assert.Throws<InvalidOperationException>(action);
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -11,8 +14,8 @@ using System.Web.Http.Dispatcher;
 using System.Web.OData;
 using System.Web.OData.Batch;
 using System.Web.OData.Extensions;
+using Microsoft.OData;
 using Microsoft.OData.Client;
-using Microsoft.OData.Core;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json.Linq;
 using Nuwa;
@@ -70,6 +73,7 @@ namespace WebStack.QA.Test.OData.Containment
 
             configuration.Routes.Clear();
             HttpServer httpServer = configuration.GetHttpServer();
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null).Select();
             configuration
                 .MapODataServiceRoute(routeName: "convention",
                     routePrefix: "convention",
@@ -362,11 +366,9 @@ namespace WebStack.QA.Test.OData.Containment
                 var odataType = (string)premiumAccount["@odata.type"];
                 Assert.Equal("#WebStack.QA.Test.OData.Containment.PremiumAccount", odataType);
 
-                // bug: 1861	The navigation link of a containment navigation property should contain cast segment if the containing entity is actually a derived type.
-                //Assert.Equal(serviceRootUri + "/Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/PayinPIs", (string)premiumAccount["PayinPIs@odata.navigationLink"]);
+                Assert.Equal(serviceRootUri + "/Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/PayinPIs", (string)premiumAccount["PayinPIs@odata.navigationLink"]);
                 Assert.Equal(serviceRootUri + "/Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/PayinPIs/$ref", (string)premiumAccount["PayinPIs@odata.associationLink"]);
-                // bug: 1861	The navigation link of a containment navigation property should contain cast segment if the containing entity is actually a derived type.
-                //Assert.Equal(serviceRootUri + "/Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/PayoutPI", (string)premiumAccount["PayoutPI@odata.navigationLink"]);
+                Assert.Equal(serviceRootUri + "/Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/PayoutPI", (string)premiumAccount["PayoutPI@odata.navigationLink"]);
                 Assert.Equal(serviceRootUri + "/Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/PayoutPI/$ref", (string)premiumAccount["PayoutPI@odata.associationLink"]);
 
                 Assert.Equal(serviceRootUri + "/Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/GiftCard",
@@ -393,11 +395,11 @@ namespace WebStack.QA.Test.OData.Containment
                 Assert.Equal("#WebStack.QA.Test.OData.Containment.PaymentInstrument", (string)payinPIsOfPremiumAccont[0]["@odata.type"]);
 
                 var giftCard = premiumAccount["GiftCard"];
-                string expected = "Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/GiftCard";
+                string expected = "Accounts(200)/GiftCard";
                 string actual = (string)giftCard["@odata.editLink"];
                 Assert.True(expected == actual, string.Format("odata.editLink of GiftCard, exptected: {0}, actual: {1}, request url: {2}", expected, actual, requestUri));
 
-                expected = "Accounts(200)/WebStack.QA.Test.OData.Containment.PremiumAccount/GiftCard";
+                expected = "Accounts(200)/GiftCard";
                 actual = (string)giftCard["@odata.id"];
                 Assert.True(expected == actual, string.Format("odata.id link of GiftCard, exptected: {0}, actual: {1}, request url: {2}", expected, actual, requestUri));
 

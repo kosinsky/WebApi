@@ -7,11 +7,12 @@ using System.Net.Http;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
-using System.Web.OData.Routing;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter.Serialization
 {
@@ -25,7 +26,7 @@ namespace System.Web.OData.Formatter.Serialization
             // Arrange
             ODataMediaTypeFormatter formatter = CreateFormatter();
 
-            IEnumerable<Employee> collectionOfPerson = new Collection<Employee>() 
+            IEnumerable<Employee> collectionOfPerson = new Collection<Employee>()
             {
                 (Employee)TypeInitializer.GetInstance(SupportedTypes.Employee, 0),
                 (Employee)TypeInitializer.GetInstance(SupportedTypes.Employee, 1),
@@ -40,7 +41,7 @@ namespace System.Web.OData.Formatter.Serialization
 
         private ODataMediaTypeFormatter CreateFormatter()
         {
-            ODataMediaTypeFormatter formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.Feed });
+            ODataMediaTypeFormatter formatter = new ODataMediaTypeFormatter(new ODataPayloadKind[] { ODataPayloadKind.ResourceSet });
             formatter.Request = GetSampleRequest();
             formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadata);
             return formatter;
@@ -54,9 +55,8 @@ namespace System.Web.OData.Formatter.Serialization
             configuration.MapODataServiceRoute(routeName, null, GetSampleModel());
             request.SetConfiguration(configuration);
             IEdmEntitySet entitySet = _model.EntityContainer.FindEntitySet("employees");
-            request.ODataProperties().Model = _model;
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment(entitySet));
-            request.ODataProperties().RouteName = routeName;
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(entitySet));
+            request.EnableODataDependencyInjectionSupport(routeName);
             return request;
         }
 

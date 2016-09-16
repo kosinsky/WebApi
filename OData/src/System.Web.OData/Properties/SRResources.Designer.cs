@@ -223,7 +223,7 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cannot automatically bind the navigation property &apos;{0}&apos; on entity type &apos;{1}&apos; for the entity set or singleton &apos;{2}&apos; because there are two or more matching target entity sets or singletons. The matching entity sets or singletons are: {3}..
+        ///   Looks up a localized string similar to Cannot automatically bind the navigation property &apos;{0}&apos; on type &apos;{1}&apos; for the entity set or singleton &apos;{2}&apos; because there are two or more matching target entity sets or singletons. The matching entity sets or singletons are: {3}..
         /// </summary>
         internal static string CannotAutoCreateMultipleCandidates {
             get {
@@ -259,20 +259,11 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to An instance of the abstract complex type &apos;{0}&apos; was found. Abstract complex types cannot be instantiated..
+        ///   Looks up a localized string similar to An instance of the abstract resource type &apos;{0}&apos; was found. Abstract resource types cannot be instantiated..
         /// </summary>
-        internal static string CannotInstantiateAbstractComplexType {
+        internal static string CannotInstantiateAbstractResourceType {
             get {
-                return ResourceManager.GetString("CannotInstantiateAbstractComplexType", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to An instance of the abstract entity type &apos;{0}&apos; was found. Abstract entity types cannot be instantiated..
-        /// </summary>
-        internal static string CannotInstantiateAbstractEntityType {
-            get {
-                return ResourceManager.GetString("CannotInstantiateAbstractEntityType", resourceCulture);
+                return ResourceManager.GetString("CannotInstantiateAbstractResourceType", resourceCulture);
             }
         }
         
@@ -309,6 +300,15 @@ namespace System.Web.OData.Properties {
         internal static string CannotRedefineBaseTypeProperty {
             get {
                 return ResourceManager.GetString("CannotRedefineBaseTypeProperty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot re-enable dependency injection for HTTP routes..
+        /// </summary>
+        internal static string CannotReEnableDependencyInjection {
+            get {
+                return ResourceManager.GetString("CannotReEnableDependencyInjection", resourceCulture);
             }
         }
         
@@ -381,24 +381,6 @@ namespace System.Web.OData.Properties {
         internal static string CollectionShouldHaveClearMethod {
             get {
                 return ResourceManager.GetString("CollectionShouldHaveClearMethod", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cannot find the complex type &apos;{0}&apos; in the model..
-        /// </summary>
-        internal static string ComplexTypeNotInModel {
-            get {
-                return ResourceManager.GetString("ComplexTypeNotInModel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The complex type &apos;{0}&apos; refers to the entity type &apos;{1}&apos; through the property &apos;{2}&apos;..
-        /// </summary>
-        internal static string ComplexTypeRefersToEntityType {
-            get {
-                return ResourceManager.GetString("ComplexTypeRefersToEntityType", resourceCulture);
             }
         }
         
@@ -493,11 +475,20 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The name of dynamic property &apos;{0}&apos; was already used as the declared property name of open complex type &apos;{1}&apos;..
+        ///   Looks up a localized string similar to The name of dynamic property &apos;{0}&apos; was already used as the declared property name of open type &apos;{1}&apos;..
         /// </summary>
         internal static string DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName {
             get {
                 return ResourceManager.GetString("DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The type name of the dynamic resource set &apos;{0}&apos; is required and cannot be empty. Consider using a OData type annotation explicitly..
+        /// </summary>
+        internal static string DynamicResourceSetTypeNameIsRequired {
+            get {
+                return ResourceManager.GetString("DynamicResourceSetTypeNameIsRequired", resourceCulture);
             }
         }
         
@@ -552,6 +543,15 @@ namespace System.Web.OData.Properties {
         internal static string ElementClrTypeNull {
             get {
                 return ResourceManager.GetString("ElementClrTypeNull", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Key template value &apos;{0}&apos; for key segment &apos;{1}&apos; is empty..
+        /// </summary>
+        internal static string EmptyKeyTemplate {
+            get {
+                return ResourceManager.GetString("EmptyKeyTemplate", resourceCulture);
             }
         }
         
@@ -624,15 +624,6 @@ namespace System.Web.OData.Properties {
         internal static string EntityTypeMismatch {
             get {
                 return ResourceManager.GetString("EntityTypeMismatch", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cannot find the entity type &apos;{0}&apos; in the model..
-        /// </summary>
-        internal static string EntityTypeNotInModel {
-            get {
-                return ResourceManager.GetString("EntityTypeNotInModel", resourceCulture);
             }
         }
         
@@ -889,6 +880,15 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The given untyped value &apos;{0}&apos; in payload is invalid. Consider using a OData type annotation explicitly..
+        /// </summary>
+        internal static string InvalidODataUntypedValue {
+            get {
+                return ResourceManager.GetString("InvalidODataUntypedValue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The URI segment &apos;{0}&apos; is invalid after the segment &apos;{1}&apos;..
         /// </summary>
         internal static string InvalidPathSegment {
@@ -952,6 +952,15 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Key template value &apos;{0}&apos; for key segment &apos;{1}&apos; does not start with &apos;{{&apos; or ends with &apos;}}&apos;..
+        /// </summary>
+        internal static string KeyTemplateMustBeInCurlyBraces {
+            get {
+                return ResourceManager.GetString("KeyTemplateMustBeInCurlyBraces", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Key property &apos;{0}&apos; of type &apos;{1}&apos; is null. Key properties cannot have null values..
         /// </summary>
         internal static string KeyValueCannotBeNull {
@@ -1006,11 +1015,11 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The provided mapping does not contain an entry for the entity type &apos;{0}&apos;..
+        ///   Looks up a localized string similar to The provided mapping does not contain a resource for the resource type &apos;{0}&apos;..
         /// </summary>
-        internal static string MappingDoesNotContainEntityType {
+        internal static string MappingDoesNotContainResourceType {
             get {
-                return ResourceManager.GetString("MappingDoesNotContainEntityType", resourceCulture);
+                return ResourceManager.GetString("MappingDoesNotContainResourceType", resourceCulture);
             }
         }
         
@@ -1024,7 +1033,7 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The request includes a $expand path which is too deep. The maximum depth allowed is {0}. To increase the limit, set the &apos;{1}&apos; property on EnableQueryAttribute or ODataValidationSettings..
+        ///   Looks up a localized string similar to The request includes a $expand path which is too deep. The maximum depth allowed is {0}. To increase the limit, set the &apos;{1}&apos; property on EnableQueryAttribute or ODataValidationSettings, or set the &apos;MaxDepth&apos; property in ExpandAttribute..
         /// </summary>
         internal static string MaxExpandDepthExceeded {
             get {
@@ -1096,20 +1105,20 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to More than one Operation called &apos;{0}&apos; was found. Try using the other RemoveOperation override..
+        /// </summary>
+        internal static string MoreThanOneOperationFound {
+            get {
+                return ResourceManager.GetString("MoreThanOneOperationFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Found more than one action with name &apos;{0}&apos; bound to the same type &apos;{1}&apos;. Each bound action must have a different binding type or name..
         /// </summary>
         internal static string MoreThanOneOverloadActionBoundToSameTypeFound {
             get {
                 return ResourceManager.GetString("MoreThanOneOverloadActionBoundToSameTypeFound", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to More than one Procedure called &apos;{0}&apos; was found. Try using the other RemoveProcedure override..
-        /// </summary>
-        internal static string MoreThanOneProcedureFound {
-            get {
-                return ResourceManager.GetString("MoreThanOneProcedureFound", resourceCulture);
             }
         }
         
@@ -1222,11 +1231,29 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cannot find navigation property &apos;{0}&apos; on the entity type &apos;{1}&apos;..
+        ///   Looks up a localized string similar to The navigation property binding path &apos;{0}&apos; is not valid. The last segment must be the navigation property &apos;{1}&apos;..
         /// </summary>
-        internal static string NavigationPropertyNotfound {
+        internal static string NavigationPropertyBindingPathIsNotValid {
             get {
-                return ResourceManager.GetString("NavigationPropertyNotfound", resourceCulture);
+                return ResourceManager.GetString("NavigationPropertyBindingPathIsNotValid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The type &apos;{0}&apos; of the binding type cast segment &apos;{1}&apos; is not a part of the type &apos;{2}&apos; hierarchy..
+        /// </summary>
+        internal static string NavigationPropertyBindingPathNotInHierarchy {
+            get {
+                return ResourceManager.GetString("NavigationPropertyBindingPathNotInHierarchy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The navigation property binding path segment &apos;{0}&apos; of member type &apos;{1}&apos; is not supported..
+        /// </summary>
+        internal static string NavigationPropertyBindingPathNotSupported {
+            get {
+                return ResourceManager.GetString("NavigationPropertyBindingPathNotSupported", resourceCulture);
             }
         }
         
@@ -1276,6 +1303,15 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cannot find nested property &apos;{0}&apos; on the resource type &apos;{1}&apos;..
+        /// </summary>
+        internal static string NestedPropertyNotfound {
+            get {
+                return ResourceManager.GetString("NestedPropertyNotfound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to No key name was found at {0} in segment &apos;{1}&apos;..
         /// </summary>
         internal static string NoKeyNameFoundInSegment {
@@ -1308,6 +1344,15 @@ namespace System.Web.OData.Properties {
         internal static string NonNullUriRequiredForMediaTypeMapping {
             get {
                 return ResourceManager.GetString("NonNullUriRequiredForMediaTypeMapping", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No non-OData HTTP route registered..
+        /// </summary>
+        internal static string NoNonODataHttpRouteRegistered {
+            get {
+                return ResourceManager.GetString("NoNonODataHttpRouteRegistered", resourceCulture);
             }
         }
         
@@ -1375,6 +1420,15 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The entity set &apos;{0}&apos; cannot be used for $count..
+        /// </summary>
+        internal static string NotCountableEntitySetUsedForCount {
+            get {
+                return ResourceManager.GetString("NotCountableEntitySetUsedForCount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The property &apos;{0}&apos; cannot be used for $count..
         /// </summary>
         internal static string NotCountablePropertyUsedForCount {
@@ -1411,6 +1465,15 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The property &apos;{0}&apos; cannot be used in the $select query option..
+        /// </summary>
+        internal static string NotSelectablePropertyUsedInSelect {
+            get {
+                return ResourceManager.GetString("NotSelectablePropertyUsedInSelect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The property &apos;{0}&apos; cannot be used in the $orderby query option..
         /// </summary>
         internal static string NotSortablePropertyUsedInOrderBy {
@@ -1438,6 +1501,24 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The container built by the container builder must not be null..
+        /// </summary>
+        internal static string NullContainer {
+            get {
+                return ResourceManager.GetString("NullContainer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The container builder created by the container builder factory must not be null..
+        /// </summary>
+        internal static string NullContainerBuilder {
+            get {
+                return ResourceManager.GetString("NullContainerBuilder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Collections cannot contain null elements..
         /// </summary>
         internal static string NullElementInCollection {
@@ -1452,6 +1533,15 @@ namespace System.Web.OData.Properties {
         internal static string NullETagHandler {
             get {
                 return ResourceManager.GetString("NullETagHandler", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Type verification failed. Expected non-nullable type &apos;{0}&apos; but received a null value..
+        /// </summary>
+        internal static string NullOnNonNullableFunctionParameter {
+            get {
+                return ResourceManager.GetString("NullOnNonNullableFunctionParameter", resourceCulture);
             }
         }
         
@@ -1488,6 +1578,33 @@ namespace System.Web.OData.Properties {
         internal static string ODataPathNotFound {
             get {
                 return ResourceManager.GetString("ODataPathNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid EntitySetPath detected. &apos;{0}&apos; is not a valid entity set path for operation &apos;{1}&apos;..
+        /// </summary>
+        internal static string OperationHasInvalidEntitySetPath {
+            get {
+                return ResourceManager.GetString("OperationHasInvalidEntitySetPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The operation import segment must be a function import segment..
+        /// </summary>
+        internal static string OperationImportSegmentMustBeFunction {
+            get {
+                return ResourceManager.GetString("OperationImportSegmentMustBeFunction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The operation segment must be a function segment..
+        /// </summary>
+        internal static string OperationSegmentMustBeFunction {
+            get {
+                return ResourceManager.GetString("OperationSegmentMustBeFunction", resourceCulture);
             }
         }
         
@@ -1542,15 +1659,6 @@ namespace System.Web.OData.Properties {
         internal static string ParameterTypeIsNotCollection {
             get {
                 return ResourceManager.GetString("ParameterTypeIsNotCollection", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Invalid EntitySetPath detected. &apos;{0}&apos; is not a valid entity set path for procedure &apos;{1}&apos;..
-        /// </summary>
-        internal static string ProcedureHasInvalidEntitySetPath {
-            get {
-                return ResourceManager.GetString("ProcedureHasInvalidEntitySetPath", resourceCulture);
             }
         }
         
@@ -1762,6 +1870,15 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to A request container already exists on the request..
+        /// </summary>
+        internal static string RequestContainerAlreadyExists {
+            get {
+                return ResourceManager.GetString("RequestContainerAlreadyExists", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Request message does not contain an HttpConfiguration object..
         /// </summary>
         internal static string RequestMustContainConfiguration {
@@ -1771,7 +1888,7 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The request must have an associated EDM model. Consider using the extension method HttpConfiguration.Routes.MapODataServiceRoute to register a route that parses the OData URI and attaches the model information..
+        ///   Looks up a localized string similar to The request must have an associated EDM model. Consider using the extension method HttpConfiguration.MapODataServiceRoute to register a route that parses the OData URI and attaches the model information..
         /// </summary>
         internal static string RequestMustHaveModel {
             get {
@@ -1803,6 +1920,15 @@ namespace System.Web.OData.Properties {
         internal static string RequestUriTooShortForODataPath {
             get {
                 return ResourceManager.GetString("RequestUriTooShortForODataPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot find the resource type &apos;{0}&apos; in the model..
+        /// </summary>
+        internal static string ResourceTypeNotInModel {
+            get {
+                return ResourceManager.GetString("ResourceTypeNotInModel", resourceCulture);
             }
         }
         
@@ -1987,20 +2113,20 @@ namespace System.Web.OData.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} is not a collection of type {1}. Only entity collections are supported..
-        /// </summary>
-        internal static string TypeMustBeEntityCollection {
-            get {
-                return ResourceManager.GetString("TypeMustBeEntityCollection", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to The type &apos;{0}&apos; must be an enum or Nullable&lt;T&gt; where T is an enum type..
         /// </summary>
         internal static string TypeMustBeEnumOrNullableEnum {
             get {
                 return ResourceManager.GetString("TypeMustBeEnumOrNullableEnum", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} is not a resource set type. Only resource set are supported..
+        /// </summary>
+        internal static string TypeMustBeResourceSet {
+            get {
+                return ResourceManager.GetString("TypeMustBeResourceSet", resourceCulture);
             }
         }
         

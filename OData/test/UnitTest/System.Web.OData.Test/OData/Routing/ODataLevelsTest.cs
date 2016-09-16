@@ -10,7 +10,7 @@ using System.Web.Http.Results;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Query;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
@@ -25,6 +25,7 @@ namespace System.Web.OData.Routing
         {
             IEdmModel model = GetEdmModel();
             HttpConfiguration configuration = new[] { typeof(LevelsEntitiesController) }.GetHttpConfiguration();
+            configuration.Count().OrderBy().Filter().Expand().MaxTop(null).Select();
             configuration.MapODataServiceRoute("odata", "odata", model);
             var server = new HttpServer(configuration);
             _client = new HttpClient(server);
@@ -65,7 +66,7 @@ namespace System.Web.OData.Routing
             Assert.Equal(
                 "The query specified in the URI is not valid. The request includes a $expand path which is too deep. " +
                 "The maximum depth allowed is 5. To increase the limit, set the 'MaxExpansionDepth' property on " +
-                "EnableQueryAttribute or ODataValidationSettings.",
+                "EnableQueryAttribute or ODataValidationSettings, or set the 'MaxDepth' property in ExpandAttribute.",
                 result);
         }
 

@@ -1,13 +1,16 @@
-﻿using System.Collections.Generic;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
 using System.Web.OData.Routing;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace WebStack.QA.Test.OData.Swagger
 {
     public class SwaggerPathSegment : ODataPathSegment
     {
         /// <inheritdoc/>
-        public override string SegmentKind
+        public virtual string SegmentKind
         {
             get
             {
@@ -16,27 +19,28 @@ namespace WebStack.QA.Test.OData.Swagger
         }
 
         /// <inheritdoc/>
-        public override IEdmType GetEdmType(IEdmType previousEdmType)
-        {
-            return null;
-        }
-
-        /// <inheritdoc/>
-        public override IEdmNavigationSource GetNavigationSource(IEdmNavigationSource previousNavigationSource)
-        {
-            return null;
-        }
-
-        /// <inheritdoc/>
         public override string ToString()
         {
             return "$swagger";
         }
 
-        /// <inheritdoc/>
-        public override bool TryMatch(ODataPathSegment pathSegment, IDictionary<string, object> values)
+        public override T TranslateWith<T>(PathSegmentTranslator<T> translator)
         {
-            return pathSegment.SegmentKind == "$swagger" || pathSegment.SegmentKind == "swagger.json";
+            return default(T);
+        }
+
+        public override void HandleWith(PathSegmentHandler handler)
+        {
+            ODataPathSegmentHandler pathSegmentHandler = handler as ODataPathSegmentHandler;
+            if (pathSegmentHandler != null)
+            {
+                pathSegmentHandler.Handle(this);
+            }
+        }
+
+        public override IEdmType EdmType
+        {
+            get { return null; }
         }
     }
 }

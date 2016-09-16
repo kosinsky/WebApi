@@ -13,7 +13,7 @@ using System.Web.Http;
 using System.Web.Http.Routing;
 using System.Web.OData.Batch;
 using System.Web.OData.Extensions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.TestCommon;
 
 namespace System.Web.OData.Test
@@ -42,8 +42,10 @@ namespace System.Web.OData.Test
         public void CreateResponseMessageAsync_Throws_IfResponsesAreNull()
         {
             UnbufferedODataBatchHandler batchHandler = new UnbufferedODataBatchHandler(new HttpServer());
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.EnableHttpDependencyInjectionSupport();
             Assert.ThrowsArgumentNull(
-                () => batchHandler.CreateResponseMessageAsync(null, new HttpRequestMessage(), CancellationToken.None).Wait(),
+                () => batchHandler.CreateResponseMessageAsync(null, request, CancellationToken.None).Wait(),
                 "responses");
         }
 
@@ -80,7 +82,7 @@ namespace System.Web.OData.Test
                     }
                 }
             };
-            batchRequest.SetConfiguration(new HttpConfiguration());
+            batchRequest.EnableHttpDependencyInjectionSupport();
 
             // Act
             var response = batchHandler.ProcessBatchAsync(batchRequest, CancellationToken.None).Result;
@@ -125,7 +127,7 @@ namespace System.Web.OData.Test
                     }
                 }
             };
-            batchRequest.SetConfiguration(new HttpConfiguration());
+            batchRequest.EnableHttpDependencyInjectionSupport();
 
             // Act
             var response = batchHandler.ProcessBatchAsync(batchRequest, CancellationToken.None).Result;
@@ -166,7 +168,7 @@ namespace System.Web.OData.Test
                     }
                 }
             };
-            batchRequest.SetConfiguration(new HttpConfiguration());
+            batchRequest.EnableHttpDependencyInjectionSupport();
 
             // Act & Assert
             Assert.Throws<InvalidOperationException>(
@@ -224,8 +226,10 @@ namespace System.Web.OData.Test
                 }
             };
             var enableContinueOnErrorconfig = new HttpConfiguration();
+            enableContinueOnErrorconfig.EnableODataDependencyInjectionSupport();
             enableContinueOnErrorconfig.EnableContinueOnErrorHeader();
             batchRequest.SetConfiguration(enableContinueOnErrorconfig);
+            batchRequest.EnableHttpDependencyInjectionSupport();
             HttpRequestMessage batchRequestWithPrefContinueOnError = new HttpRequestMessage(HttpMethod.Post, "http://example.com/$batch")
             {
                 Content = new MultipartContent("mixed")
@@ -244,14 +248,11 @@ namespace System.Web.OData.Test
                     }),
                 }
             };
+            batchRequestWithPrefContinueOnError.EnableHttpDependencyInjectionSupport();
             if (enableContinueOnError)
             {
                 batchRequestWithPrefContinueOnError.SetConfiguration(enableContinueOnErrorconfig);
                 batchRequestWithPrefContinueOnError.Headers.Add("prefer", "odata.continue-on-error");
-            }
-            else
-            {
-                batchRequestWithPrefContinueOnError.SetConfiguration(new HttpConfiguration());
             }
 
             // Act

@@ -1,10 +1,15 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
-using System.Web.OData.Routing;
+using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Nuwa;
 using WebStack.QA.Test.OData.Common;
 using WebStack.QA.Test.OData.Common.Controllers;
@@ -79,8 +84,8 @@ namespace WebStack.QA.Test.OData.ModelBuilder
                     object id;
                     ctx.EdmObject.TryGetPropertyValue("ID", out id);
                     return new Uri(ctx.Url.CreateODataLink(
-                                    new EntitySetPathSegment("ConditionalLinkGeneration_Products"),
-                                    new KeyValuePathSegment(id.ToString())));
+                                    new EntitySetSegment(ctx.NavigationSource as IEdmEntitySet),
+                                    new KeySegment(new[] {new KeyValuePair<string, object>("Id", id)}, ctx.StructuredType as IEdmEntityType, null)));
                 },
                 true);
 

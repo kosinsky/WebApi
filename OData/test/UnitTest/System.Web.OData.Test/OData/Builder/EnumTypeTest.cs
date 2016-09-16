@@ -10,9 +10,7 @@ using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Formatter;
 using System.Web.OData.TestCommon;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Annotations;
-using Microsoft.OData.Edm.Expressions;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.Edm.Vocabularies;
 using Microsoft.OData.Edm.Vocabularies.V1;
 using Microsoft.TestCommon;
 using Microsoft.TestCommon.Types;
@@ -232,16 +230,23 @@ namespace System.Web.OData.Builder
             var builder = ODataModelBuilderMocks.GetModelBuilderMock<ODataModelBuilder>().Add_Color_EnumType();
             var entityTypeConfiguration = builder.EntityType<EntityTypeWithEnumTypePropertyTestModel>();
             entityTypeConfiguration.EnumProperty(c => c.RequiredColor).IsOptional().IsConcurrencyToken();
+            builder.EntitySet<EntityTypeWithEnumTypePropertyTestModel>("EntitySet");
 
             // Act
             var model = builder.GetEdmModel();
             var complexType = model.SchemaElements.OfType<IEdmStructuredType>().Single();
-            IEdmStructuralProperty requiredColor = complexType.Properties().SingleOrDefault(p => p.Name == "RequiredColor") as IEdmStructuralProperty;
+            IEdmStructuralProperty requiredColor =
+                complexType.Properties().SingleOrDefault(p => p.Name == "RequiredColor") as IEdmStructuralProperty;
+            IEdmEntitySet entitySet = model.EntityContainer.FindEntitySet("EntitySet");
 
             // Assert
             Assert.NotNull(requiredColor);
             Assert.True(requiredColor.Type.IsNullable);
-            Assert.Equal(EdmConcurrencyMode.Fixed, requiredColor.ConcurrencyMode);
+
+            Assert.NotNull(entitySet);
+            IEnumerable<IEdmStructuralProperty> currencyProperties = model.GetConcurrencyProperties(entitySet);
+            IEdmStructuralProperty currencyProperty = Assert.Single(currencyProperties);
+            Assert.Same(requiredColor, currencyProperty);
         }
 
         [Fact]
@@ -260,8 +265,8 @@ namespace System.Web.OData.Builder
             var entityset = model.FindDeclaredEntitySet("EnumEntities");
             Assert.NotNull(entityset);
 
-            var annotations = model.FindVocabularyAnnotations<IEdmValueAnnotation>(entityset, CoreVocabularyModel.ConcurrencyTerm);
-            IEdmValueAnnotation concurrencyAnnotation = Assert.Single(annotations);
+            var annotations = model.FindVocabularyAnnotations<IEdmVocabularyAnnotation>(entityset, CoreVocabularyModel.ConcurrencyTerm);
+            IEdmVocabularyAnnotation concurrencyAnnotation = Assert.Single(annotations);
 
             IEdmCollectionExpression properties = concurrencyAnnotation.Value as IEdmCollectionExpression;
             Assert.NotNull(properties);
@@ -270,7 +275,7 @@ namespace System.Web.OData.Builder
             var element = properties.Elements.First() as IEdmPathExpression;
             Assert.NotNull(element);
 
-            string path = Assert.Single(element.Path);
+            string path = Assert.Single(element.PathSegments);
             Assert.Equal("RequiredColor", path);
         }
 
@@ -1076,11 +1081,24 @@ namespace System.Web.OData.Builder
             // Assert
             IEdmEnumType enumType = model.SchemaElements.OfType<IEdmEnumType>().Single();
             Assert.NotNull(enumType);
-            Assert.Equal(2, enumType.Members.Count());
+            Assert.Equal(3, enumType.Members.Count());
             Assert.Equal("Feelings", enumType.Name);
             Assert.Equal("Test", enumType.Namespace);
             Assert.True(enumType.Members.Any(m => m.Name.Equals("happy")));
             Assert.True(enumType.Members.Any(m => m.Name.Equals("sad")));
+            Assert.True(enumType.Members.Any(m => m.Name.Equals("KeepDefaultName")));
+        }
+
+        [Fact]
+        public void ODataConventionModelBuilder_DataContractAttribute_AllowsReferencingSameEnumTwice()
+        {
+            // Arrange
+            var builder = new ODataConventionModelBuilder();
+            builder.EnumType<Life>();
+        
+            // Act
+            builder.EnumType<Life>();
+            IEdmModel model = builder.GetEdmModel();
         }
 
         [Fact]
@@ -1097,12 +1115,13 @@ namespace System.Web.OData.Builder
             // Assert
             IEdmEnumType enumType = model.SchemaElements.OfType<IEdmEnumType>().Single();
             Assert.NotNull(enumType);
-            Assert.Equal(3, enumType.Members.Count());
+            Assert.Equal(4, enumType.Members.Count());
             Assert.Equal("Feelings", enumType.Name);
             Assert.Equal("Test", enumType.Namespace);
             Assert.True(enumType.Members.Any(m => m.Name.Equals("happy")));
             Assert.True(enumType.Members.Any(m => m.Name.Equals("sad")));
             Assert.True(enumType.Members.Any(m => m.Name.Equals("JustSoSo")));
+            Assert.True(enumType.Members.Any(m => m.Name.Equals("KeepDefaultName")));
         }
 
         private IEdmStructuredType AddComplexTypeWithODataConventionModelBuilder()
@@ -1172,6 +1191,8 @@ namespace System.Web.OData.Builder
         Happy = 1,
         [EnumMember(Value = "sad")]
         Sad = 2,
-        JustSoSo = 3
+        JustSoSo = 3,
+        [EnumMember]
+        KeepDefaultName
     }
 }

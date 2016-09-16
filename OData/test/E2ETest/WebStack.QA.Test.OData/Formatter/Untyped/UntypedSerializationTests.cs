@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +16,7 @@ using System.Web.OData.Query;
 using System.Web.OData.Routing;
 using System.Web.OData.Routing.Conventions;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Newtonsoft.Json.Linq;
 using Nuwa;
 using WebStack.QA.Common.XUnit;
@@ -54,6 +57,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
         {
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
             configuration.Formatters.JsonFormatter.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null).Select();
             configuration.MapODataServiceRoute("untyped", "untyped", GetEdmModel(), new DefaultODataPathHandler(), ODataRoutingConventions.CreateDefault());
         }
 
@@ -139,6 +143,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
             request.Content = new StringContent(untypedCustomer.ToString());
             request.Content.Headers.ContentType = MediaTypeWithQualityHeaderValue.Parse("application/json");
             HttpResponseMessage response = Client.SendAsync(request).Result;
+            Console.WriteLine(response.Content.ReadAsStringAsync().Result);
             Assert.True(response.IsSuccessStatusCode);
 
             HttpRequestMessage getRequest = new HttpRequestMessage(HttpMethod.Get, string.Format("{0}{1}({2})?$expand=Orders", BaseAddress, url, i));
@@ -215,7 +220,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
         {
             get
             {
-                return Request.ODataProperties().Model.FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedCustomer") as IEdmEntityType;
+                return Request.GetModel().FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedCustomer") as IEdmEntityType;
             }
         }
 
@@ -223,7 +228,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
         {
             get
             {
-                return Request.ODataProperties().Model.FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedOrder") as IEdmEntityType;
+                return Request.GetModel().FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedOrder") as IEdmEntityType;
             }
         }
 
@@ -231,7 +236,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
         {
             get
             {
-                return Request.ODataProperties().Model.FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedAddress") as IEdmComplexType;
+                return Request.GetModel().FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedAddress") as IEdmComplexType;
             }
         }
 
@@ -265,7 +270,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
                 return BadRequest("The key isn't the one posted to the customer");
             }
 
-            ODataQueryContext context = new ODataQueryContext(Request.ODataProperties().Model, CustomerType, path: null);
+            ODataQueryContext context = new ODataQueryContext(Request.GetModel(), CustomerType, path: null);
             ODataQueryOptions query = new ODataQueryOptions(context, Request);
             if (query.SelectExpand != null)
             {
@@ -283,7 +288,10 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
             postedCustomer = customer;
             object id;
             customer.TryGetPropertyValue("Id", out id);
-            return Created(Url.CreateODataLink(new EntitySetPathSegment("UntypedCustomer"), new KeyValuePathSegment(id.ToString())), customer);
+
+            IEdmEntitySet entitySet = Request.GetModel().EntityContainer.FindEntitySet("UntypedCustomers");
+            return Created(Url.CreateODataLink(new EntitySetSegment(entitySet),
+                new KeySegment(new[] {new KeyValuePair<string, object>("Id", id)}, entitySet.EntityType(), null)), customer);
         }
 
         public IHttpActionResult PrimitiveCollection()
@@ -388,6 +396,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
             return address;
         }
     }
+
     public class UntypedCustomer
     {
         public int Id { get; set; }

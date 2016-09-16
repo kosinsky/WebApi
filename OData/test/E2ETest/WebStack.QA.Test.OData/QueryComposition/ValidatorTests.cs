@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -6,9 +9,11 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Web.Http;
 using System.Web.OData;
+using System.Web.OData.Extensions;
 using System.Web.OData.Query;
 using System.Web.OData.Query.Validators;
-using Microsoft.OData.Core;
+using Microsoft.OData;
+using Microsoft.OData.UriParser;
 using Nuwa;
 using WebStack.QA.Common.XUnit;
 using WebStack.QA.Test.OData.Common;
@@ -118,7 +123,10 @@ namespace WebStack.QA.Test.OData.QueryComposition
         {
             if (options.Filter != null)
             {
-                options.Filter.Validator = new CustomFilterValidator();
+                options.Filter.Validator = new CustomFilterValidator(new DefaultQuerySettings
+                {
+                    EnableFilter = true
+                });
             }
             try
             {
@@ -137,7 +145,12 @@ namespace WebStack.QA.Test.OData.QueryComposition
     {
         private bool visited = false;
 
-        public override void ValidateSingleValuePropertyAccessNode(Microsoft.OData.Core.UriParser.Semantic.SingleValuePropertyAccessNode propertyAccessNode, ODataValidationSettings settings)
+        public CustomFilterValidator(DefaultQuerySettings defaultQuerySettings)
+            :base(defaultQuerySettings)
+        {
+        }
+
+        public override void ValidateSingleValuePropertyAccessNode(SingleValuePropertyAccessNode propertyAccessNode, ODataValidationSettings settings)
         {
             if (propertyAccessNode.Property.Name == "ID")
             {
@@ -169,7 +182,7 @@ namespace WebStack.QA.Test.OData.QueryComposition
                     MaxSkip = 10,
                     AllowedQueryOptions = AllowedQueryOptions.Top | AllowedQueryOptions.OrderBy | AllowedQueryOptions.Filter,
                     AllowedLogicalOperators = AllowedLogicalOperators.Not | AllowedLogicalOperators.Equal | AllowedLogicalOperators.GreaterThan | AllowedLogicalOperators.And | AllowedLogicalOperators.Or,
-                    AllowedFunctions = AllowedFunctions.AllMathFunctions | AllowedFunctions.SubstringOf | AllowedFunctions.AllDateTimeFunctions,
+                    AllowedFunctions = AllowedFunctions.AllMathFunctions | AllowedFunctions.Contains | AllowedFunctions.AllDateTimeFunctions,
                     AllowedArithmeticOperators = AllowedArithmeticOperators.Add | AllowedArithmeticOperators.Subtract
                 };
                 commonSettings.AllowedOrderByProperties.Add("ID");
@@ -179,9 +192,9 @@ namespace WebStack.QA.Test.OData.QueryComposition
                 set.Add(commonSettings, "$top=10", true);
                 set.Add(commonSettings, "$top=11", false);
                 set.Add(commonSettings, new AttackStringBuilder().Append("$filter=").Repeat("not ", 50).Append("(1 mul 1 eq 1)").ToString(), false);
-                set.Add(commonSettings, "$top=10&$orderby=ID,DateTime&$filter=contains(Name, 'Test') and (DateTime gt 2012-12-04 or 1 add 1 eq 2) and floor(Double) gt 5", true);
-                set.Add(commonSettings, "$top=10&$orderby=ID,DateTime&$filter=contains(Name, 'Test') and (DateTime gt 2012-12-04 or 1 add 1 eq 2) and floor(Decimal) gt 5", true);
-                set.Add(commonSettings, "$top=10&$orderby=ID,DateTime&$filter=contains(Name, 'Test') and (DateTime gt 2012-12-04 or 1 add 1 eq 2) and length(Name) gt 5", false);
+                set.Add(commonSettings, "$top=10&$orderby=ID,DateTime&$filter=contains(Name, 'Test') and (DateTime gt 2012-12-04T00:00:00Z or 1 add 1 eq 2) and floor(Double) gt 5", true);
+                set.Add(commonSettings, "$top=10&$orderby=ID,DateTime&$filter=contains(Name, 'Test') and (DateTime gt 2012-12-04T00:00:00Z or 1 add 1 eq 2) and floor(Decimal) gt 5", true);
+                set.Add(commonSettings, "$top=10&$orderby=ID,DateTime&$filter=contains(Name, 'Test') and (DateTime gt 2012-12-04T00:00:00Z or 1 add 1 eq 2) and length(Name) gt 5", false);
 
                 return set;
             }
@@ -212,7 +225,7 @@ namespace WebStack.QA.Test.OData.QueryComposition
                 data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.Length);
                 data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.StartsWith);
                 data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.Substring);
-                data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.SubstringOf);
+                data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.Contains);
                 data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.ToLower);
                 data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.ToUpper);
                 data.Add(AllowedFunctions.AllStringFunctions, AllowedFunctions.Trim);
@@ -232,6 +245,8 @@ namespace WebStack.QA.Test.OData.QueryComposition
         {
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
             configuration.Formatters.JsonFormatter.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
+            configuration.EnableDependencyInjection();
         }
 
         [Theory]

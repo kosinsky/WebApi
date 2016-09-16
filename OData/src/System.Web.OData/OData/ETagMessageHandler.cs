@@ -14,15 +14,16 @@ using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Properties;
-using System.Web.OData.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData
 {
     /// <summary>
-    /// Defines a <see cref="HttpMessageHandler"/> to add an ETag header value to an OData response when the response 
-    /// is a single entity that has an ETag defined.
+    /// Defines a <see cref="HttpMessageHandler"/> to add an ETag header value to an OData response when the response
+    /// is a single resource that has an ETag defined.
     /// </summary>
     public class ETagMessageHandler : DelegatingHandler
     {
@@ -49,7 +50,7 @@ namespace System.Web.OData
             // unless the request's representation data was saved without any transformation applied to the body
             // (i.e., the resource's new representation data is identical to the representation data received in the
             // PUT request) and the ETag value reflects the new representation.
-            // Even in that case returning an ETag is optional and it requires access to the original object which is 
+            // Even in that case returning an ETag is optional and it requires access to the original object which is
             // not possible with the current architecture, so if the user is interested he can set the ETag in that
             // case by himself on the response.
             if (response == null || !response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NoContent)
@@ -58,7 +59,7 @@ namespace System.Web.OData
             }
 
             ODataPath path = request.ODataProperties().Path;
-            IEdmModel model = request.ODataProperties().Model;
+            IEdmModel model = request.GetModel();
 
             IEdmEntityType edmType = GetSingleEntityEntityType(path);
             object value = GetSingleEntityObject(response);
@@ -66,7 +67,7 @@ namespace System.Web.OData
             IEdmEntityTypeReference typeReference = GetTypeReference(model, edmType, value);
             if (typeReference != null)
             {
-                EntityInstanceContext context = CreateInstanceContext(typeReference, value);
+                ResourceContext context = CreateInstanceContext(typeReference, value);
                 context.EdmModel = model;
                 context.NavigationSource = path.NavigationSource;
                 IETagHandler etagHandler = configuration.GetETagHandler();
@@ -88,6 +89,13 @@ namespace System.Web.OData
                 return null;
             }
 
+            IEdmObject edmObject = value as IEdmEntityObject;
+            if (edmObject != null)
+            {
+                IEdmTypeReference edmTypeReference = edmObject.GetEdmType();
+                return edmTypeReference.AsEntity();
+            }
+
             IEdmTypeReference reference = EdmLibHelpers.GetEdmTypeReference(model, value.GetType());
             if (reference != null && reference.Definition.IsOrInheritsFrom(edmType))
             {
@@ -104,11 +112,11 @@ namespace System.Web.OData
         }
 
         private static EntityTagHeaderValue CreateETag(
-            EntityInstanceContext entityInstanceContext,
+            ResourceContext resourceContext,
             IETagHandler handler)
         {
-            IEdmModel model = entityInstanceContext.EdmModel;
-            IEdmEntitySet entitySet = entityInstanceContext.NavigationSource as IEdmEntitySet;
+            IEdmModel model = resourceContext.EdmModel;
+            IEdmEntitySet entitySet = resourceContext.NavigationSource as IEdmEntitySet;
 
             IEnumerable<IEdmStructuralProperty> concurrencyProperties;
             if (model != null && entitySet != null)
@@ -123,7 +131,7 @@ namespace System.Web.OData
             IDictionary<string, object> properties = new Dictionary<string, object>();
             foreach (IEdmStructuralProperty etagProperty in concurrencyProperties)
             {
-                properties.Add(etagProperty.Name, entityInstanceContext.GetPropertyValue(etagProperty.Name));
+                properties.Add(etagProperty.Name, resourceContext.GetPropertyValue(etagProperty.Name));
             }
             EntityTagHeaderValue etagHeaderValue = handler.CreateETag(properties);
             return etagHeaderValue;
@@ -142,13 +150,13 @@ namespace System.Web.OData
             return null;
         }
 
-        private static EntityInstanceContext CreateInstanceContext(IEdmEntityTypeReference reference, object value)
+        private static ResourceContext CreateInstanceContext(IEdmEntityTypeReference reference, object value)
         {
             Contract.Assert(reference != null);
             Contract.Assert(value != null);
 
             ODataSerializerContext serializerCtx = new ODataSerializerContext();
-            return new EntityInstanceContext(serializerCtx, reference, value);
+            return new ResourceContext(serializerCtx, reference, value);
         }
 
         // Retrieves the IEdmEntityType from the path only in the case that we are addressing a single entity.
@@ -166,7 +174,7 @@ namespace System.Web.OData
 
             // Skip a possible sequence of casts at the end of the path.
             while (currentSegmentIndex >= 0 &&
-                path.Segments[currentSegmentIndex].SegmentKind == ODataSegmentKinds._Cast)
+                path.Segments[currentSegmentIndex] is TypeSegment)
             {
                 currentSegmentIndex--;
             }
@@ -176,23 +184,22 @@ namespace System.Web.OData
             }
 
             ODataPathSegment currentSegment = path.Segments[currentSegmentIndex];
-            switch (currentSegment.SegmentKind)
-            {
-                case ODataSegmentKinds._Singleton:
-                case ODataSegmentKinds._Key:
-                    return (IEdmEntityType)path.EdmType;
 
-                case ODataSegmentKinds._Navigation:
-                    NavigationPathSegment navigation = (NavigationPathSegment)currentSegment;
-                    if (navigation.NavigationProperty.TargetMultiplicity() == EdmMultiplicity.ZeroOrOne ||
-                        navigation.NavigationProperty.TargetMultiplicity() == EdmMultiplicity.One)
-                    {
-                        return (IEdmEntityType)path.EdmType;
-                    }
-                    break;
-                default:
-                    break;
+            if (currentSegment is SingletonSegment || currentSegment is KeySegment)
+            {
+                return (IEdmEntityType)path.EdmType;
             }
+
+            NavigationPropertySegment navigationPropertySegment = currentSegment as NavigationPropertySegment;
+            if (navigationPropertySegment != null)
+            {
+                if (navigationPropertySegment.NavigationProperty.TargetMultiplicity() == EdmMultiplicity.ZeroOrOne ||
+                    navigationPropertySegment.NavigationProperty.TargetMultiplicity() == EdmMultiplicity.One)
+                {
+                    return (IEdmEntityType)path.EdmType;
+                }
+            }
+
             return null;
         }
     }

@@ -5,10 +5,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Web.OData.Formatter.Serialization.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -17,8 +15,7 @@ namespace System.Web.OData.Formatter.Serialization
     public class ODataCollectionSerializerTests
     {
         IEdmModel _model;
-        IEdmEntitySet _customerSet;
-        Customer _customer;
+        ODataSerializerProvider _serializerProvider;
         ODataCollectionSerializer _serializer;
         IEdmPrimitiveTypeReference _edmIntType;
         IEdmCollectionTypeReference _collectionType;
@@ -26,18 +23,11 @@ namespace System.Web.OData.Formatter.Serialization
         public ODataCollectionSerializerTests()
         {
             _model = SerializationTestsHelpers.SimpleCustomerOrderModel();
-            _customerSet = _model.EntityContainer.FindEntitySet("Customers");
             _edmIntType = EdmCoreModel.Instance.GetPrimitive(EdmPrimitiveTypeKind.Int32, isNullable: false);
-            _customer = new Customer()
-            {
-                FirstName = "Foo",
-                LastName = "Bar",
-                ID = 10,
-            };
 
-            ODataSerializerProvider serializerProvider = new DefaultODataSerializerProvider();
+            _serializerProvider = DependencyInjectionHelper.GetDefaultODataSerializerProvider();
             _collectionType = new EdmCollectionTypeReference(new EdmCollectionType(_edmIntType));
-            _serializer = new ODataCollectionSerializer(serializerProvider);
+            _serializer = new ODataCollectionSerializer(_serializerProvider);
         }
 
         [Fact]
@@ -77,10 +67,10 @@ namespace System.Web.OData.Formatter.Serialization
             settings.SetContentType(ODataFormat.Json);
 
             ODataMessageWriter messageWriter = new ODataMessageWriter(message, settings);
-            Mock<ODataCollectionSerializer> serializer = new Mock<ODataCollectionSerializer>(new DefaultODataSerializerProvider());
+            Mock<ODataCollectionSerializer> serializer = new Mock<ODataCollectionSerializer>(_serializerProvider);
             ODataSerializerContext writeContext = new ODataSerializerContext { RootElementName = "CollectionName", Model = _model };
             IEnumerable enumerable = new object[0];
-            ODataCollectionValue collectionValue = new ODataCollectionValue { TypeName = "NS.Name", Items = new[] { 0, 1, 2 } };
+            ODataCollectionValue collectionValue = new ODataCollectionValue { TypeName = "NS.Name", Items = new object[] { 0, 1, 2 } };
 
             serializer.CallBase = true;
             serializer
@@ -138,7 +128,7 @@ namespace System.Web.OData.Formatter.Serialization
             // Arrange
             ODataCollectionValue oDataCollectionValue = new ODataCollectionValue();
             var collection = new object[0];
-            Mock<ODataCollectionSerializer> serializer = new Mock<ODataCollectionSerializer>(new DefaultODataSerializerProvider());
+            Mock<ODataCollectionSerializer> serializer = new Mock<ODataCollectionSerializer>(_serializerProvider);
             ODataSerializerContext writeContext = new ODataSerializerContext();
             serializer.CallBase = true;
             serializer
@@ -175,22 +165,21 @@ namespace System.Web.OData.Formatter.Serialization
         public void CreateODataCollectionValue_CanSerialize_IEdmObjects()
         {
             // Arrange
-            Mock<IEdmComplexObject> edmComplexObject = new Mock<IEdmComplexObject>();
-            IEdmComplexObject[] collection = new IEdmComplexObject[] { edmComplexObject.Object };
+            Mock<IEdmEnumObject> edmEnumObject = new Mock<IEdmEnumObject>();
+            IEdmEnumObject[] collection = { edmEnumObject.Object };
             ODataSerializerContext serializerContext = new ODataSerializerContext();
-            IEdmComplexTypeReference elementType = new EdmComplexTypeReference(new EdmComplexType("NS", "ComplexType"), isNullable: true);
-            edmComplexObject.Setup(s => s.GetEdmType()).Returns(elementType);
-            IEdmCollectionTypeReference collectionType = new EdmCollectionTypeReference(new EdmCollectionType(elementType));
+            IEdmEnumTypeReference elementType = new EdmEnumTypeReference(new EdmEnumType("NS", "EnumType"), isNullable: true);
+            edmEnumObject.Setup(s => s.GetEdmType()).Returns(elementType);
 
             Mock<ODataSerializerProvider> serializerProvider = new Mock<ODataSerializerProvider>();
-            Mock<ODataComplexTypeSerializer> elementSerializer = new Mock<ODataComplexTypeSerializer>(MockBehavior.Strict, serializerProvider.Object);
+            Mock<ODataEnumSerializer> elementSerializer = new Mock<ODataEnumSerializer>(MockBehavior.Strict, serializerProvider.Object);
             serializerProvider.Setup(s => s.GetEdmTypeSerializer(elementType)).Returns(elementSerializer.Object);
-            elementSerializer.Setup(s => s.CreateODataComplexValue(collection[0], elementType, serializerContext)).Returns(new ODataComplexValue()).Verifiable();
+            elementSerializer.Setup(s => s.CreateODataEnumValue(collection[0], elementType, serializerContext)).Returns(new ODataEnumValue("1", "NS.EnumType")).Verifiable();
 
             ODataCollectionSerializer serializer = new ODataCollectionSerializer(serializerProvider.Object);
 
             // Act
-            var result = serializer.CreateODataCollectionValue(collection, elementType, serializerContext);
+            serializer.CreateODataCollectionValue(collection, elementType, serializerContext);
 
             // Assert
             elementSerializer.Verify();
@@ -231,7 +220,7 @@ namespace System.Web.OData.Formatter.Serialization
             ODataCollectionSerializer.AddTypeNameAnnotationAsNeeded(value, ODataMetadataLevel.MinimalMetadata);
 
             // Assert
-            Assert.Null(value.GetAnnotation<SerializationTypeNameAnnotation>());
+            Assert.Null(value.TypeAnnotation);
         }
 
         [Fact]
@@ -248,7 +237,7 @@ namespace System.Web.OData.Formatter.Serialization
             ODataCollectionSerializer.AddTypeNameAnnotationAsNeeded(value, ODataMetadataLevel.FullMetadata);
 
             // Assert
-            SerializationTypeNameAnnotation annotation = value.GetAnnotation<SerializationTypeNameAnnotation>();
+            ODataTypeAnnotation annotation = value.TypeAnnotation;
             Assert.NotNull(annotation); // Guard
             Assert.Equal(expectedTypeName, annotation.TypeName);
         }
@@ -267,7 +256,7 @@ namespace System.Web.OData.Formatter.Serialization
             ODataCollectionSerializer.AddTypeNameAnnotationAsNeeded(value, ODataMetadataLevel.NoMetadata);
 
             // Assert
-            SerializationTypeNameAnnotation annotation = value.GetAnnotation<SerializationTypeNameAnnotation>();
+            ODataTypeAnnotation annotation = value.TypeAnnotation;
             Assert.NotNull(annotation); // Guard
             Assert.Null(annotation.TypeName);
         }

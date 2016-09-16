@@ -5,13 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web.OData.Builder;
 using System.Web.OData.Formatter;
+using System.Web.OData.Routing.Template;
+using System.Web.OData.Test.TestCommon;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Expressions;
-using Microsoft.OData.Edm.Library;
-using Microsoft.OData.Edm.Library.Expressions;
+using Microsoft.OData.Edm.Vocabularies;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Microsoft.TestCommon.Types;
 
@@ -101,7 +101,11 @@ namespace System.Web.OData.Routing
 
             Assert.NotNull(path);
             Assert.Equal("~/entityset", path.PathTemplate);
-            Assert.Equal("üCategories", segment.ToString());
+
+            EntitySetSegment entitySetSegment = Assert.IsType<EntitySetSegment>(path.Segments.First());
+            Assert.Equal("üCategories", entitySetSegment.EntitySet.Name);
+
+            Assert.Equal("Collection(System.Web.OData.Routing.üCategory)", entitySetSegment.EdmType.FullTypeName());
         }
 
         [Fact]
@@ -161,9 +165,9 @@ namespace System.Web.OData.Routing
             "RoutingCustomers/Default.FunctionBoundToRoutingCustomers()")]
         [InlineData("RoutingCustomers/System.Web.OData.Routing.VIP/Default.FunctionBoundToRoutingCustomers()", "~/entityset/cast/function",
             "RoutingCustomers/System.Web.OData.Routing.VIP/Default.FunctionBoundToRoutingCustomers()")]
-        [InlineData("Products(1)/RoutingCustomers/System.Web.OData.Routing.VIP(1)/RelationshipManager/ManagedProducts",
-            "~/entityset/key/navigation/cast/key/navigation/navigation",
-            "Products(1)/RoutingCustomers/System.Web.OData.Routing.VIP(1)/RelationshipManager/ManagedProducts")]
+        [InlineData("Products(1)/RoutingCustomers(1)/System.Web.OData.Routing.VIP/RelationshipManager/ManagedProducts",
+            "~/entityset/key/navigation/key/cast/navigation/navigation",
+            "Products(1)/RoutingCustomers(1)/System.Web.OData.Routing.VIP/RelationshipManager/ManagedProducts")]
         [InlineData("Products(1)/Default.FunctionBoundToProductWithMultipleParamters(P1=1,P2=2,P3='a')", "~/entityset/key/function",
             "Products(1)/Default.FunctionBoundToProductWithMultipleParamters(P1=1,P2=2,P3='a')")]
         [InlineData("Products(1)/Default.FunctionBoundToProduct()", "~/entityset/key/function",
@@ -200,19 +204,19 @@ namespace System.Web.OData.Routing
         [InlineData("", new string[] { })]
         [InlineData("UnboundFunctionWithOneParamters(P1=1)/Products", new string[] { "UnboundFunctionWithOneParamters(P1=1)", "Products" })]
         [InlineData("UnboundFunctionWithMultipleParamters(P1=1,P2=2,P3='a')", new string[] { "UnboundFunctionWithMultipleParamters(P1=1,P2=2,P3='a')" })]
-        [InlineData("RoutingCustomers(100)/System.Web.OData.Routing.VIP/RelationshipManager", new string[] { "RoutingCustomers", "100", "System.Web.OData.Routing.VIP", "RelationshipManager" })]
-        [InlineData("RoutingCustomers(112)/Address/Street", new string[] { "RoutingCustomers", "112", "Address", "Street" })]
-        [InlineData("RoutingCustomers(1)/Name/$value", new string[] { "RoutingCustomers", "1", "Name", "$value" })]
-        [InlineData("RoutingCustomers(1)/Products/$ref", new string[] { "RoutingCustomers", "1", "Products", "$ref" })]
+        [InlineData("RoutingCustomers(100)/System.Web.OData.Routing.VIP/RelationshipManager", new string[] { "RoutingCustomers(100)", "System.Web.OData.Routing.VIP", "RelationshipManager" })]
+        [InlineData("RoutingCustomers(112)/Address/Street", new string[] { "RoutingCustomers(112)", "Address", "Street" })]
+        [InlineData("RoutingCustomers(1)/Name/$value", new string[] { "RoutingCustomers(1)", "Name", "$value" })]
+        [InlineData("RoutingCustomers(1)/Products/$ref", new string[] { "RoutingCustomers(1)", "Products", "$ref" })]
         [InlineData("VipCustomer/Default.GetRelatedRoutingCustomers", new string[] { "VipCustomer", "Default.GetRelatedRoutingCustomers" })]
-        [InlineData("SalesPeople(100)/Foo", new string[] { "SalesPeople", "100", "Foo" })]
+        [InlineData("SalesPeople(100)/Foo", new string[] { "SalesPeople(100)", "Foo" })]
         public void ParseSegmentsCorrectly(string odataPath, string[] expectedSegments)
         {
             // Arrange & Act
             ODataPath path = _parser.Parse(_model, _serviceRoot, odataPath);
 
             // Assert
-            Assert.Equal(expectedSegments, path.Segments.Select(segment => segment.ToString()));
+            Assert.Equal(String.Join("/", expectedSegments), path.ToString());
         }
 
         [Fact]
@@ -227,7 +231,9 @@ namespace System.Web.OData.Routing
             Assert.NotNull(path);
             Assert.Null(path.NavigationSource);
             Assert.Null(path.EdmType);
-            Assert.Equal("$metadata", segment.ToString());
+
+            MetadataSegment metadataSegment = Assert.IsType<MetadataSegment>(segment);
+            Assert.Equal("$metadata", metadataSegment.ToUriLiteral());
         }
 
         [Fact]
@@ -245,7 +251,10 @@ namespace System.Web.OData.Routing
             Assert.NotNull(segment);
             Assert.Null(path.NavigationSource);
             Assert.Null(path.EdmType);
-            Assert.Equal("$batch", segment.ToString());
+
+            BatchSegment batch = Assert.IsType<BatchSegment>(segment);
+            Assert.Same(BatchSegment.Instance, batch);
+            Assert.Equal("$batch", batch.ToUriLiteral());
         }
 
         [Fact]
@@ -263,7 +272,10 @@ namespace System.Web.OData.Routing
             // Assert
             Assert.NotNull(path);
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            EntitySetSegment entitySet = Assert.IsType<EntitySetSegment>(segment);
+
+            Assert.Equal(expectedText, entitySet.ToUriLiteral());
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Same(expectedSet.EntityType(), (path.EdmType as IEdmCollectionType).ElementType.Definition);
         }
@@ -285,9 +297,60 @@ namespace System.Web.OData.Routing
             // Assert
             Assert.NotNull(segment);
             Assert.Equal("~/entityset/cast", path.PathTemplate);
-            Assert.Equal("System.Web.OData.Routing.VIP", segment.ToString());
+
+            TypeSegment typeSegment = Assert.IsType<TypeSegment>(segment);
+            Assert.Equal("System.Web.OData.Routing.VIP", typeSegment.ToUriLiteral());
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Same(entityType, ((IEdmCollectionType)path.EdmType).ElementType.Definition);
+        }
+
+        [Fact]
+        public void CanParseEntityCastUrl()
+        {
+            // Arrange
+            IEdmEntitySet expectedSet = _model.EntityContainer.EntitySets()
+                .SingleOrDefault(s => s.Name == "RoutingCustomers");
+            IEdmEntityType entityType = _model.SchemaElements.OfType<IEdmEntityType>()
+                .SingleOrDefault(s => s.FullName() == "System.Web.OData.Routing.VIP");
+
+            // Act
+            ODataPath path = _parser.Parse(_model, _serviceRoot, "RoutingCustomers(1)/System.Web.OData.Routing.VIP");
+            Assert.NotNull(path); // Guard
+            ODataPathSegment segment = path.Segments.Last();
+
+            // Assert
+            Assert.NotNull(segment);
+            Assert.Equal("~/entityset/key/cast", path.PathTemplate);
+
+            TypeSegment typeSegment = Assert.IsType<TypeSegment>(segment);
+
+            Assert.Equal("System.Web.OData.Routing.VIP", typeSegment.ToUriLiteral());
+            Assert.Same(expectedSet, path.NavigationSource);
+            Assert.Same(entityType, path.EdmType);
+        }
+
+        [Fact]
+        public void CanParseComplexCastUrl()
+        {
+            // Arrange
+            IEdmComplexType complexType = _model.SchemaElements.OfType<IEdmComplexType>()
+                .SingleOrDefault(s => s.FullName() == "System.Web.OData.Routing.UsAddress");
+
+            // Act
+            ODataPath path = _parser.Parse(_model, _serviceRoot, "RoutingCustomers(1)/Address/System.Web.OData.Routing.UsAddress");
+            Assert.NotNull(path); // Guard
+            ODataPathSegment segment = path.Segments.Last();
+
+            // Assert
+            Assert.NotNull(segment);
+            Assert.Equal("~/entityset/key/property/cast", path.PathTemplate);
+            TypeSegment typeSegment = Assert.IsType<TypeSegment>(segment);
+
+            Assert.Equal("System.Web.OData.Routing.UsAddress", typeSegment.ToUriLiteral());
+
+            Assert.NotNull(path.NavigationSource);
+
+            Assert.Same(complexType, path.EdmType);
         }
 
         [Fact]
@@ -305,7 +368,9 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal("VipCustomer", segment.ToString());
+            SingletonSegment singletonSegment = Assert.IsType<SingletonSegment>(segment);
+            Assert.Equal("VipCustomer", singletonSegment.ToUriLiteral());
+
             Assert.Equal("~/singleton", path.PathTemplate);
             Assert.Same(expectedSingleton, path.NavigationSource);
             Assert.Same(expectedSingleton.EntityType(), path.EdmType);
@@ -325,11 +390,15 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
-            Assert.IsType<KeyValuePathSegment>(segment);
+
+            KeySegment keySegment = Assert.IsType<KeySegment>(segment);
+
+            Assert.Equal(expectedText, keySegment.ToUriLiteral());
+            Assert.IsType<KeySegment>(segment);
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Same(expectedSet.EntityType(), path.EdmType);
         }
+
 
         [Fact]
         public void CanParseKeyAsSegmentUrl()
@@ -339,7 +408,7 @@ namespace System.Web.OData.Routing
             string expectedText = "112";
             IEdmEntitySet expectedSet = _model.EntityContainer.EntitySets().SingleOrDefault(s => s.Name == "RoutingCustomers");
             var simplifiedParser = new DefaultODataPathHandler();
-            simplifiedParser.ResolverSetttings.UrlConventions = ODataUrlConventions.ODataSimplified;
+            simplifiedParser.UrlKeyDelimiter = ODataUrlKeyDelimiter.Slash;
 
             // Act
             ODataPath path = simplifiedParser.Parse(_model, _serviceRoot, odataPath);
@@ -347,8 +416,10 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
-            Assert.IsType<KeyValuePathSegment>(segment);
+
+            KeySegment keySegment = Assert.IsType<KeySegment>(segment);
+            Assert.Equal(expectedText, keySegment.ToUriLiteral());
+
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Same(expectedSet.EntityType(), path.EdmType);
         }
@@ -368,7 +439,11 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            TypeSegment typeSegment = Assert.IsType<TypeSegment>(segment);
+
+            Assert.Equal(expectedText, typeSegment.ToUriLiteral());
+
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Equal(expectedType, (path.EdmType as IEdmCollectionType).ElementType.Definition);
         }
@@ -388,9 +463,12 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            TypeSegment typeSegment = Assert.IsType<TypeSegment>(segment);
+            Assert.Equal(expectedText, typeSegment.ToUriLiteral());
+
             Assert.Same(expectedSingleton, path.NavigationSource);
-            Assert.Equal(expectedType, path.EdmType);
+            Assert.Same(expectedType, path.EdmType);
         }
 
         [Fact]
@@ -408,9 +486,12 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+            TypeSegment typeSegment = Assert.IsType<TypeSegment>(segment);
+
+            Assert.Equal(expectedText, typeSegment.ToUriLiteral());
+
             Assert.Same(expectedSet, path.NavigationSource);
-            Assert.Equal(expectedType, path.EdmType);
+            Assert.Same(expectedType, path.EdmType);
         }
 
         [Fact]
@@ -428,11 +509,14 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            NavigationPropertySegment navigationPropertySegment = Assert.IsType<NavigationPropertySegment>(segment);
+
+            Assert.Equal(expectedText, navigationPropertySegment.ToUriLiteral());
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Equal(expectedSet.EntityType(), (path.EdmType as IEdmCollectionType).ElementType.Definition);
-            NavigationPathSegment navigation = Assert.IsType<NavigationPathSegment>(segment);
-            Assert.Same(expectedEdmElement, navigation.NavigationProperty);
+
+            Assert.Same(expectedEdmElement, navigationPropertySegment.NavigationProperty);
         }
 
         [Fact]
@@ -450,15 +534,18 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            NavigationPropertySegment navigationPropertySegment = Assert.IsType<NavigationPropertySegment>(segment);
+
+            Assert.Equal(expectedText, navigationPropertySegment.ToUriLiteral());
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Equal(expectedSet.EntityType(), path.EdmType);
-            NavigationPathSegment navigation = Assert.IsType<NavigationPathSegment>(segment);
-            Assert.Same(expectedEdmElement, navigation.NavigationProperty);
+
+            Assert.Same(expectedEdmElement, navigationPropertySegment.NavigationProperty);
         }
 
         [Fact]
-        public void CanParseRootProcedureSegment()
+        public void CanParseRootOperationSegment()
         {
             // Arrange
             string odataPath = "GetRoutingCustomerById()";
@@ -474,11 +561,14 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+            OperationImportSegment operationSegment = Assert.IsType<OperationImportSegment>(segment);
+            Assert.Equal(expectedText, operationSegment.ToUriLiteral());
+
+            EdmActionImport actionImport = Assert.IsType<EdmActionImport>(operationSegment.OperationImports.First());
+            Assert.Same(expectedEdmElement, actionImport);
+
             Assert.Same(expectedSet, path.NavigationSource);
-            Assert.Equal(expectedSet.EntityType(), path.EdmType);
-            UnboundActionPathSegment action = Assert.IsType<UnboundActionPathSegment>(segment);
-            Assert.Same(expectedEdmElement, action.Action);
+            Assert.Same(expectedSet.EntityType(), path.EdmType);
         }
 
         [Theory]
@@ -498,10 +588,13 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            PropertySegment propertySegment = Assert.IsType<PropertySegment>(segment);
+
+            Assert.Equal(expectedText, propertySegment.ToUriLiteral());
             Assert.Null(path.NavigationSource);
-            PropertyAccessPathSegment propertyAccess = Assert.IsType<PropertyAccessPathSegment>(segment);
-            Assert.Same(expectedEdmElement, propertyAccess.Property);
+
+            Assert.Same(expectedEdmElement, propertySegment.Property);
         }
 
         [Fact]
@@ -516,10 +609,10 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal("Foo", segment.ToString());
+            DynamicPathSegment openPropertySegment = Assert.IsType<DynamicPathSegment>(segment);
+            Assert.Equal("Foo", openPropertySegment.ToUriLiteral());
+
             Assert.Null(path.NavigationSource);
-            DynamicPropertyPathSegment dynamicPropertyPathSegment = Assert.IsType<DynamicPropertyPathSegment>(segment);
-            Assert.Equal("Foo", dynamicPropertyPathSegment.PropertyName);
         }
 
         [Theory]
@@ -539,11 +632,14 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            PropertySegment propertySegment = Assert.IsType<PropertySegment>(segment);
+
+            Assert.Equal(expectedText, propertySegment.ToUriLiteral());
+
             Assert.Null(path.NavigationSource);
             Assert.Same(expectedType, path.EdmType);
-            PropertyAccessPathSegment propertyAccess = Assert.IsType<PropertyAccessPathSegment>(segment);
-            Assert.Same(expectedEdmElement, propertyAccess.Property);
+            Assert.Same(expectedEdmElement, propertySegment.Property);
         }
 
         [Theory]
@@ -563,11 +659,13 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            PropertySegment propertySegment = Assert.IsType<PropertySegment>(segment);
+            Assert.Equal(expectedText, propertySegment.ToUriLiteral());
             Assert.Null(path.NavigationSource);
             Assert.Same(expectedType, path.EdmType);
-            PropertyAccessPathSegment propertyAccess = Assert.IsType<PropertyAccessPathSegment>(segment);
-            Assert.Same(expectedEdmElement, propertyAccess.Property);
+
+            Assert.Same(expectedEdmElement, propertySegment.Property);
         }
 
         [Theory]
@@ -586,9 +684,11 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.IsType<ComplexCastPathSegment>(segment);
-            Assert.Equal(ExpectedText, segment.ToString());
-            Assert.Null(path.NavigationSource);
+            TypeSegment typeSegment = Assert.IsType<TypeSegment>(segment);
+
+            Assert.Equal(ExpectedText, typeSegment.ToUriLiteral());
+
+            Assert.NotNull(path.NavigationSource);
             Assert.Same(expectedType, path.EdmType);
         }
 
@@ -603,7 +703,11 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectText, segment.ToString());
+
+            PropertySegment propertySegment = Assert.IsType<PropertySegment>(segment);
+
+            Assert.Equal(expectText, propertySegment.ToUriLiteral());
+
             Assert.Null(path.NavigationSource);
             Assert.NotNull(path.EdmType);
             Assert.Equal("Edm.Boolean", (path.EdmType as IEdmPrimitiveType).FullName());
@@ -620,10 +724,35 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal("$value", segment.ToString());
+
+            ValueSegment valueSegment = Assert.IsType<ValueSegment>(segment);
+
+            Assert.Equal("$value", valueSegment.ToUriLiteral());
+
             Assert.Null(path.NavigationSource);
             Assert.NotNull(path.EdmType);
             Assert.Equal("Edm.String", (path.EdmType as IEdmPrimitiveType).FullName());
+        }
+
+        [Theory]
+        [InlineData("RoutingCustomers(1)/Address/$value")]
+        [InlineData("VipCustomer/Address/$value")]
+        public void CanParseComplexPropertyValueSegment(string odataPath)
+        {
+            // Arrange & Act
+            ODataPath path = _parser.Parse(_model, _serviceRoot, odataPath);
+            ODataPathSegment segment = path.Segments.Last();
+
+            // Assert
+            Assert.NotNull(segment);
+
+            ValueSegment valueSegment = Assert.IsType<ValueSegment>(segment);
+
+            Assert.Equal("$value", valueSegment.ToUriLiteral());
+
+            Assert.Null(path.NavigationSource);
+            Assert.NotNull(path.EdmType);
+            Assert.Equal("System.Web.OData.Routing.Address", (path.EdmType as IEdmComplexType).FullName());
         }
 
         [Theory]
@@ -643,7 +772,9 @@ namespace System.Web.OData.Routing
             Assert.NotNull(segment);
             Assert.Same(expectedType, (path.EdmType as IEdmCollectionType).ElementType.Definition);
             Assert.Same(expectedSet, path.NavigationSource);
-            Assert.Same("$ref", segment.ToString());
+
+            NavigationPropertyLinkSegment linkSegment = Assert.IsType<NavigationPropertyLinkSegment>(segment);
+            Assert.Equal("Products/$ref", linkSegment.ToUriLiteral());
         }
 
         [Theory]
@@ -655,14 +786,19 @@ namespace System.Web.OData.Routing
             ODataPath path = _parser.Parse(_model, _serviceRoot, odataPath);
 
             // Assert
-            KeyValuePathSegment keyValuePathSegment =
-                Assert.IsType<KeyValuePathSegment>(path.Segments[path.Segments.Count - 2]);
-            Assert.Equal("5", keyValuePathSegment.Value);
-            Assert.IsType<RefPathSegment>(path.Segments[path.Segments.Count - 1]);
+            KeySegment keySegment =
+                Assert.IsType<KeySegment>(path.Segments.Last());
+
+            KeyValuePair<string, object> keyValues = Assert.Single(keySegment.Keys);
+
+            Assert.Equal("ID", keyValues.Key);
+            Assert.Equal(5, keyValues.Value);
+
+
+            Assert.IsType<NavigationPropertyLinkSegment>(path.Segments[path.Segments.Count - 2]);
         }
 
         [Theory]
-        [InlineData("RoutingCustomers(1)/Products/$ref?$id=5", "The value of $id '5' is invalid.")]
         [InlineData("RoutingCustomers(1)/Products/$ref?$id=Products(5)", "The value of $id 'Products(5)' is invalid.")]
         [InlineData("RoutingCustomers(1)/Products/$ref?$id=../../RoutingCustomers(5)", "The value of $id '../../RoutingCustomers(5)' is invalid.")]
         [InlineData("VipCustomer/Products/$ref?$id=" + _serviceRoot + "RoutingCustomers(5)", "The value of $id '" + _serviceRoot + "RoutingCustomers(5)' is invalid.")]
@@ -718,11 +854,17 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            OperationSegment operation = Assert.IsType<OperationSegment>(segment);
+            IEdmOperation edmOperation = Assert.Single(operation.Operations);
+
+            EdmAction action = Assert.IsType<EdmAction>(edmOperation);
+            Assert.Equal(expectedText, action.FullName());
+
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Same(expectedType, path.EdmType);
-            BoundActionPathSegment action = Assert.IsType<BoundActionPathSegment>(segment);
-            Assert.Same(expectedEdmElement, action.Action);
+
+            Assert.Same(expectedEdmElement, action);
         }
 
         [Fact]
@@ -742,11 +884,16 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+
+            OperationSegment operationSegment = Assert.IsType<OperationSegment>(segment);
+
+            Assert.Equal(expectedText, operationSegment.ToUriLiteral());
             Assert.Same(expectedEntitySet, path.NavigationSource);
             Assert.Same(expectedType, path.EdmType);
-            BoundActionPathSegment action = Assert.IsType<BoundActionPathSegment>(segment);
-            Assert.Same(expectedEdmElement, action.Action);
+
+            EdmAction action = operationSegment.Operations.First() as EdmAction;
+            Assert.NotNull(action);
+            Assert.Same(expectedEdmElement, action);
         }
 
         [Fact]
@@ -766,11 +913,14 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(segment);
-            Assert.Equal(expectedText, segment.ToString());
+            OperationSegment operation = Assert.IsType<OperationSegment>(segment);
+            IEdmOperation edmOperation = Assert.Single(operation.Operations);
+            
+            EdmAction action = Assert.IsType<EdmAction>(edmOperation);
+            Assert.Equal(expectedText, action.FullName());
+
             Assert.Same(expectedSet, path.NavigationSource);
             Assert.Same(expectedType, path.EdmType);
-            BoundActionPathSegment action = Assert.IsType<BoundActionPathSegment>(segment);
-            Assert.Same(expectedEdmElement, action.Action);
         }
 
         [Theory]
@@ -1004,9 +1154,12 @@ namespace System.Web.OData.Routing
             // Assert
             Assert.NotNull(path);
             Assert.Equal(1, path.Segments.Count);
-            var functionSegment = Assert.IsType<UnboundFunctionPathSegment>(path.Segments.First());
-            Assert.Same(function, functionSegment.Function);
-            Assert.Empty(functionSegment.Values);
+            var functionSegment = Assert.IsType<OperationImportSegment>(path.Segments.First());
+
+            IEdmOperationImport opertionImport = functionSegment.OperationImports.First();
+            EdmFunctionImport functionImport = Assert.IsType<EdmFunctionImport>(opertionImport);
+            Assert.Same(function, functionImport);
+            Assert.Empty(functionSegment.Parameters);
         }
 
         [Theory]
@@ -1017,7 +1170,7 @@ namespace System.Web.OData.Routing
             // Arrange
             var model = new CustomersModelWithInheritance();
             IEdmTypeReference returnType = EdmCoreModel.Instance.GetPrimitive(EdmPrimitiveTypeKind.Boolean, isNullable: false);
-            IEdmExpression entitySet = new EdmEntitySetReferenceExpression(model.Customers);
+            IEdmExpression entitySet = new EdmPathExpression(model.Customers.Name);
             var function = new EdmFunction(
                 model.Container.Namespace,
                 "IsSpecial",
@@ -1034,9 +1187,13 @@ namespace System.Web.OData.Routing
             // Assert
             Assert.NotNull(path);
             Assert.Equal(segmentCount, path.Segments.Count);
-            var functionSegment = Assert.IsType<BoundFunctionPathSegment>(path.Segments.Last());
-            Assert.Same(function, functionSegment.Function);
-            Assert.Empty(functionSegment.Values);
+
+            var functionSegment = Assert.IsType<OperationSegment>(path.Segments.Last());
+
+            IEdmOperation opertion = functionSegment.Operations.First();
+            EdmFunction edmFunction = Assert.IsType<EdmFunction>(opertion);
+            Assert.Same(function, edmFunction);
+            Assert.Empty(functionSegment.Parameters);
         }
 
         [Fact]
@@ -1045,7 +1202,7 @@ namespace System.Web.OData.Routing
             // Arrange
             var model = new CustomersModelWithInheritance();
             IEdmTypeReference returnType = EdmCoreModel.Instance.GetPrimitive(EdmPrimitiveTypeKind.Boolean, isNullable: false);
-            IEdmExpression entitySet = new EdmEntitySetReferenceExpression(model.Customers);
+            IEdmExpression entitySet = new EdmPathExpression(model.Customers.Name);
             var function = new EdmFunction(
                 model.Container.Namespace,
                 "Count",
@@ -1064,9 +1221,13 @@ namespace System.Web.OData.Routing
             // Assert
             Assert.NotNull(path);
             Assert.Equal(2, path.Segments.Count);
-            var functionSegment = Assert.IsType<BoundFunctionPathSegment>(path.Segments.Last());
-            Assert.Same(function, functionSegment.Function);
-            Assert.Empty(functionSegment.Values);
+            var functionSegment = Assert.IsType<OperationSegment>(path.Segments.Last());
+
+            IEdmOperation opertion = functionSegment.Operations.First();
+            EdmFunction edmFunction = Assert.IsType<EdmFunction>(opertion);
+            Assert.Same(function, edmFunction);
+            Assert.Empty(functionSegment.Parameters);
+
         }
 
         [Fact]
@@ -1087,7 +1248,7 @@ namespace System.Web.OData.Routing
 
             // Act
             ODataPath path = _parser.Parse(model.Model, _serviceRoot, "FunctionAtRoot(IntParameter=1)");
-            UnboundFunctionPathSegment functionSegment = (UnboundFunctionPathSegment)path.Segments.Last();
+            var functionSegment = Assert.IsType<OperationImportSegment>(path.Segments.Last());
 
             // Assert
             int intParameter = (int)functionSegment.GetParameterValue("IntParameter");
@@ -1102,7 +1263,7 @@ namespace System.Web.OData.Routing
             object parameter = GetAliasedParameterValue(value, type);
 
             // Assert
-            Assert.IsType<ODataNullValue>(parameter);
+            Assert.Null(parameter);
         }
 
         [Theory]
@@ -1149,9 +1310,9 @@ namespace System.Web.OData.Routing
                 model.Model,
                 _serviceRoot,
                 "FunctionAtRoot(Parameter=@param)?@param=" + ODataUriUtils.ConvertToUriLiteral(value, ODataVersion.V4));
-            UnboundFunctionPathSegment functionSegment = (UnboundFunctionPathSegment)path.Segments.Last();
 
-            return functionSegment.GetParameterValue("Parameter");
+            OperationImportSegment segment = Assert.IsType<OperationImportSegment>(path.Segments.Last());
+            return segment.GetParameterValue("Parameter");
         }
 
         [Fact]
@@ -1187,16 +1348,16 @@ namespace System.Web.OData.Routing
                 ODataUriUtils.ConvertToUriLiteral(Guid.Empty, ODataVersion.V4),
                 ODataUriUtils.ConvertToUriLiteral(new ODataEnumValue("Third", "NS.SimpleEnum"), ODataVersion.V4)));
 
-            BoundFunctionPathSegment functionSegment = (BoundFunctionPathSegment)path.Segments.Last();
+            OperationSegment functionSegment = (OperationSegment)path.Segments.Last();
             object intParameter = functionSegment.GetParameterValue("IntParameter");
             object nullableDoubleParameter = functionSegment.GetParameterValue("NullableDoubleParameter");
             object stringParameter = functionSegment.GetParameterValue("StringParameter");
             object guidParameter = functionSegment.GetParameterValue("GuidParameter");
             object enumParameter = functionSegment.GetParameterValue("EnumParameter");
-
+            
             // Assert
             Assert.Equal(123, intParameter);
-            Assert.IsType<ODataNullValue>(nullableDoubleParameter);
+            Assert.Null(nullableDoubleParameter);
             Assert.Equal("123", stringParameter);
             Assert.Equal(Guid.Empty, guidParameter);
             Assert.IsType<ODataEnumValue>(enumParameter);
@@ -1223,7 +1384,7 @@ namespace System.Web.OData.Routing
                 _serviceRoot,
                 "UnboundFunction(P1=@p1,P2=@p2)/unknown?@p1=1&@p3=2&@p2=@p3");
 
-            var functionSegment = (UnboundFunctionPathSegment)path.Segments.First();
+            var functionSegment = (OperationImportSegment)path.Segments.First();
             object p1 = functionSegment.GetParameterValue("P1");
             object p2 = functionSegment.GetParameterValue("P2");
 
@@ -1251,7 +1412,7 @@ namespace System.Web.OData.Routing
                 _serviceRoot,
                 "UnboundFunction(P1=@p1,P2=@p2)/unknownFunc(a=@p4)?@p1=1&@p3=2&@p2=@p3&@p4='abc'");
 
-            var functionSegment = (UnboundFunctionPathSegment)path.Segments.First();
+            var functionSegment = (OperationImportSegment)path.Segments.First();
             object p1 = functionSegment.GetParameterValue("P1");
             object p2 = functionSegment.GetParameterValue("P2");
 
@@ -1270,7 +1431,7 @@ namespace System.Web.OData.Routing
             object parameter = GetParameterValue(value, type);
 
             // Assert
-            Assert.IsType<ODataNullValue>(parameter);
+            Assert.Null(parameter);
         }
 
         [Theory]
@@ -1317,43 +1478,54 @@ namespace System.Web.OData.Routing
                 model.Model,
                 _serviceRoot,
                 "FunctionAtRoot(Parameter=" + ODataUriUtils.ConvertToUriLiteral(value, ODataVersion.V4) + ")");
-            UnboundFunctionPathSegment functionSegment = (UnboundFunctionPathSegment)path.Segments.Last();
 
-            return functionSegment.GetParameterValue("Parameter");
+            OperationImportSegment operationSegment = Assert.IsType<OperationImportSegment>(path.Segments.Last());
+            return operationSegment.GetParameterValue("Parameter");
         }
 
         [Theory]
-        [InlineData("(address=@p)?@p={\"@odata.type\":\"System.Web.OData.Routing.Address\",\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"}")]
-        [InlineData("(address={\"@odata.type\":\"System.Web.OData.Routing.Address\",\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"})")]
-        public void CanParse_ComplexTypeAsFunctionParameter(string parametervalue)
+        [InlineData(
+            "(address=@p)?@p={\"@odata.type\":\"System.Web.OData.Routing.Address\",\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"}"
+            )]
+        public void CanParse_ComplexTypeAsFunctionParameterInAlias(string parameterValue)
         {
             // Arrange & Act
-            ODataPath path = _parser.Parse(_model, _serviceRoot, "RoutingCustomers(1)/Default.CanMoveToAddress" + parametervalue);
+            ODataPath path = _parser.Parse(_model, _serviceRoot,
+                "RoutingCustomers(1)/Default.CanMoveToAddress" + parameterValue);
 
             // Assert
             Assert.Equal("~/entityset/key/function", path.PathTemplate);
-            BoundFunctionPathSegment functionSegment = (BoundFunctionPathSegment)path.Segments.Last();
 
-            object parameterValue = functionSegment.GetParameterValue("address");
-            ODataComplexValue address = Assert.IsType<ODataComplexValue>(parameterValue);
-            Assert.Equal("System.Web.OData.Routing.Address", address.TypeName);
+            OperationSegment operationSegment = Assert.IsType<OperationSegment>(path.Segments.Last());
+
+            object value = operationSegment.GetParameterValue("address");
+
+            string address = Assert.IsType<string>(parameterValue);
+            Assert.Equal(parameterValue, address);
+        }
+
+        [Theory]
+        [InlineData("(address={\"@odata.type\":\"System.Web.OData.Routing.Address\",\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"})")]
+        public void ParseComplexTypeAsFunctionParameterInlineThrows(string parameterValue)
+        {
+            // Arrange & Act
+            Assert.Throws<ODataException>(() => _parser.Parse(_model, _serviceRoot, "RoutingCustomers(1)/Default.CanMoveToAddress" + parameterValue));
         }
 
         [Theory]
         [InlineData("(addresses=@p)?@p=[{\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"},{\"Street\":\"Pine St.\",\"City\":\"Seattle\"}]")]
-        [InlineData("(addresses=[{\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"},{\"Street\":\"Pine St.\",\"City\":\"Seattle\"}])")]
-        public void CanParse_CollectionOfComplexTypeAsFunctionParameter(string parametervalue)
+        public void CanParse_CollectionOfComplexTypeAsFunctionParameter_Alias(string parametervalue)
         {
             // Arrange & Act
             ODataPath path = _parser.Parse(_model, _serviceRoot, "RoutingCustomers(1)/Default.MoveToAddresses" + parametervalue);
 
             // Assert
             Assert.Equal("~/entityset/key/function", path.PathTemplate);
-            BoundFunctionPathSegment functionSegment = (BoundFunctionPathSegment)path.Segments.Last();
+            OperationSegment functionSegment = (OperationSegment)path.Segments.Last();
 
             object parameterValue = functionSegment.GetParameterValue("addresses");
-            ODataCollectionValue addresses = Assert.IsType<ODataCollectionValue>(parameterValue);
-            Assert.Equal("Collection(System.Web.OData.Routing.Address)", addresses.TypeName);
+            string addresses = Assert.IsType<string>(parameterValue);
+            Assert.Equal(parametervalue.Substring(parametervalue.IndexOf("[{", StringComparison.Ordinal)), addresses);
         }
 
         [Theory]
@@ -1367,7 +1539,7 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.Equal("~/entityset/key/function", path.PathTemplate);
-            BoundFunctionPathSegment functionSegment = (BoundFunctionPathSegment)path.Segments.Last();
+            OperationSegment functionSegment = (OperationSegment)path.Segments.Last();
 
             object parameterValue = functionSegment.GetParameterValue("intValues");
             ODataCollectionValue intValues = Assert.IsType<ODataCollectionValue>(parameterValue);
@@ -1385,7 +1557,7 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.Equal("~/entityset/key/function", path.PathTemplate);
-            BoundFunctionPathSegment functionSegment = (BoundFunctionPathSegment)path.Segments.Last();
+            OperationSegment functionSegment = (OperationSegment)path.Segments.Last();
 
             object parameterValue = functionSegment.GetParameterValue("product");
             string product = Assert.IsType<string>(parameterValue);
@@ -1415,7 +1587,7 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.Equal("~/entityset/key/function", path.PathTemplate);
-            BoundFunctionPathSegment functionSegment = (BoundFunctionPathSegment)path.Segments.Last();
+            OperationSegment functionSegment = (OperationSegment)path.Segments.Last();
 
             object parameterValue = functionSegment.GetParameterValue("products");
             string product = Assert.IsType<string>(parameterValue);
@@ -1732,8 +1904,8 @@ namespace System.Web.OData.Routing
         [InlineData("Products(1)/RoutingCustomers/System.Web.OData.Routing.VIP", "VIP", "RoutingCustomers", true)]
         [InlineData("SalesPeople(1)/ManagedRoutingCustomers", "VIP", "RoutingCustomers", true)]
         [InlineData("RoutingCustomers(1)/System.Web.OData.Routing.VIP/RelationshipManager", "SalesPerson", "SalesPeople", false)]
-        [InlineData("Products/System.Web.OData.Routing.ImportantProduct(1)/LeadSalesPerson", "SalesPerson", "SalesPeople", false)]
-        [InlineData("Products(1)/RoutingCustomers/System.Web.OData.Routing.VIP(1)/RelationshipManager/ManagedProducts", "ImportantProduct", "Products", true)]
+        [InlineData("Products(1)/System.Web.OData.Routing.ImportantProduct/LeadSalesPerson", "SalesPerson", "SalesPeople", false)]
+        [InlineData("Products(1)/RoutingCustomers(1)/System.Web.OData.Routing.VIP/RelationshipManager/ManagedProducts", "ImportantProduct", "Products", true)]
         public void CanResolveSetAndTypeViaCastSegment(string odataPath, string expectedTypeName, string expectedSetName, bool isCollection)
         {
             AssertTypeMatchesExpectedType(odataPath, expectedSetName, expectedTypeName, isCollection);
@@ -1743,7 +1915,7 @@ namespace System.Web.OData.Routing
         [InlineData("GetRoutingCustomerById", "RoutingCustomer", "RoutingCustomers", false)]
         [InlineData("GetSalesPersonById", "SalesPerson", "SalesPeople", false)]
         [InlineData("GetAllVIPs", "VIP", "RoutingCustomers", true)]
-        public void CanResolveSetAndTypeViaRootProcedureSegment(string odataPath, string expectedTypeName, string expectedSetName, bool isCollection)
+        public void CanResolveSetAndTypeViaRootOperationSegment(string odataPath, string expectedTypeName, string expectedSetName, bool isCollection)
         {
             AssertTypeMatchesExpectedType(odataPath, expectedSetName, expectedTypeName, isCollection);
         }
@@ -1889,9 +2061,12 @@ namespace System.Web.OData.Routing
 
             // Assert
             Assert.NotNull(odataPath);
-            BoundActionPathSegment actionSegment = Assert.IsType<BoundActionPathSegment>(odataPath.Segments.Last());
-            Assert.Equal("NS." + actionName, actionSegment.ActionName);
-            Assert.Equal(expectedEntityBound, actionSegment.Action.Parameters.First().Type.Definition.ToTraceString());
+            OperationSegment actionSegment = Assert.IsType<OperationSegment>(odataPath.Segments.Last());
+
+            IEdmOperation operation = actionSegment.Operations.First();
+            EdmAction edmAction = Assert.IsType<EdmAction>(operation);
+            Assert.Equal("NS." + actionName, edmAction.FullName());
+            Assert.Equal(expectedEntityBound, edmAction.Parameters.First().Type.Definition.ToTraceString());
         }
 
         [Theory]
@@ -1955,8 +2130,8 @@ namespace System.Web.OData.Routing
         [InlineData("CustomersWithMultiKeys(ID1=1,ID2=2)", "CustomersWithMultiKeys(ID1={key1},ID2={key2})", new string[] { "key1:1", "key2:2" })]
         [InlineData("CustomersWithMultiKeys(ID2=2,ID1=1)", "CustomersWithMultiKeys(ID1={key1},ID2={key2})", new string[] { "key1:1", "key2:2" })]
         [InlineData("Customers(42)/Orders(24)", "Customers({customerID})/Orders({orderID})", new string[] { "customerID:42", "orderID:24" })]
-        [InlineData("Function(foo=42,bar=true)", "Function(foo={newFoo},bar={newBar})", new string[] { "newFoo:42", "newBar:true" })]
-        [InlineData("Function(bar=false,foo=24)", "Function(foo={newFoo},bar={newBar})", new string[] { "newFoo:24", "newBar:false" })]
+        [InlineData("Function(foo=42,bar=true)", "Function(foo={newFoo},bar={newBar})", new string[] { "newFoo:42", "newBar:True" })]
+        [InlineData("Function(bar=false,foo=24)", "Function(foo={newFoo},bar={newBar})", new string[] { "newFoo:24", "newBar:False" })]
         [InlineData("Customers(42)/Account/DynamicPropertyName", "Customers({ID})/Account/{propertyname:dynamicproperty}", new string[] { "ID:42", "propertyname:DynamicPropertyName" })]
         [InlineData("Orders(24)/DynamicPropertyName", "Orders({ID})/{propertyname:dynamicproperty}", new string[] { "ID:24", "propertyname:DynamicPropertyName" })]
         [InlineData("RootOrder/DynamicPropertyName", "RootOrder/{propertyname:dynamicproperty}", new string[] { "propertyname:DynamicPropertyName" })]
@@ -1982,6 +2157,7 @@ namespace System.Web.OData.Routing
             // Assert
             Dictionary<string, object> routeData = new Dictionary<string, object>();
             Assert.True(odataPathTemplate.TryMatch(odataPath, routeData));
+
             Assert.Equal(keyValues.OrderBy(k => k), routeData.Where(d => !d.Key.StartsWith(ODataParameterValue.ParameterValuePrefix))
                 .Select(d => d.Key + ":" + d.Value).OrderBy(d => d));
         }
@@ -2093,15 +2269,10 @@ namespace System.Web.OData.Routing
         public void DefaultUriResolverHandler_Works_CaseInsensitive(string path, string template, string expect)
         {
             // Arrange & Act
-            DefaultODataPathHandler pathHandler = new DefaultODataPathHandler
-            {
-                ResolverSetttings = new ODataUriResolverSetttings
-                {
-                    CaseInsensitive = true,
-                }
-            };
+            DefaultODataPathHandler pathHandler = new DefaultODataPathHandler();
+            ODataUriResolver resolver = new CaseInsensitiveResolver();
 
-            ODataPath odataPath = pathHandler.Parse(_model, _serviceRoot, path);
+            ODataPath odataPath = pathHandler.Parse(_model, _serviceRoot, path, resolver);
 
             // Assert
             Assert.NotNull(odataPath);
@@ -2139,17 +2310,11 @@ namespace System.Web.OData.Routing
         public void Unqualified_Works_CustomUriResolverHandler(string path, string template, string expect)
         {
             // Arrange
-            DefaultODataPathHandler pathHandler = new DefaultODataPathHandler
-            {
-                ResolverSetttings = new ODataUriResolverSetttings
-                {
-                    CaseInsensitive = true,
-                    UnqualifiedNameCall = true
-                }
-            };
+            DefaultODataPathHandler pathHandler = new DefaultODataPathHandler();
+            ODataUriResolver resolver = new UnqualifiedCaseInsensitiveResolver();
 
             // Act
-            ODataPath odataPath = pathHandler.Parse(_model, _serviceRoot, path);
+            ODataPath odataPath = pathHandler.Parse(_model, _serviceRoot, path, resolver);
 
             // Assert
             Assert.NotNull(odataPath);
@@ -2186,18 +2351,12 @@ namespace System.Web.OData.Routing
         [PropertyData("PrefixFreeEnumCases")]
         public void PrefixFreeEnumValue_Works_PrefixFreeResolver(string path, string template, string expect)
         {
-            // Arrange & Act
             // Arrange
-            DefaultODataPathHandler pathHandler = new DefaultODataPathHandler
-            {
-                ResolverSetttings = new ODataUriResolverSetttings
-                {
-                    EnumPrefixFree = true
-                }
-            };
+            DefaultODataPathHandler pathHandler = new DefaultODataPathHandler();
+            StringAsEnumResolver resolver = new StringAsEnumResolver();
 
             // Act
-            ODataPath odataPath = pathHandler.Parse(_model, _serviceRoot, path);
+            ODataPath odataPath = pathHandler.Parse(_model, _serviceRoot, path, resolver);
 
             // Assert
             Assert.NotNull(odataPath);
@@ -2247,7 +2406,7 @@ namespace System.Web.OData.Routing
             IEdmEntitySet entitySet = null, IEdmTypeReference bindingParameterType = null, string entitySetPath = null)
         {
             returnType = returnType ?? EdmCoreModel.Instance.GetPrimitive(EdmPrimitiveTypeKind.Boolean, isNullable: false);
-            IEdmExpression expression = entitySet == null ? null : new EdmEntitySetReferenceExpression(entitySet);
+            IEdmExpression expression = entitySet == null ? null : new EdmPathExpression(entitySet.Name);
 
             var function = new EdmFunction(
                 model.Container.Namespace,

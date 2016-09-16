@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.TestCommon;
 using Moq;
@@ -20,8 +20,7 @@ namespace System.Web.OData.Formatter.Serialization
         [Fact]
         public void Ctor_SetsProperty_SerializerProvider()
         {
-            IEdmTypeReference edmType = new Mock<IEdmTypeReference>().Object;
-            ODataSerializerProvider serializerProvider = new DefaultODataSerializerProvider();
+            ODataSerializerProvider serializerProvider = DependencyInjectionHelper.GetDefaultODataSerializerProvider();
             var serializer = new Mock<ODataEdmTypeSerializer>(ODataPayloadKind.Unsupported, serializerProvider).Object;
 
             Assert.Same(serializerProvider, serializer.SerializerProvider);

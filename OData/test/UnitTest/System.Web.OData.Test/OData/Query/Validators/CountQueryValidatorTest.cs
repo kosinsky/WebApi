@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Web.OData.Builder;
 using System.Web.OData.Routing;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Microsoft.TestCommon.Types;
 
@@ -13,7 +12,7 @@ namespace System.Web.OData.Query.Validators
 {
     public class CountQueryValidatorTest
     {
-        private readonly CountQueryValidator _validator = new CountQueryValidator();
+        private readonly CountQueryValidator _validator = CountQueryValidator.GetCountQueryValidator(null);
 
         [Fact]
         public void Validate_Throws_NullOption()

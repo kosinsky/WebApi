@@ -4,10 +4,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.OData.Builder;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 
 namespace System.Web.OData.Query.Validators
@@ -19,8 +18,8 @@ namespace System.Web.OData.Query.Validators
 
         public OrderByQueryValidatorTest()
         {
-            _validator = new OrderByQueryValidator();
             _context = ValidationTestHelper.CreateCustomerContext();
+            _validator = new OrderByQueryValidator(_context.DefaultQuerySettings);
         }
 
         [Fact]
@@ -238,7 +237,10 @@ namespace System.Web.OData.Query.Validators
             ODataValidationSettings settings = new ODataValidationSettings();
 
             // Act & Assert
-            OrderByQueryValidator validator = new OrderByQueryValidator();
+            OrderByQueryValidator validator = new OrderByQueryValidator(new DefaultQuerySettings
+            {
+                EnableOrderBy = true
+            });
             Assert.Throws<ODataException>(() => validator.Validate(option, settings), message);
         }
 
@@ -254,7 +256,7 @@ namespace System.Web.OData.Query.Validators
             settings.AllowedOrderByProperties.Add("Value");
 
             // Act & Assert
-            OrderByQueryValidator validator = new OrderByQueryValidator();
+            OrderByQueryValidator validator = OrderByQueryValidator.GetOrderByQueryValidator(context);
             Assert.DoesNotThrow(() => validator.Validate(option, settings));
         }
 
@@ -270,7 +272,7 @@ namespace System.Web.OData.Query.Validators
             settings.AllowedOrderByProperties.Add("NotSortableProperty");
 
             // Act & Assert
-            OrderByQueryValidator validator = new OrderByQueryValidator();
+            OrderByQueryValidator validator = OrderByQueryValidator.GetOrderByQueryValidator(context);
             Assert.Throws<ODataException>(() =>
                 validator.Validate(option, settings),
                 "Order by 'Value' is not allowed. To allow it, set the 'AllowedOrderByProperties' property on EnableQueryAttribute or QueryValidationSettings.");

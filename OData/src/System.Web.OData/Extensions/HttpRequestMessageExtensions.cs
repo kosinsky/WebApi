@@ -13,11 +13,14 @@ using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Web.Http;
-using System.Web.Http.Routing;
 using System.Web.OData.Formatter;
+using System.Web.OData.Formatter.Deserialization;
+using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Properties;
 using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using System.Web.OData.Routing.Conventions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Extensions
@@ -29,6 +32,8 @@ namespace System.Web.OData.Extensions
     public static class HttpRequestMessageExtensions
     {
         private const string PropertiesKey = "System.Web.OData.Properties";
+        private const string RequestContainerKey = "System.Web.OData.RequestContainer";
+        private const string RequestScopeKey = "System.Web.OData.RequestScope";
 
         /// <summary>
         /// Gets the <see cref="HttpRequestMessageProperties"/> instance containing OData methods and properties
@@ -135,7 +140,7 @@ namespace System.Web.OData.Extensions
 
                 // get property names from request
                 ODataPath odataPath = request.ODataProperties().Path;
-                IEdmModel model = request.ODataProperties().Model;
+                IEdmModel model = request.GetModel();
                 IEdmEntitySet entitySet = odataPath.NavigationSource as IEdmEntitySet;
                 if (model != null && entitySet != null)
                 {
@@ -221,6 +226,184 @@ namespace System.Web.OData.Extensions
             return GetNextPageLink(requestUri, request.GetQueryNameValuePairs(), pageSize);
         }
 
+        /// <summary>
+        /// Gets the dependency injection container for the OData request.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The dependency injection container.</returns>
+        public static IServiceProvider GetRequestContainer(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            object value;
+            if (request.Properties.TryGetValue(RequestContainerKey, out value))
+            {
+                return (IServiceProvider)value;
+            }
+
+            // HTTP routes will not have chance to call CreateRequestContainer.
+            // We have to call it.
+            return request.CreateRequestContainer(null);
+        }
+
+        /// <summary>
+        /// Creates a request container that associates with the <paramref name="request"/>.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <param name="routeName">The name of the route.</param>
+        /// <returns>The request container created.</returns>
+        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
+            Justification = "requestScope will be disposed when the request ends.")]
+        public static IServiceProvider CreateRequestContainer(this HttpRequestMessage request, string routeName)
+        {
+            if (request.Properties.ContainsKey(RequestContainerKey))
+            {
+                throw Error.InvalidOperation(SRResources.RequestContainerAlreadyExists);
+            }
+
+            IServiceScope requestScope = request.CreateRequestScope(routeName);
+            IServiceProvider requestContainer = requestScope.ServiceProvider;
+
+            request.Properties[RequestScopeKey] = requestScope;
+            request.Properties[RequestContainerKey] = requestContainer;
+
+            return requestContainer;
+        }
+
+        /// <summary>
+        /// Deletes the request container from the <paramref name="request"/> and disposes
+        /// the container if <paramref name="dispose"/> is <c>true</c>.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <param name="dispose">
+        /// Returns <c>true</c> to dispose the request container after deletion; <c>false</c> otherwise.
+        /// </param>
+        public static void DeleteRequestContainer(this HttpRequestMessage request, bool dispose)
+        {
+            object value;
+            if (request.Properties.TryGetValue(RequestScopeKey, out value))
+            {
+                IServiceScope requestScope = (IServiceScope)value;
+                Contract.Assert(requestScope != null);
+
+                request.Properties.Remove(RequestScopeKey);
+                request.Properties.Remove(RequestContainerKey);
+
+                if (dispose)
+                {
+                    requestScope.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="IEdmModel"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The <see cref="IEdmModel"/> from the request container.</returns>
+        public static IEdmModel GetModel(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetRequiredService<IEdmModel>();
+        }
+
+        /// <summary>
+        /// Gets the <see cref="ODataMessageWriterSettings"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The <see cref="ODataMessageWriterSettings"/> from the request container.</returns>
+        public static ODataMessageWriterSettings GetWriterSettings(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetRequiredService<ODataMessageWriterSettings>();
+        }
+
+        /// <summary>
+        /// Gets the <see cref="ODataMessageReaderSettings"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The <see cref="ODataMessageReaderSettings"/> from the request container.</returns>
+        public static ODataMessageReaderSettings GetReaderSettings(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetRequiredService<ODataMessageReaderSettings>();
+        }
+
+        /// <summary>
+        /// Gets the <see cref="IODataPathHandler"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The <see cref="IODataPathHandler"/> from the request container.</returns>
+        public static IODataPathHandler GetPathHandler(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetRequiredService<IODataPathHandler>();
+        }
+
+        /// <summary>
+        /// Gets the <see cref="ODataSerializerProvider"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The <see cref="ODataSerializerProvider"/> from the request container.</returns>
+        public static ODataSerializerProvider GetSerializerProvider(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetRequiredService<ODataSerializerProvider>();
+        }
+
+        /// <summary>
+        /// Gets the <see cref="ODataDeserializerProvider"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The <see cref="ODataDeserializerProvider"/> from the request container.</returns>
+        public static ODataDeserializerProvider GetDeserializerProvider(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetRequiredService<ODataDeserializerProvider>();
+        }
+
+        /// <summary>
+        /// Gets the set of <see cref="IODataRoutingConvention"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The set of <see cref="IODataRoutingConvention"/> from the request container.</returns>
+        public static IEnumerable<IODataRoutingConvention> GetRoutingConventions(this HttpRequestMessage request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetServices<IODataRoutingConvention>();
+        }
+
         internal static Uri GetNextPageLink(Uri requestUri, int pageSize)
         {
             Contract.Assert(requestUri != null);
@@ -291,6 +474,25 @@ namespace System.Web.OData.Extensions
                 Query = queryBuilder.ToString()
             };
             return uriBuilder.Uri;
+        }
+
+        private static IServiceProvider GetRootContainer(this HttpRequestMessage request, string routeName)
+        {
+            HttpConfiguration configuration = request.GetConfiguration();
+            if (configuration == null)
+            {
+                throw Error.Argument("request", SRResources.RequestMustContainConfiguration);
+            }
+
+            // Requests from OData routes will have RouteName set.
+            return routeName != null
+                ? configuration.GetODataRootContainer(routeName)
+                : configuration.GetNonODataRootContainer();
+        }
+
+        private static IServiceScope CreateRequestScope(this HttpRequestMessage request, string routeName)
+        {
+            return request.GetRootContainer(routeName).GetRequiredService<IServiceScopeFactory>().CreateScope();
         }
     }
 }

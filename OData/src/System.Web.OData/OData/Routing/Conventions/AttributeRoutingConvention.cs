@@ -11,7 +11,8 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Dispatcher;
 using System.Web.OData.Extensions;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using System.Web.OData.Routing.Template;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Routing.Conventions
@@ -24,39 +25,43 @@ namespace System.Web.OData.Routing.Conventions
     {
         private static readonly DefaultODataPathHandler _defaultPathHandler = new DefaultODataPathHandler();
 
+        private readonly string _routeName;
+
         private IDictionary<ODataPathTemplate, HttpActionDescriptor> _attributeMappings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AttributeRoutingConvention"/> class.
         /// </summary>
-        /// <param name="model">The <see cref="IEdmModel"/> to be used for parsing the route templates.</param>
-        /// <param name="configuration">The <see cref="HttpConfiguration"/> to use for figuring out all the controllers to 
+        /// <param name="routeName">The name of the route.</param>
+        /// <param name="configuration">The <see cref="HttpConfiguration"/> to use for figuring out all the controllers to
         /// look for a match.</param>
-        public AttributeRoutingConvention(IEdmModel model, HttpConfiguration configuration)
-            : this(model, configuration, _defaultPathHandler)
+        public AttributeRoutingConvention(string routeName, HttpConfiguration configuration)
+            : this(routeName, configuration, _defaultPathHandler)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AttributeRoutingConvention"/> class.
         /// </summary>
-        /// <param name="model">The <see cref="IEdmModel"/> to be used for parsing the route templates.</param>
-        /// <param name="configuration">The <see cref="HttpConfiguration"/> to use for figuring out all the controllers to 
+        /// <param name="routeName">The name of the route.</param>
+        /// <param name="configuration">The <see cref="HttpConfiguration"/> to use for figuring out all the controllers to
         /// look for a match.</param>
         /// <param name="pathTemplateHandler">The path template handler to be used for parsing the path templates.</param>
-        public AttributeRoutingConvention(IEdmModel model, HttpConfiguration configuration,
+        public AttributeRoutingConvention(string routeName, HttpConfiguration configuration,
             IODataPathTemplateHandler pathTemplateHandler)
-            : this(model, pathTemplateHandler)
+            : this(routeName, pathTemplateHandler)
         {
             if (configuration == null)
             {
                 throw Error.ArgumentNull("configuration");
             }
 
-            DefaultODataPathHandler odataPathHanlder = pathTemplateHandler as DefaultODataPathHandler;
-            if (odataPathHanlder != null)
+            IODataPathHandler pathHandler = pathTemplateHandler as IODataPathHandler;
+            // if settings is not on local, use the global configuration settings.
+            if (pathHandler != null && pathHandler.UrlKeyDelimiter == null)
             {
-                odataPathHanlder.ResolverSetttings = configuration.GetResolverSettings();
+                ODataUrlKeyDelimiter urlKeyDelimiter = configuration.GetUrlKeyDelimiter();
+                pathHandler.UrlKeyDelimiter = urlKeyDelimiter;
             }
 
             Action<HttpConfiguration> oldInitializer = configuration.Initializer;
@@ -76,24 +81,26 @@ namespace System.Web.OData.Routing.Conventions
         /// <summary>
         /// Initializes a new instance of the <see cref="AttributeRoutingConvention"/> class.
         /// </summary>
-        /// <param name="model">The <see cref="IEdmModel"/> to be used for parsing the route templates.</param>
+        /// <param name="routeName">The name of the route.</param>
         /// <param name="controllers">The collection of controllers to search for a match.</param>
-        public AttributeRoutingConvention(IEdmModel model, IEnumerable<HttpControllerDescriptor> controllers)
-            : this(model, controllers, _defaultPathHandler)
+        public AttributeRoutingConvention(string routeName,
+            IEnumerable<HttpControllerDescriptor> controllers)
+            : this(routeName, controllers, _defaultPathHandler)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AttributeRoutingConvention"/> class.
         /// </summary>
-        /// <param name="model">The <see cref="IEdmModel"/> to be used for parsing the route templates.</param>
+        /// <param name="routeName">The name of the route.</param>
         /// <param name="controllers">The collection of controllers to search for a match.</param>
         /// <param name="pathTemplateHandler">The path template handler to be used for parsing the path templates.</param>
         [SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors",
             Justification = "See note on <see cref=\"ShouldMapController()\"> method.")]
-        public AttributeRoutingConvention(IEdmModel model, IEnumerable<HttpControllerDescriptor> controllers,
+        public AttributeRoutingConvention(string routeName,
+            IEnumerable<HttpControllerDescriptor> controllers,
             IODataPathTemplateHandler pathTemplateHandler)
-            : this(model, pathTemplateHandler)
+            : this(routeName, pathTemplateHandler)
         {
             if (controllers == null)
             {
@@ -103,25 +110,21 @@ namespace System.Web.OData.Routing.Conventions
             _attributeMappings = BuildAttributeMappings(controllers);
         }
 
-        private AttributeRoutingConvention(IEdmModel model, IODataPathTemplateHandler pathTemplateHandler)
+        private AttributeRoutingConvention(string routeName, IODataPathTemplateHandler pathTemplateHandler)
         {
-            if (model == null)
+            if (routeName == null)
             {
-                throw Error.ArgumentNull("model");
+                throw Error.ArgumentNull("routeName");
             }
+
             if (pathTemplateHandler == null)
             {
                 throw Error.ArgumentNull("pathTemplateHandler");
             }
 
-            Model = model;
+            _routeName = routeName;
             ODataPathTemplateHandler = pathTemplateHandler;
         }
-
-        /// <summary>
-        /// Gets the <see cref="IEdmModel"/> to be used for parsing the route templates.
-        /// </summary>
-        public IEdmModel Model { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="IODataPathTemplateHandler"/> to be used for parsing the route templates.
@@ -135,7 +138,7 @@ namespace System.Web.OData.Routing.Conventions
                 if (_attributeMappings == null)
                 {
                     // Will throw an InvalidOperationException if this class is constructed with an HttpConfiguration
-                    // but EnsureInitialized() hasn't been called yet. 
+                    // but EnsureInitialized() hasn't been called yet.
                     throw Error.InvalidOperation(SRResources.Object_NotYetInitialized);
                 }
 
@@ -311,11 +314,14 @@ namespace System.Web.OData.Routing.Conventions
                 pathTemplate = pathTemplate.Substring(1);
             }
 
-            ODataPathTemplate odataPathTemplate = null;
+            ODataPathTemplate odataPathTemplate;
 
             try
             {
-                odataPathTemplate = ODataPathTemplateHandler.ParseTemplate(Model, pathTemplate);
+                // We are NOT in a request but establishing the attribute routing convention.
+                // So use the root container rather than the request container.
+                odataPathTemplate = ODataPathTemplateHandler.ParseTemplate(pathTemplate,
+                    action.Configuration.GetODataRootContainer(_routeName));
             }
             catch (ODataException e)
             {

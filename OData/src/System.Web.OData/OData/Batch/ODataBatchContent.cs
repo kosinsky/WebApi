@@ -12,7 +12,8 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 
 namespace System.Web.OData.Batch
 {
@@ -21,35 +22,24 @@ namespace System.Web.OData.Batch
     /// </summary>
     public class ODataBatchContent : HttpContent
     {
-        private ODataMessageWriterSettings _writerSettings;
+        private readonly IServiceProvider _requestContainer;
+        private readonly ODataMessageWriterSettings _writerSettings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ODataBatchContent"/> class.
         /// </summary>
         /// <param name="responses">The batch responses.</param>
-        public ODataBatchContent(IEnumerable<ODataBatchResponseItem> responses)
-            : this(responses, new ODataMessageWriterSettings())
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ODataBatchContent"/> class.
-        /// </summary>
-        /// <param name="responses">The batch responses.</param>
-        /// <param name="writerSettings">The <see cref="ODataMessageWriterSettings"/>.</param>
-        public ODataBatchContent(IEnumerable<ODataBatchResponseItem> responses, ODataMessageWriterSettings writerSettings)
+        /// <param name="requestContainer">The dependency injection container for the request.</param>
+        public ODataBatchContent(IEnumerable<ODataBatchResponseItem> responses, IServiceProvider requestContainer)
         {
             if (responses == null)
             {
                 throw Error.ArgumentNull("responses");
             }
-            if (writerSettings == null)
-            {
-                throw Error.ArgumentNull("writerSettings");
-            }
 
             Responses = responses;
-            _writerSettings = writerSettings;
+            _requestContainer = requestContainer;
+            _writerSettings = requestContainer.GetRequiredService<ODataMessageWriterSettings>();
             Headers.ContentType = MediaTypeHeaderValue.Parse(String.Format(CultureInfo.InvariantCulture, "multipart/mixed;boundary=batchresponse_{0}", Guid.NewGuid()));
             ODataVersion version = _writerSettings.Version ?? HttpRequestMessageProperties.DefaultODataVersion;
             Headers.TryAddWithoutValidation(HttpRequestMessageProperties.ODataServiceVersionHeader, ODataUtils.ODataVersionToString(version));
@@ -79,7 +69,10 @@ namespace System.Web.OData.Batch
         /// <inheritdoc/>
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
-            IODataResponseMessage responseMessage = new ODataMessageWrapper(stream, Headers);
+            IODataResponseMessage responseMessage = new ODataMessageWrapper(stream, Headers)
+            {
+                Container = _requestContainer
+            };
             ODataMessageWriter messageWriter = new ODataMessageWriter(responseMessage, _writerSettings);
             ODataBatchWriter writer = messageWriter.CreateODataBatchWriter();
 

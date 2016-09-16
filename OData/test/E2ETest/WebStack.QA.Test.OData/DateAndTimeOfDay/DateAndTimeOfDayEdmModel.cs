@@ -1,10 +1,15 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
+using System.Collections.Generic;
 using System.Web.OData;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
-using System.Web.OData.Routing;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
+using EdmPrimitiveTypeKind = Microsoft.OData.Edm.EdmPrimitiveTypeKind;
+using IEdmModel = Microsoft.OData.Edm.IEdmModel;
 
 namespace WebStack.QA.Test.OData.DateAndTimeOfDay
 {
@@ -93,13 +98,13 @@ namespace WebStack.QA.Test.OData.DateAndTimeOfDay
             builder.Action("ResetDataSource");
         }
 
-        private static Func<EntityInstanceContext, Uri> link = entityContext =>
+        private static Func<ResourceContext, Uri> link = entityContext =>
         {
             object id;
             entityContext.EdmObject.TryGetPropertyValue("Id", out id);
             string uri = entityContext.Url.CreateODataLink(
-                            new EntitySetPathSegment(entityContext.NavigationSource.Name),
-                            new KeyValuePathSegment(id.ToString()));
+                            new EntitySetSegment(entityContext.NavigationSource as IEdmEntitySet),
+                            new KeySegment(new[] { new KeyValuePair<string, object>("Id", id) }, entityContext.StructuredType as IEdmEntityType, null));
             return new Uri(uri);
         };
 

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Net;
@@ -15,9 +14,10 @@ using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Properties;
-using System.Web.OData.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData.Edm;
-using ODL = Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.OData.UriParser;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Results
 {
@@ -27,35 +27,35 @@ namespace System.Web.OData.Results
 
         public static Uri GenerateODataLink(HttpRequestMessage request, object entity, bool isEntityId)
         {
-            EntityInstanceContext entityContext = CreateEntityInstanceContext(request, entity);
-            Contract.Assert(entityContext != null);
+            ResourceContext resourceContext = CreateResourceContext(request, entity);
+            Contract.Assert(resourceContext != null);
 
             // Generate location or entityId header from request Uri and key, if Post to a containment.
             // Link builder is not used, since it is also for generating ID, Edit, Read links, etc. scenarios, where
             // request Uri is not used.
-            if (entityContext.NavigationSource.NavigationSourceKind() == EdmNavigationSourceKind.ContainedEntitySet)
+            if (resourceContext.NavigationSource.NavigationSourceKind() == EdmNavigationSourceKind.ContainedEntitySet)
             {
-                return GenerateContainmentODataPathSegments(entityContext, isEntityId);
+                return GenerateContainmentODataPathSegments(resourceContext, isEntityId);
             }
 
             NavigationSourceLinkBuilderAnnotation linkBuilder =
-                entityContext.EdmModel.GetNavigationSourceLinkBuilder(entityContext.NavigationSource);
+                resourceContext.EdmModel.GetNavigationSourceLinkBuilder(resourceContext.NavigationSource);
             Contract.Assert(linkBuilder != null);
 
-            Uri idLink = linkBuilder.BuildIdLink(entityContext);
+            Uri idLink = linkBuilder.BuildIdLink(resourceContext);
             if (isEntityId)
             {
                 if (idLink == null)
                 {
                     throw Error.InvalidOperation(
                         SRResources.IdLinkNullForEntityIdHeader,
-                        entityContext.NavigationSource.Name);
+                        resourceContext.NavigationSource.Name);
                 }
 
                 return idLink;
             }
 
-            Uri editLink = linkBuilder.BuildEditLink(entityContext);
+            Uri editLink = linkBuilder.BuildEditLink(resourceContext);
             if (editLink == null)
             {
                 if (idLink != null)
@@ -65,7 +65,7 @@ namespace System.Web.OData.Results
 
                 throw Error.InvalidOperation(
                     SRResources.EditLinkNullForLocationHeader,
-                    entityContext.NavigationSource.Name);
+                    resourceContext.NavigationSource.Name);
             }
 
             return editLink;
@@ -79,49 +79,51 @@ namespace System.Web.OData.Results
             }
         }
 
-        private static Uri GenerateContainmentODataPathSegments(EntityInstanceContext entityContext, bool isEntityId)
+        private static Uri GenerateContainmentODataPathSegments(ResourceContext resourceContext, bool isEntityId)
         {
-            Contract.Assert(entityContext != null);
+            Contract.Assert(resourceContext != null);
             Contract.Assert(
-                entityContext.NavigationSource.NavigationSourceKind() == EdmNavigationSourceKind.ContainedEntitySet);
-            Contract.Assert(entityContext.Request != null);
+                resourceContext.NavigationSource.NavigationSourceKind() == EdmNavigationSourceKind.ContainedEntitySet);
+            Contract.Assert(resourceContext.Request != null);
 
-            ODataPath path = entityContext.Request.ODataProperties().Path;
+            ODataPath path = resourceContext.Request.ODataProperties().Path;
             if (path == null)
             {
                 throw Error.InvalidOperation(SRResources.ODataPathMissing);
             }
 
-            ODL.ODataPath odlPath = path.ODLPath;
-            odlPath = new ContainmentPathBuilder().TryComputeCanonicalContainingPath(odlPath);
-            path = ODataPathSegmentTranslator.TranslateODataLibPathToWebApiPath(
-                odlPath,
-                entityContext.EdmModel,
-                unresolvedPathSegment: null,
-                id: null,
-                enableUriTemplateParsing: false,
-                parameterAliasNodes: new Dictionary<string, ODL.SingleValueNode>());
+            path = new ContainmentPathBuilder().TryComputeCanonicalContainingPath(path);
 
             List<ODataPathSegment> odataPath = path.Segments.ToList();
-            odataPath.Add(new EntitySetPathSegment((IEdmEntitySetBase)entityContext.NavigationSource));
-            odataPath.Add(new KeyValuePathSegment(ConventionsHelpers.GetEntityKeyValue(entityContext)));
+
+            // create a template entity set if it's contained entity set
+            IEdmEntitySet entitySet = resourceContext.NavigationSource as IEdmEntitySet;
+            if (entitySet == null)
+            {
+                EdmEntityContainer container = new EdmEntityContainer("NS", "Default");
+                entitySet = new EdmEntitySet(container, resourceContext.NavigationSource.Name, resourceContext.NavigationSource.EntityType());
+            }
+
+            odataPath.Add(new EntitySetSegment(entitySet));
+            odataPath.Add(new KeySegment(ConventionsHelpers.GetEntityKey(resourceContext),
+                resourceContext.StructuredType as IEdmEntityType, resourceContext.NavigationSource));
 
             if (!isEntityId)
             {
-                bool isSameType = entityContext.EntityType == entityContext.NavigationSource.EntityType();
+                bool isSameType = resourceContext.StructuredType == resourceContext.NavigationSource.EntityType();
                 if (!isSameType)
                 {
-                    odataPath.Add(new CastPathSegment(entityContext.EntityType));
+                    odataPath.Add(new TypeSegment(resourceContext.StructuredType, resourceContext.NavigationSource));
                 }
             }
 
-            string odataLink = entityContext.Url.CreateODataLink(odataPath);
+            string odataLink = resourceContext.Url.CreateODataLink(odataPath);
             return odataLink == null ? null : new Uri(odataLink);
         }
 
-        private static EntityInstanceContext CreateEntityInstanceContext(HttpRequestMessage request, object entity)
+        private static ResourceContext CreateResourceContext(HttpRequestMessage request, object entity)
         {
-            IEdmModel model = request.ODataProperties().Model;
+            IEdmModel model = request.GetModel();
             if (model == null)
             {
                 throw new InvalidOperationException(SRResources.RequestMustHaveModel);
@@ -151,7 +153,7 @@ namespace System.Web.OData.Results
             };
 
             IEdmEntityTypeReference entityType = GetEntityType(model, entity);
-            return new EntityInstanceContext(serializerContext, entityType, entity);
+            return new ResourceContext(serializerContext, entityType, entity);
         }
 
         private static IEdmEntityTypeReference GetEntityType(IEdmModel model, object entity)
@@ -160,7 +162,7 @@ namespace System.Web.OData.Results
             IEdmTypeReference edmType = model.GetEdmTypeReference(entityType);
             if (edmType == null)
             {
-                throw Error.InvalidOperation(SRResources.EntityTypeNotInModel, entityType.FullName);
+                throw Error.InvalidOperation(SRResources.ResourceTypeNotInModel, entityType.FullName);
             }
             if (!edmType.IsEntity())
             {

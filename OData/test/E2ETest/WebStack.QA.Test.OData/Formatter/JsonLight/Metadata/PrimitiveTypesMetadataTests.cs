@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -82,7 +83,6 @@ namespace WebStack.QA.Test.OData.Formatter.JsonLight.Metadata
                 var propertyNameAndEdmTypes = new Tuple<string, string>[] 
                 {
                     Tuple.Create("Id", "Edm.Int32"),
-                    Tuple.Create("NullableIntProperty", "Edm.Int32"),
                     Tuple.Create("BinaryProperty", "Edm.Binary"),
                     Tuple.Create("BooleanProperty", "Edm.Boolean"),
                     Tuple.Create("DurationProperty", "Edm.Duration"),
@@ -156,24 +156,17 @@ namespace WebStack.QA.Test.OData.Formatter.JsonLight.Metadata
             var entryUrl = BaseAddress + "/EntityWithSimpleProperties(" + entity.Id + ")/" + propertyName;
             var response = await Client.GetWithAcceptAsync(entryUrl, acceptHeader);
             var result = await response.Content.ReadAsAsync<JObject>();
-            bool isODataNull = result.Property("@odata.null") != null;
 
             // Assert
             if (acceptHeader.Contains("odata.metadata=none"))
             {
-                if (!isODataNull)
-                {
-                    JsonAssert.DoesNotContainProperty("@odata.*", result);
-                }
-                else
-                {
-                    JsonAssert.Equals(true, (bool)result.Property("@odata.null"));
-                }
+                JsonAssert.DoesNotContainProperty("@odata.*", result);
             }
             else
             {
                 ODataUrlAssert.UrlEquals(expectedContextUrl, result, "@odata.context", BaseAddress);
-                if (!acceptHeader.Contains("odata.metadata=full") || (inferableTypes.Contains(edmType) && !result.IsSpecialValue()))
+                if (!acceptHeader.Contains("odata.metadata=full") ||
+                    (inferableTypes.Contains(edmType) && !result.IsSpecialValue()))
                 {
                     JsonAssert.DoesNotContainProperty("@odata.type", result);
                 }

@@ -3,6 +3,8 @@
 
 using System.Net.Http;
 using System.Web.OData.TestCommon;
+using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -26,7 +28,8 @@ namespace System.Web.OData.Routing.Conventions
         public void SelectController_ThrowsArgmentNull_IfMissRequest()
         {
             // Arrange
-            ODataPath odataPath = new ODataPath(new ODataPathSegment[] { new EntitySetPathSegment("Customers") });
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(model.Customers));
 
             // Act & Assert
             Assert.ThrowsArgumentNull(
@@ -39,7 +42,10 @@ namespace System.Web.OData.Routing.Conventions
         {
             // Arrange
             Mock<HttpRequestMessage> request = new Mock<HttpRequestMessage>();
-            ODataPath odataPath = new ODataPath(new ODataPathSegment[] { new RefPathSegment() });
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+            var ordersProperty = model.Customer.FindProperty("Orders") as IEdmNavigationProperty;
+            NavigationPropertyLinkSegment navigationLinkSegment = new NavigationPropertyLinkSegment(ordersProperty, model.Orders);
+            ODataPath odataPath = new ODataPath(navigationLinkSegment);
 
             // Act
             string controller = new MockNavigationSourceRoutingConvention().SelectController(odataPath, request.Object);

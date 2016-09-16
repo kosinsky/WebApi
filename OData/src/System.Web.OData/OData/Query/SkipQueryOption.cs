@@ -3,14 +3,12 @@
 
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
-using System.Globalization;
 using System.Linq;
 using System.Web.Http;
 using System.Web.OData.Properties;
 using System.Web.OData.Query.Validators;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Query
 {
@@ -23,7 +21,7 @@ namespace System.Web.OData.Query
         private ODataQueryOptionParser _queryOptionParser;
 
         /// <summary>
-        /// Initialize a new instance of <see cref="SkipQueryOption"/> based on the raw $skip value and 
+        /// Initialize a new instance of <see cref="SkipQueryOption"/> based on the raw $skip value and
         /// an EdmModel from <see cref="ODataQueryContext"/>.
         /// </summary>
         /// <param name="rawValue">The raw value for $skip query. It can be null or empty.</param>
@@ -48,7 +46,7 @@ namespace System.Web.OData.Query
 
             Context = context;
             RawValue = rawValue;
-            Validator = new SkipQueryValidator();
+            Validator = SkipQueryValidator.GetSkipQueryValidator(context);
             _queryOptionParser = queryOptionParser;
         }
 
@@ -67,7 +65,7 @@ namespace System.Web.OData.Query
 
             Context = context;
             RawValue = rawValue;
-            Validator = new SkipQueryValidator();
+            Validator = SkipQueryValidator.GetSkipQueryValidator(context);
             _queryOptionParser = new ODataQueryOptionParser(
                 context.Model,
                 context.ElementType,
@@ -77,7 +75,7 @@ namespace System.Web.OData.Query
 
         /// <summary>
         /// Gets the given <see cref="ODataQueryContext"/>.
-        /// </summary>        
+        /// </summary>
         public ODataQueryContext Context { get; private set; }
 
         /// <summary>

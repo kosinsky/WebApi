@@ -12,20 +12,19 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser.Semantic;
-using Microsoft.OData.Core.UriParser.TreeNodeKinds;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Query.Expressions
 {
     /// <summary>
-    /// Translates an OData $filter parse tree represented by <see cref="FilterClause"/> to 
+    /// Translates an OData $filter parse tree represented by <see cref="FilterClause"/> to
     /// an <see cref="Expression"/> and applies it to an <see cref="IQueryable"/>.
     /// </summary>
     [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Relies on many ODataLib classes.")]
-    internal class FilterBinder : ExpressionBinderBase
+    public class FilterBinder : ExpressionBinderBase
     {
         private const string ODataItParameterName = "$it";
 
@@ -35,29 +34,67 @@ namespace System.Web.OData.Query.Expressions
         private Dictionary<string, ParameterExpression> _lambdaParameters;
         private Type _filterType;
 
-        private FilterBinder(IEdmModel model, ODataQuerySettings querySettings, Type filterType)
-            : base(model, querySettings)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FilterBinder"/> class.
+        /// </summary>
+        /// <param name="requestContainer">The request container.</param>
+        public FilterBinder(IServiceProvider requestContainer)
+            : base(requestContainer)
         {
-            _filterType = filterType;
         }
 
+        internal static Expression Bind(FilterClause filterClause, Type filterType, IServiceProvider requestContainer)
+        {
+            if (filterClause == null)
+            {
+                throw Error.ArgumentNull("filterClause");
+            }
+            if (filterType == null)
+            {
+                throw Error.ArgumentNull("filterType");
+            }
+            if (requestContainer == null)
+            {
+                throw Error.ArgumentNull("requestContainer");
+            }
+
+            FilterBinder binder = requestContainer.GetRequiredService<FilterBinder>();
+            binder._filterType = filterType;
+
+            return BindFilterClause(binder, filterClause, filterType);
+        }
+
+        internal static LambdaExpression Bind(OrderByClause orderBy, Type elementType, IServiceProvider requestContainer)
+        {
+            Contract.Assert(orderBy != null);
+            Contract.Assert(elementType != null);
+            Contract.Assert(requestContainer != null);
+
+            FilterBinder binder = requestContainer.GetRequiredService<FilterBinder>();
+            binder._filterType = elementType;
+
+            return BindOrderByClause(binder, orderBy, elementType);
+        }
+
+        #region For testing purposes only.
+
         private FilterBinder(
-            IEdmModel model, 
-            IAssembliesResolver assembliesResolver, 
-            ODataQuerySettings querySettings, 
+            IEdmModel model,
+            IAssembliesResolver assembliesResolver,
+            ODataQuerySettings querySettings,
             Type filterType)
             : base(model, assembliesResolver, querySettings)
         {
             _filterType = filterType;
         }
 
-        public static Expression<Func<TEntityType, bool>> Bind<TEntityType>(FilterClause filterClause, IEdmModel model,
+        internal static Expression<Func<TEntityType, bool>> Bind<TEntityType>(FilterClause filterClause, IEdmModel model,
             IAssembliesResolver assembliesResolver, ODataQuerySettings querySettings)
         {
             return Bind(filterClause, typeof(TEntityType), model, assembliesResolver, querySettings) as Expression<Func<TEntityType, bool>>;
         }
 
-        public static Expression Bind(FilterClause filterClause, Type filterType, IEdmModel model,
+        internal static Expression Bind(FilterClause filterClause, Type filterType, IEdmModel model,
             IAssembliesResolver assembliesResolver, ODataQuerySettings querySettings)
         {
             if (filterClause == null)
@@ -72,12 +109,16 @@ namespace System.Web.OData.Query.Expressions
             {
                 throw Error.ArgumentNull("model");
             }
-            if (assembliesResolver == null)
-            {
-                throw Error.ArgumentNull("assembliesResolver");
-            }
 
             FilterBinder binder = new FilterBinder(model, assembliesResolver, querySettings, filterType);
+
+            return BindFilterClause(binder, filterClause, filterType);
+        }
+
+        #endregion
+
+        private static LambdaExpression BindFilterClause(FilterBinder binder, FilterClause filterClause, Type filterType)
+        {
             LambdaExpression filter = binder.BindExpression(filterClause.Expression, filterClause.RangeVariable, filterType);
             filter = Expression.Lambda(binder.ApplyNullPropagationForFilterBody(filter.Body), filter.Parameters);
 
@@ -90,20 +131,21 @@ namespace System.Web.OData.Query.Expressions
             return filter;
         }
 
-        public static LambdaExpression Bind(OrderByClause orderBy, Type elementType,
-            IEdmModel model, ODataQuerySettings querySettings)
+        private static LambdaExpression BindOrderByClause(FilterBinder binder, OrderByClause orderBy, Type elementType)
         {
-            Contract.Assert(orderBy != null);
-            Contract.Assert(elementType != null);
-            Contract.Assert(model != null);
-            Contract.Assert(querySettings != null);
-
-            FilterBinder binder = new FilterBinder(model, querySettings, elementType);
             LambdaExpression orderByLambda = binder.BindExpression(orderBy.Expression, orderBy.RangeVariable, elementType);
             return orderByLambda;
         }
 
-        private Expression Bind(QueryNode node)
+        /// <summary>
+        /// Binds a <see cref="QueryNode"/> to create a LINQ <see cref="Expression"/> that represents the semantics
+        /// of the <see cref="QueryNode"/>.
+        /// </summary>
+        /// <param name="node">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
+            Justification = "These are simple conversion function and cannot be split up.")]
+        public virtual Expression Bind(QueryNode node)
         {
             // Recursion guard to avoid stack overflows
             RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -122,13 +164,15 @@ namespace System.Web.OData.Query.Expressions
                     case QueryNodeKind.CollectionPropertyAccess:
                         return BindCollectionPropertyAccessNode(node as CollectionPropertyAccessNode);
 
-                    case QueryNodeKind.EntityCollectionCast:
-                        return BindEntityCollectionCastNode(node as EntityCollectionCastNode);
+                    case QueryNodeKind.CollectionComplexNode:
+                        return BindCollectionComplexNode(node as CollectionComplexNode);
+
+                    case QueryNodeKind.CollectionResourceCast:
+                        return BindCollectionResourceCastNode(node as CollectionResourceCastNode);
 
                     case QueryNodeKind.CollectionFunctionCall:
-                    case QueryNodeKind.EntityCollectionFunctionCall:
+                    case QueryNodeKind.CollectionResourceFunctionCall:
                     case QueryNodeKind.CollectionOpenPropertyAccess:
-                    case QueryNodeKind.CollectionPropertyCast:
                     // Unused or have unknown uses.
                     default:
                         throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, node.Kind, typeof(FilterBinder).Name);
@@ -147,14 +191,17 @@ namespace System.Web.OData.Query.Expressions
                     case QueryNodeKind.Convert:
                         return BindConvertNode(node as ConvertNode);
 
-                    case QueryNodeKind.EntityRangeVariableReference:
-                        return BindRangeVariable((node as EntityRangeVariableReferenceNode).RangeVariable);
+                    case QueryNodeKind.ResourceRangeVariableReference:
+                        return BindRangeVariable((node as ResourceRangeVariableReferenceNode).RangeVariable);
 
-                    case QueryNodeKind.NonentityRangeVariableReference:
-                        return BindRangeVariable((node as NonentityRangeVariableReferenceNode).RangeVariable);
+                    case QueryNodeKind.NonResourceRangeVariableReference:
+                        return BindRangeVariable((node as NonResourceRangeVariableReferenceNode).RangeVariable);
 
                     case QueryNodeKind.SingleValuePropertyAccess:
                         return BindPropertyAccessQueryNode(node as SingleValuePropertyAccessNode);
+
+                    case QueryNodeKind.SingleComplexNode:
+                        return BindSingleComplexNode(node as SingleComplexNode);
 
                     case QueryNodeKind.SingleValueOpenPropertyAccess:
                         return BindDynamicPropertyAccessQueryNode(node as SingleValueOpenPropertyAccessNode);
@@ -175,18 +222,17 @@ namespace System.Web.OData.Query.Expressions
                     case QueryNodeKind.All:
                         return BindAllNode(node as AllNode);
 
-                    case QueryNodeKind.SingleEntityCast:
-                        return BindSingleEntityCastNode(node as SingleEntityCastNode);
+                    case QueryNodeKind.SingleResourceCast:
+                        return BindSingleResourceCastNode(node as SingleResourceCastNode);
 
-                    case QueryNodeKind.SingleEntityFunctionCall:
-                        return BindSingleEntityFunctionCallNode(node as SingleEntityFunctionCallNode);
+                    case QueryNodeKind.SingleResourceFunctionCall:
+                        return BindSingleResourceFunctionCallNode(node as SingleResourceFunctionCallNode);
 
                     case QueryNodeKind.NamedFunctionParameter:
                     case QueryNodeKind.ParameterAlias:
                     case QueryNodeKind.EntitySet:
                     case QueryNodeKind.KeyLookup:
                     case QueryNodeKind.SearchTerm:
-                    case QueryNodeKind.SingleValueCast:
                     // Unused or have unknown uses.
                     default:
                         throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, node.Kind, typeof(FilterBinder).Name);
@@ -198,7 +244,13 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindDynamicPropertyAccessQueryNode(SingleValueOpenPropertyAccessNode openNode)
+        /// <summary>
+        /// Binds a <see cref="SingleValueOpenPropertyAccessNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="SingleValueOpenPropertyAccessNode"/>.
+        /// </summary>
+        /// <param name="openNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindDynamicPropertyAccessQueryNode(SingleValueOpenPropertyAccessNode openNode)
         {
             if (EdmLibHelpers.IsDynamicTypeWrapper(_filterType))
             {
@@ -214,7 +266,7 @@ namespace System.Web.OData.Query.Expressions
                 propertyAccessExpression.Type.GetMethod("ContainsKey"), Expression.Constant(openNode.Name));
             var nullExpression = Expression.Constant(null);
 
-            if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
             {
                 var dynamicDictIsNotNull = Expression.NotEqual(propertyAccessExpression, Expression.Constant(null));
                 var dynamicDictIsNotNullAndContainsKey = Expression.AndAlso(dynamicDictIsNotNull, containsKeyExpression);
@@ -236,7 +288,7 @@ namespace System.Web.OData.Query.Expressions
         {
             var source = Bind(openNode.Source);
             Expression propertyAccessExpression;
-            if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True &&
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True &&
                 IsNullable(source.Type) && source != _lambdaParameters[ODataItParameterName])
             {
                 propertyAccessExpression = Expression.Property(RemoveInnerNullPropagation(source), prop.Name);
@@ -264,22 +316,28 @@ namespace System.Web.OData.Query.Expressions
             {
                 throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, openNode.Kind, typeof(FilterBinder).Name);
             }
-            var prop = EdmLibHelpers.GetDynamicPropertyDictionary(edmStructuredType, _model);
+            var prop = EdmLibHelpers.GetDynamicPropertyDictionary(edmStructuredType, Model);
             return prop;
         }
 
-        private Expression BindSingleEntityFunctionCallNode(SingleEntityFunctionCallNode node)
+        /// <summary>
+        /// Binds a <see cref="SingleResourceFunctionCallNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="SingleResourceFunctionCallNode"/>.
+        /// </summary>
+        /// <param name="node">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindSingleResourceFunctionCallNode(SingleResourceFunctionCallNode node)
         {
             switch (node.Name)
             {
                 case ClrCanonicalFunctions.CastFunctionName:
-                    return BindSingleEntityCastFunctionCall(node);
+                    return BindSingleResourceCastFunctionCall(node);
                 default:
                     throw Error.NotSupported(SRResources.ODataFunctionNotSupported, node.Name);
             }
         }
 
-        private Expression BindSingleEntityCastFunctionCall(SingleEntityFunctionCallNode node)
+        private Expression BindSingleResourceCastFunctionCall(SingleResourceFunctionCallNode node)
         {
             Contract.Assert(ClrCanonicalFunctions.CastFunctionName == node.Name);
 
@@ -288,12 +346,12 @@ namespace System.Web.OData.Query.Expressions
             Contract.Assert(arguments.Length == 2);
 
             string targetEdmTypeName = (string)((ConstantNode)node.Parameters.Last()).Value;
-            IEdmType targetEdmType = _model.FindType(targetEdmTypeName);
+            IEdmType targetEdmType = Model.FindType(targetEdmTypeName);
             Type targetClrType = null;
 
             if (targetEdmType != null)
             {
-                targetClrType = EdmLibHelpers.GetClrType(targetEdmType.ToEdmTypeReference(false), _model);
+                targetClrType = EdmLibHelpers.GetClrType(targetEdmType.ToEdmTypeReference(false), Model);
             }
 
             if (arguments[0].Type == targetClrType)
@@ -308,23 +366,35 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindSingleEntityCastNode(SingleEntityCastNode node)
+        /// <summary>
+        /// Binds a <see cref="SingleResourceCastNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="SingleResourceCastNode"/>.
+        /// </summary>
+        /// <param name="node">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindSingleResourceCastNode(SingleResourceCastNode node)
         {
-            IEdmEntityTypeReference entity = node.EntityTypeReference;
-            Contract.Assert(entity != null, "NS casts can contain only entity types");
+            IEdmStructuredTypeReference structured = node.StructuredTypeReference;
+            Contract.Assert(structured != null, "NS casts can contain only structured types");
 
-            Type clrType = EdmLibHelpers.GetClrType(entity, _model);
+            Type clrType = EdmLibHelpers.GetClrType(structured, Model);
 
             Expression source = BindCastSourceNode(node.Source);
             return Expression.TypeAs(source, clrType);
         }
 
-        private Expression BindEntityCollectionCastNode(EntityCollectionCastNode node)
+        /// <summary>
+        /// Binds a <see cref="CollectionResourceCastNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="CollectionResourceCastNode"/>.
+        /// </summary>
+        /// <param name="node">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindCollectionResourceCastNode(CollectionResourceCastNode node)
         {
-            IEdmEntityTypeReference entity = node.EntityItemType;
-            Contract.Assert(entity != null, "NS casts can contain only entity types");
+            IEdmStructuredTypeReference structured = node.ItemStructuredType;
+            Contract.Assert(structured != null, "NS casts can contain only structured types");
 
-            Type clrType = EdmLibHelpers.GetClrType(entity, _model);
+            Type clrType = EdmLibHelpers.GetClrType(structured, Model);
 
             Expression source = BindCastSourceNode(node.Source);
             return OfType(source, clrType);
@@ -335,7 +405,7 @@ namespace System.Web.OData.Query.Expressions
             Expression source;
             if (sourceNode == null)
             {
-                // if the cast is on the root i.e $it (~/Products?$filter=NS.PopularProducts/.....), 
+                // if the cast is on the root i.e $it (~/Products?$filter=NS.PopularProducts/.....),
                 // source would be null. So bind null to '$it'.
                 source = _lambdaParameters[ODataItParameterName];
             }
@@ -362,7 +432,14 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindNavigationPropertyNode(QueryNode sourceNode, IEdmNavigationProperty navigationProperty)
+        /// <summary>
+        /// Binds a <see cref="IEdmNavigationProperty"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="IEdmNavigationProperty"/>.
+        /// </summary>
+        /// <param name="sourceNode">The node that represents the navigation source.</param>
+        /// <param name="navigationProperty">The navigation property to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindNavigationPropertyNode(QueryNode sourceNode, IEdmNavigationProperty navigationProperty)
         {
             Expression source;
 
@@ -379,13 +456,19 @@ namespace System.Web.OData.Query.Expressions
             return CreatePropertyAccessExpression(source, navigationProperty);
         }
 
-        private Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode)
+        /// <summary>
+        /// Binds a <see cref="BinaryOperatorNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="BinaryOperatorNode"/>.
+        /// </summary>
+        /// <param name="binaryOperatorNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode)
         {
             Expression left = Bind(binaryOperatorNode.Left);
             Expression right = Bind(binaryOperatorNode.Right);
 
             // handle null propagation only if either of the operands can be null
-            bool isNullPropagationRequired = _querySettings.HandleNullPropagation == HandleNullPropagationOption.True && (IsNullable(left.Type) || IsNullable(right.Type));
+            bool isNullPropagationRequired = QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && (IsNullable(left.Type) || IsNullable(right.Type));
             if (isNullPropagationRequired)
             {
                 // |----------------------------------------------------------------|
@@ -423,7 +506,13 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindConstantNode(ConstantNode constantNode)
+        /// <summary>
+        /// Binds a <see cref="ConstantNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="ConstantNode"/>.
+        /// </summary>
+        /// <param name="constantNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindConstantNode(ConstantNode constantNode)
         {
             Contract.Assert(constantNode != null);
 
@@ -433,7 +522,7 @@ namespace System.Web.OData.Query.Expressions
                 return NullConstant;
             }
 
-            Type constantType = EdmLibHelpers.GetClrType(constantNode.TypeReference, _model, _assembliesResolver);
+            Type constantType = EdmLibHelpers.GetClrType(constantNode.TypeReference, Model, AssembliesResolver);
             object value = constantNode.Value;
 
             if (constantNode.TypeReference != null && constantNode.TypeReference.IsEnum())
@@ -453,7 +542,7 @@ namespace System.Web.OData.Query.Expressions
                 constantType = Nullable.GetUnderlyingType(constantType) ?? constantType;
             }
 
-            if (_querySettings.EnableConstantParameterization)
+            if (QuerySettings.EnableConstantParameterization)
             {
                 return LinqParameterContainer.Parameterize(constantType, value);
             }
@@ -463,7 +552,13 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindConvertNode(ConvertNode convertNode)
+        /// <summary>
+        /// Binds a <see cref="ConvertNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="ConvertNode"/>.
+        /// </summary>
+        /// <param name="convertNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindConvertNode(ConvertNode convertNode)
         {
             Contract.Assert(convertNode != null);
             Contract.Assert(convertNode.TypeReference != null);
@@ -487,7 +582,7 @@ namespace System.Web.OData.Query.Expressions
         {
             if (IsNullable(body.Type))
             {
-                if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+                if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
                 {
                     // handle null as false
                     // body => body == true. passing liftToNull:false would convert null to false.
@@ -502,28 +597,70 @@ namespace System.Web.OData.Query.Expressions
             return body;
         }
 
-        private Expression BindRangeVariable(RangeVariable rangeVariable)
+        /// <summary>
+        /// Binds a <see cref="RangeVariable"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="RangeVariable"/>.
+        /// </summary>
+        /// <param name="rangeVariable">The range variable to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindRangeVariable(RangeVariable rangeVariable)
         {
             ParameterExpression parameter = _lambdaParameters[rangeVariable.Name];
             return ConvertNonStandardPrimitives(parameter);
         }
 
-        private Expression BindCollectionPropertyAccessNode(CollectionPropertyAccessNode propertyAccessNode)
+        /// <summary>
+        /// Binds a <see cref="CollectionPropertyAccessNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="CollectionPropertyAccessNode"/>.
+        /// </summary>
+        /// <param name="propertyAccessNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindCollectionPropertyAccessNode(CollectionPropertyAccessNode propertyAccessNode)
         {
             Expression source = Bind(propertyAccessNode.Source);
             return CreatePropertyAccessExpression(source, propertyAccessNode.Property);
         }
 
-        private Expression BindPropertyAccessQueryNode(SingleValuePropertyAccessNode propertyAccessNode)
+        /// <summary>
+        /// Binds a <see cref="CollectionComplexNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="CollectionComplexNode"/>.
+        /// </summary>
+        /// <param name="collectionComplexNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindCollectionComplexNode(CollectionComplexNode collectionComplexNode)
+        {
+            Expression source = Bind(collectionComplexNode.Source);
+            return CreatePropertyAccessExpression(source, collectionComplexNode.Property);
+        }
+
+        /// <summary>
+        /// Binds a <see cref="SingleValuePropertyAccessNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="SingleValuePropertyAccessNode"/>.
+        /// </summary>
+        /// <param name="propertyAccessNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindPropertyAccessQueryNode(SingleValuePropertyAccessNode propertyAccessNode)
         {
             Expression source = Bind(propertyAccessNode.Source);
             return CreatePropertyAccessExpression(source, propertyAccessNode.Property);
+        }
+
+        /// <summary>
+        /// Binds a <see cref="SingleComplexNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="SingleComplexNode"/>.
+        /// </summary>
+        /// <param name="singleComplexNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindSingleComplexNode(SingleComplexNode singleComplexNode)
+        {
+            Expression source = Bind(singleComplexNode.Source);
+            return CreatePropertyAccessExpression(source, singleComplexNode.Property);
         }
 
         private Expression CreatePropertyAccessExpression(Expression source, IEdmProperty property)
         {
-            string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
-            if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) && source != _lambdaParameters[ODataItParameterName])
+            string propertyName = EdmLibHelpers.GetClrPropertyName(property, Model);
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) && source != _lambdaParameters[ODataItParameterName])
             {
                 Expression propertyAccessExpression = Expression.Property(RemoveInnerNullPropagation(source), propertyName);
 
@@ -543,7 +680,13 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindUnaryOperatorNode(UnaryOperatorNode unaryOperatorNode)
+        /// <summary>
+        /// Binds a <see cref="UnaryOperatorNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="UnaryOperatorNode"/>.
+        /// </summary>
+        /// <param name="unaryOperatorNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindUnaryOperatorNode(UnaryOperatorNode unaryOperatorNode)
         {
             // No need to handle null-propagation here as CLR already handles it.
             // !(null) = null
@@ -562,7 +705,13 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindSingleValueFunctionCallNode(SingleValueFunctionCallNode node)
+        /// <summary>
+        /// Binds a <see cref="SingleValueFunctionCallNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="SingleValueFunctionCallNode"/>.
+        /// </summary>
+        /// <param name="node">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindSingleValueFunctionCallNode(SingleValueFunctionCallNode node)
         {
             switch (node.Name)
             {
@@ -651,13 +800,13 @@ namespace System.Web.OData.Query.Expressions
 
             Expression source = arguments.Length == 1 ? _lambdaParameters[ODataItParameterName] : arguments[0];
             string targetTypeName = (string)((ConstantNode)node.Parameters.Last()).Value;
-            IEdmType targetEdmType = _model.FindType(targetTypeName);
+            IEdmType targetEdmType = Model.FindType(targetTypeName);
             Type targetClrType = null;
 
             if (targetEdmType != null)
             {
                 IEdmTypeReference targetEdmTypeReference = targetEdmType.ToEdmTypeReference(false);
-                targetClrType = EdmLibHelpers.GetClrType(targetEdmTypeReference, _model);
+                targetClrType = EdmLibHelpers.GetClrType(targetEdmTypeReference, Model);
 
                 if (source != NullConstant)
                 {
@@ -765,7 +914,7 @@ namespace System.Web.OData.Query.Expressions
 
                 if (isSuccessful)
                 {
-                    if (_querySettings.EnableConstantParameterization)
+                    if (QuerySettings.EnableConstantParameterization)
                     {
                         return LinqParameterContainer.Parameterize(targetClrType, parameters[1]);
                     }
@@ -799,13 +948,13 @@ namespace System.Web.OData.Query.Expressions
 
             string typeName = (string)((ConstantNode)node.Parameters.Last()).Value;
 
-            IEdmType edmType = _model.FindType(typeName);
+            IEdmType edmType = Model.FindType(typeName);
             Type clrType = null;
             if (edmType != null)
             {
                 // bool nullable = source.Type.IsNullable();
                 IEdmTypeReference edmTypeReference = edmType.ToEdmTypeReference(false);
-                clrType = EdmLibHelpers.GetClrType(edmTypeReference, _model);
+                clrType = EdmLibHelpers.GetClrType(edmTypeReference, Model);
             }
 
             if (clrType == null)
@@ -1074,9 +1223,9 @@ namespace System.Web.OData.Query.Expressions
                 Contract.Assert(IsInteger(arguments[1].Type));
 
                 // When null propagation is allowed, we use a safe version of String.Substring(int).
-                // But for providers that would not recognize custom expressions like this, we map 
+                // But for providers that would not recognize custom expressions like this, we map
                 // directly to String.Substring(int)
-                if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+                if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
                 {
                     // Safe function is static and takes string "this" as first argument
                     functionCall = MakeFunctionCall(ClrCanonicalFunctions.SubstringStartNoThrow, arguments);
@@ -1092,9 +1241,9 @@ namespace System.Web.OData.Query.Expressions
                 Contract.Assert(arguments.Length == 3 && IsInteger(arguments[1].Type) && IsInteger(arguments[2].Type));
 
                 // When null propagation is allowed, we use a safe version of String.Substring(int, int).
-                // But for providers that would not recognize custom expressions like this, we map 
+                // But for providers that would not recognize custom expressions like this, we map
                 // directly to String.Substring(int, int)
-                if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+                if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
                 {
                     // Safe function is static and takes string "this" as first argument
                     functionCall = MakeFunctionCall(ClrCanonicalFunctions.SubstringStartAndLengthNoThrow, arguments);
@@ -1169,7 +1318,13 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindAllNode(AllNode allNode)
+        /// <summary>
+        /// Binds a <see cref="AllNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="AllNode"/>.
+        /// </summary>
+        /// <param name="allNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindAllNode(AllNode allNode)
         {
             ParameterExpression allIt = HandleLambdaParameters(allNode.RangeVariables);
 
@@ -1188,7 +1343,7 @@ namespace System.Web.OData.Query.Expressions
 
             ExitLamdbaScope();
 
-            if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type))
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type))
             {
                 // IFF(source == null) null; else Any(body);
                 all = ToNullable(all);
@@ -1203,7 +1358,13 @@ namespace System.Web.OData.Query.Expressions
             }
         }
 
-        private Expression BindAnyNode(AnyNode anyNode)
+        /// <summary>
+        /// Binds a <see cref="AnyNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="AnyNode"/>.
+        /// </summary>
+        /// <param name="anyNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public virtual Expression BindAnyNode(AnyNode anyNode)
         {
             ParameterExpression anyIt = HandleLambdaParameters(anyNode.RangeVariables);
 
@@ -1224,7 +1385,7 @@ namespace System.Web.OData.Query.Expressions
 
             ExitLamdbaScope();
 
-            if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type))
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type))
             {
                 // IFF(source == null) null; else Any(body);
                 any = ToNullable(any);
@@ -1280,7 +1441,7 @@ namespace System.Web.OData.Query.Expressions
                         }
                     }
 
-                    parameter = Expression.Parameter(EdmLibHelpers.GetClrType(edmTypeReference, _model, _assembliesResolver), rangeVariable.Name);
+                    parameter = Expression.Parameter(EdmLibHelpers.GetClrType(edmTypeReference, Model, AssembliesResolver), rangeVariable.Name);
                     Contract.Assert(lambdaIt == null, "There can be only one parameter in an Any/All lambda");
                     lambdaIt = parameter;
                 }

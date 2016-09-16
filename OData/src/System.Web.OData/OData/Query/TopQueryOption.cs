@@ -8,9 +8,8 @@ using System.Linq;
 using System.Web.Http;
 using System.Web.OData.Properties;
 using System.Web.OData.Query.Validators;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Query
 {
@@ -48,7 +47,7 @@ namespace System.Web.OData.Query
 
             Context = context;
             RawValue = rawValue;
-            Validator = new TopQueryValidator();
+            Validator = TopQueryValidator.GetTopQueryValidator(context);
             _queryOptionParser = queryOptionParser;
         }
 
@@ -67,7 +66,7 @@ namespace System.Web.OData.Query
 
             Context = context;
             RawValue = rawValue;
-            Validator = new TopQueryValidator();
+            Validator = TopQueryValidator.GetTopQueryValidator(context);
             _queryOptionParser = new ODataQueryOptionParser(
                 context.Model,
                 context.ElementType,

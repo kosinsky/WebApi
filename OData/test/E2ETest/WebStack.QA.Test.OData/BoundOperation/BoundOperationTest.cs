@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -11,7 +14,7 @@ using System.Web.OData;
 using System.Web.OData.Extensions;
 using System.Web.OData.Routing;
 using System.Web.OData.Routing.Conventions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json.Linq;
 using Nuwa;
@@ -62,9 +65,10 @@ namespace WebStack.QA.Test.OData.BoundOperation
             // only with attribute routing & metadata routing convention
             IList<IODataRoutingConvention> routingConventions = new List<IODataRoutingConvention>
             {
-                new AttributeRoutingConvention(edmModel, configuration),
+                new AttributeRoutingConvention("AttributeRouting", configuration),
                 new MetadataRoutingConvention()
             };
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
             configuration.MapODataServiceRoute("AttributeRouting", "AttributeRouting", edmModel, pathHandler, routingConventions);
 
             // only with convention routing
@@ -577,7 +581,6 @@ namespace WebStack.QA.Test.OData.BoundOperation
                 {
                    @"{""@odata.context"":CONTEXT,""value"":[ADDRESS,SUBADDRESS,ADDRESS,SUBADDRESS]}",
                    @"{""@odata.context"":CONTEXT,""value"":[ADDRESS,null,ADDRESS,null,SUBADDRESS]}",
-                   @"{""@odata.context"":CONTEXT,""value"":[ADDRESS,null,ADDRESS,null]}",
                 };
 
                 for (int i = 0; i< results.Length; i++)
@@ -591,9 +594,6 @@ namespace WebStack.QA.Test.OData.BoundOperation
                 {
                     {"(address=@x,location=@y,addresses=@z)?@x=" + address + "&@y=" + subAddress + "&@z=[" + address + "," + subAddress + "]", results[0]},
                     {"(address=@x,location=@y,addresses=@z)?@x=" + address + "&@y=null&@z=[" + address + ",null," + subAddress + "]", results[1] },
-
-                    // without '#', the complex value can be used in parameter inline.
-                    { "(address=" + address + ",location=null,addresses=[" + address + ",null])", results[2] },
                 };
 
                 string[] modes = { "ConventionRouting", "AttributeRouting" };
@@ -646,8 +646,8 @@ namespace WebStack.QA.Test.OData.BoundOperation
         }
 
         [Theory]
-        [InlineData("ConventionRouting", "(address={\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"},location=null,addresses=null)")]
-        [InlineData("AttributeRouting", "(address={\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"},location=null,addresses=null)")]
+        [InlineData("ConventionRouting", "(address=@p,location=null,addresses=null)?@p={\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"}")]
+        [InlineData("AttributeRouting", "(address=@p,location=null,addresses=null)?@p={\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"}")]
         public async Task BoundFunction_DoesnotWork_WithNullValue_ForCollectionComplexParameter(string route, string parameter)
         {
             // Arrange
@@ -672,14 +672,14 @@ namespace WebStack.QA.Test.OData.BoundOperation
 
                 string[] parameters =
                 {
-                    "(person=@x,guard=@y,staff=@z)?@x=" + person + "&@y=" + guard + "&@z={\"value\":[" + person + "," + guard + "]}",
-                    "(person=@x,guard=@y,staff=@z)?@x=" + guard + "&@y=null&@z={\"value\":[" + guard + "," + person + "]}",
+                    "(person=@x,guard=@y,staff=@z)?@x=" + person + "&@y=" + guard + "&@z=[" + person + "," + guard + "]",
+                    "(person=@x,guard=@y,staff=@z)?@x=" + guard + "&@y=null&@z=[" + guard + "," + person + "]",
 
                     // ODL doesn't work for 'null' in collection of entity. https://github.com/OData/odata.net/issues/100
                     // "(person=@x,guard=@y,staff=@z)?@x=" + guard + "&@y=null&@z={\"value\":[" + guard + ",null," + person + "]}",
 
                     // Entity Reference
-                    "(person=@x,guard=@y,staff=@z)?@x=" + odataId + "&@y=null&@z={\"value\":[" + odataId + "," + odataId + "]}",
+                    "(person=@x,guard=@y,staff=@z)?@x=" + odataId + "&@y=null&@z=[" + odataId + "," + odataId + "]",
                 };
 
                 string[] modes = { "ConventionRouting", "AttributeRouting" };

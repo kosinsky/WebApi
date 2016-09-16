@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -8,9 +11,8 @@ using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Routing;
 using System.Web.OData.Routing.Conventions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Newtonsoft.Json.Linq;
 using Nuwa;
 using WebStack.QA.Test.OData.Common;
@@ -87,7 +89,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
             for (int i=10 ; i < 15 ; i++)
             {
                 string contextUrl = BaseAddress.ToLowerInvariant() + "/untyped/$metadata#UntypedDeltaCustomers/$deletedEntity";
-                Assert.True(contextUrl.Equals(((dynamic)returnedObject).value[i]["@odata.context"].Value)); 
+                Assert.True(contextUrl.Equals(((dynamic)returnedObject).value[i]["@odata.context"].Value));
                 Assert.True(i.ToString().Equals(((dynamic)returnedObject).value[i]["id"].Value));
             }
         }
@@ -99,7 +101,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
         {
             get
             {
-                return Request.ODataProperties().Model.FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedCustomer") as IEdmEntityType;
+                return Request.GetModel().FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedCustomer") as IEdmEntityType;
             }
         }
 
@@ -107,7 +109,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
         {
             get
             {
-                return Request.ODataProperties().Model.FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedOrder") as IEdmEntityType;
+                return Request.GetModel().FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedOrder") as IEdmEntityType;
             }
         }
 
@@ -115,7 +117,7 @@ namespace WebStack.QA.Test.OData.Formatter.Untyped
         {
             get
             {
-                return Request.ODataProperties().Model.FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedAddress") as IEdmComplexType;
+                return Request.GetModel().FindType("WebStack.QA.Test.OData.Formatter.Untyped.UntypedAddress") as IEdmComplexType;
             }
         }
 

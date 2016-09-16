@@ -7,21 +7,17 @@ using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 using System.Reflection;
-using System.Text;
 using System.Web.Http;
-using System.Web.Http.Dispatcher;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
-using System.Web.OData.Query.Expressions;
 using System.Web.OData.Query.Validators;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Query
 {
@@ -33,8 +29,6 @@ namespace System.Web.OData.Query
     public class ODataQueryOptions
     {
         private static readonly MethodInfo _limitResultsGenericMethod = typeof(ODataQueryOptions).GetMethod("LimitResults");
-
-        private IAssembliesResolver _assembliesResolver;
 
         private ETag _etagIfMatch;
 
@@ -66,39 +60,29 @@ namespace System.Web.OData.Query
                 throw Error.ArgumentNull("request");
             }
 
-            if (request.GetConfiguration() != null)
-            {
-                _assembliesResolver = request.GetConfiguration().Services.GetAssembliesResolver();
-            }
+            // Set the request container into context
+            Contract.Assert(context.RequestContainer == null);
+            context.RequestContainer = request.GetRequestContainer();
 
-            // fallback to the default assemblies resolver if none available.
-            _assembliesResolver = _assembliesResolver ?? new DefaultAssembliesResolver();
-
-            // remember the context and request
+            // Remember the context and request
             Context = context;
             Request = request;
 
-            // Parse the query from request Uri
+            // Parse the query from request Uri, including only keys which are OData query parameters or parameter alias
             RawValues = new ODataRawQueryOptions();
-            IDictionary<string, string> queryParameters = 
-                request.GetQueryNameValuePairs().ToDictionary(p => p.Key, p => p.Value);
-            
+            IDictionary<string, string> queryParameters = GetODataQueryParameters();
+
             _queryOptionParser = new ODataQueryOptionParser(
                 context.Model,
                 context.ElementType,
                 context.NavigationSource,
                 queryParameters);
 
-            HttpConfiguration configuration = Request.GetConfiguration();
-            if (configuration != null)
-            {
-                ODataUriResolverSetttings resolverSettings = configuration.GetResolverSettings();
-                _queryOptionParser.Resolver = resolverSettings.CreateResolver(context.Model);
-            }
+            _queryOptionParser.Resolver = request.GetRequestContainer().GetRequiredService<ODataUriResolver>();
 
             BuildQueryOptions(queryParameters);
 
-            Validator = new ODataQueryValidator();
+            Validator = ODataQueryValidator.GetODataQueryValidator(context);
         }
 
         /// <summary>
@@ -277,8 +261,8 @@ namespace System.Web.OData.Query
         /// <param name="querySettings">The settings to use in query composition.</param>
         /// <returns>The new <see cref="IQueryable"/> after the query has been applied to.</returns>
         [SuppressMessage(
-            "Microsoft.Maintainability", 
-            "CA1502:AvoidExcessiveComplexity", 
+            "Microsoft.Maintainability",
+            "CA1502:AvoidExcessiveComplexity",
             Justification = "These are simple conversion function and cannot be split up.")]
         public virtual IQueryable ApplyTo(IQueryable query, ODataQuerySettings querySettings)
         {
@@ -298,7 +282,7 @@ namespace System.Web.OData.Query
             // Section 3.15 of the spec http://docs.oasis-open.org/odata/odata-data-aggregation-ext/v4.0/cs01/odata-data-aggregation-ext-v4.0-cs01.html#_Toc378326311
             if (IsAvailableODataQueryOption(Apply, AllowedQueryOptions.Apply))
             {
-                result = Apply.ApplyTo(result, querySettings, _assembliesResolver);
+                result = Apply.ApplyTo(result, querySettings);
                 Request.ODataProperties().ApplyClause = Apply.ApplyClause;
                 this.Context.ElementClrType = Apply.ResultClrType;
             }
@@ -306,7 +290,7 @@ namespace System.Web.OData.Query
             // Construct the actual query and apply them in the following order: filter, orderby, skip, top
             if (IsAvailableODataQueryOption(Filter, AllowedQueryOptions.Filter))
             {
-                result = Filter.ApplyTo(result, querySettings, _assembliesResolver);
+                result = Filter.ApplyTo(result, querySettings);
             }
 
             if (IsAvailableODataQueryOption(Count, AllowedQueryOptions.Count))
@@ -334,7 +318,7 @@ namespace System.Web.OData.Query
             // generate an $orderby that will produce a stable sort.
             if (querySettings.EnsureStableOrdering &&
                 (IsAvailableODataQueryOption(Skip, AllowedQueryOptions.Skip) ||
-                 IsAvailableODataQueryOption(Top, AllowedQueryOptions.Top) || 
+                 IsAvailableODataQueryOption(Top, AllowedQueryOptions.Top) ||
                  querySettings.PageSize.HasValue))
             {
                 // If there is no OrderBy present, we manufacture a default.
@@ -362,7 +346,7 @@ namespace System.Web.OData.Query
                 result = Top.ApplyTo(result, querySettings);
             }
 
-            AddAutoExpandProperties();
+            AddAutoSelectExpandProperties();
 
             if (SelectExpand != null)
             {
@@ -373,13 +357,24 @@ namespace System.Web.OData.Query
                 }
             }
 
+            int pageSize = -1;
             if (querySettings.PageSize.HasValue)
             {
+                pageSize = querySettings.PageSize.Value;
+            }
+            else if (querySettings.ModelBoundPageSize.HasValue)
+            {
+                pageSize = querySettings.ModelBoundPageSize.Value;
+            }
+
+            if (pageSize > 0)
+            {
                 bool resultsLimited;
-                result = LimitResults(result, querySettings.PageSize.Value, out resultsLimited);
-                if (resultsLimited && Request.RequestUri != null && Request.RequestUri.IsAbsoluteUri && Request.ODataProperties().NextLink == null)
+                result = LimitResults(result, pageSize, out resultsLimited);
+                if (resultsLimited && Request.RequestUri != null && Request.RequestUri.IsAbsoluteUri &&
+                    Request.ODataProperties().NextLink == null)
                 {
-                    Uri nextPageLink = Request.GetNextPageLink(querySettings.PageSize.Value);
+                    Uri nextPageLink = Request.GetNextPageLink(pageSize);
                     Request.ODataProperties().NextLink = nextPageLink;
                 }
             }
@@ -392,8 +387,8 @@ namespace System.Web.OData.Query
         /// </summary>
         /// <param name="entity">The original entity.</param>
         /// <param name="querySettings">The <see cref="ODataQuerySettings"/> that contains all the query application related settings.</param>
-        /// <param name="ignoreQueryOptions">The query parameters that are already applied in queries.</param>  
-        /// <returns>The new entity after the $select and $expand query has been applied to.</returns>     
+        /// <param name="ignoreQueryOptions">The query parameters that are already applied in queries.</param>
+        /// <returns>The new entity after the $select and $expand query has been applied to.</returns>
         /// <remarks>Only $select and $expand query options can be applied on single entities. This method throws if the query contains any other
         /// query options.</remarks>
         public virtual object ApplyTo(object entity, ODataQuerySettings querySettings, AllowedQueryOptions ignoreQueryOptions)
@@ -426,7 +421,7 @@ namespace System.Web.OData.Query
                 throw Error.InvalidOperation(SRResources.NonSelectExpandOnSingleEntity);
             }
 
-            AddAutoExpandProperties();
+            AddAutoSelectExpandProperties();
 
             if (SelectExpand != null)
             {
@@ -481,7 +476,7 @@ namespace System.Web.OData.Query
                         ? entityType.Key()
                         : entityType
                             .StructuralProperties()
-                            .Where(property => property.Type.IsPrimitive());
+                            .Where(property => property.Type.IsPrimitive() && !property.Type.IsStream());
 
                 // Sort properties alphabetically for stable sort
                 return properties.OrderBy(property => property.Name);
@@ -573,7 +568,7 @@ namespace System.Web.OData.Query
         /// <param name="limit">The query result limit.</param>
         /// <param name="resultsLimited"><c>true</c> if the query results were limited; <c>false</c> otherwise</param>
         /// <returns>The limited query results.</returns>
-        [SuppressMessage("Microsoft.Design", "CA1021:AvoidOutParameters", Justification = "Not intended for public use, only public to enable invokation without security issues.")]
+        [SuppressMessage("Microsoft.Design", "CA1021:AvoidOutParameters", Justification = "Not intended for public use, only public to enable invocation without security issues.")]
         public static IQueryable<T> LimitResults<T>(IQueryable<T> queryable, int limit, out bool resultsLimited)
         {
             TruncatedCollection<T> truncatedCollection = new TruncatedCollection<T>(queryable, limit);
@@ -586,21 +581,46 @@ namespace System.Web.OData.Query
             return Request.GetETag(etagHeaderValue);
         }
 
-        internal void AddAutoExpandProperties()
+        internal void AddAutoSelectExpandProperties()
         {
+            bool containsAutoSelectExpandProperties = false;
             var autoExpandRawValue = GetAutoExpandRawValue();
-            if (autoExpandRawValue != null && !autoExpandRawValue.Equals(RawValues.Expand))
+            var autoSelectRawValue = GetAutoSelectRawValue();
+
+            IDictionary<string, string> queryParameters = GetODataQueryParameters();
+
+            if (!String.IsNullOrEmpty(autoExpandRawValue) && !autoExpandRawValue.Equals(RawValues.Expand))
             {
-                IDictionary<string, string> queryParameters =
-                   Request.GetQueryNameValuePairs().ToDictionary(p => p.Key, p => p.Value);
                 queryParameters["$expand"] = autoExpandRawValue;
+                containsAutoSelectExpandProperties = true;
+            }
+            else
+            {
+                autoExpandRawValue = RawValues.Expand;
+            }
+
+            if (!String.IsNullOrEmpty(autoSelectRawValue) && !autoSelectRawValue.Equals(RawValues.Select))
+            {
+                queryParameters["$select"] = autoSelectRawValue;
+                containsAutoSelectExpandProperties = true;
+            }
+            else
+            {
+                autoSelectRawValue = RawValues.Select;
+            }
+
+            if (containsAutoSelectExpandProperties)
+            {
                 _queryOptionParser = new ODataQueryOptionParser(
                     Context.Model,
                     Context.ElementType,
                     Context.NavigationSource,
                     queryParameters);
                 var originalSelectExpand = SelectExpand;
-                SelectExpand = new SelectExpandQueryOption(RawValues.Select, autoExpandRawValue, Context,
+                SelectExpand = new SelectExpandQueryOption(
+                    autoSelectRawValue,
+                    autoExpandRawValue,
+                    Context,
                     _queryOptionParser);
                 if (originalSelectExpand != null && originalSelectExpand.LevelsMaxLiteralExpansionDepth > 0)
                 {
@@ -609,13 +629,64 @@ namespace System.Web.OData.Query
             }
         }
 
+        private IDictionary<string, string> GetODataQueryParameters()
+        {
+            return Request.GetQueryNameValuePairs()
+                .Where(p => p.Key.StartsWith("$", StringComparison.Ordinal) ||
+                    p.Key.StartsWith("@", StringComparison.Ordinal))
+                .ToDictionary(p => p.Key, p => p.Value);
+        }
+
+        private string GetAutoSelectRawValue()
+        {
+            var selectRawValue = RawValues.Select;
+            var autoSelectRawValue = String.Empty;
+            IEdmEntityType baseEntityType = Context.TargetStructuredType as IEdmEntityType;
+            if (String.IsNullOrEmpty(selectRawValue))
+            {
+                var autoSelectProperties = EdmLibHelpers.GetAutoSelectProperties(Context.TargetProperty,
+                    Context.TargetStructuredType, Context.Model);
+
+                foreach (var property in autoSelectProperties)
+                {
+                    if (!String.IsNullOrEmpty(autoSelectRawValue))
+                    {
+                        autoSelectRawValue += ",";
+                    }
+
+                    if (baseEntityType != null && property.DeclaringType != baseEntityType)
+                    {
+                        autoSelectRawValue += String.Format(CultureInfo.InvariantCulture, "{0}/",
+                            property.DeclaringType.FullTypeName());
+                    }
+
+                    autoSelectRawValue += property.Name;
+                }
+
+                if (!String.IsNullOrEmpty(autoSelectRawValue))
+                {
+                    if (!String.IsNullOrEmpty(selectRawValue))
+                    {
+                        selectRawValue = String.Format(CultureInfo.InvariantCulture, "{0},{1}",
+                            autoSelectRawValue, selectRawValue);
+                    }
+                    else
+                    {
+                        selectRawValue = autoSelectRawValue;
+                    }
+                }
+            }
+
+            return selectRawValue;
+        }
+
         private string GetAutoExpandRawValue()
         {
             var expandRawValue = RawValues.Expand;
-            IEdmEntityType baseEntityType = Context.ElementType as IEdmEntityType;
+            IEdmEntityType baseEntityType = Context.TargetStructuredType as IEdmEntityType;
             var autoExpandRawValue = String.Empty;
-            var autoExpandNavigationProperties = EdmLibHelpers.GetAutoExpandNavigationProperties(baseEntityType,
-                Context.Model);
+            var autoExpandNavigationProperties = EdmLibHelpers.GetAutoExpandNavigationProperties(
+                Context.TargetProperty, Context.TargetStructuredType, Context.Model);
 
             foreach (var property in autoExpandNavigationProperties)
             {

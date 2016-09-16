@@ -16,6 +16,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.OData.Core, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.OData.Core.7.0.0\lib\portable-net45+win8+wpa81\Microsoft.OData.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.OData.Edm, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.OData.Edm.7.0.0\lib\portable-net45+win8+wpa81\Microsoft.OData.Edm.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Spatial, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Spatial.7.0.0\lib\portable-net45+win8+wpa81\Microsoft.Spatial.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Moq, Version=4.0.10827.0, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\packages\Moq.4.0.10827\lib\NET40\Moq.dll</HintPath>
@@ -23,6 +35,14 @@
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Extensions.DependencyInjection.1.0.0\lib\netstandard1.1\Microsoft.Extensions.DependencyInjection.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.1.0.0\lib\netstandard1.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -74,6 +94,7 @@
     <Compile Include="HttpConfigurationExtensions.cs" />
     <Compile Include="HttpRequestMessageExtensionsTest.cs" />
     <Compile Include="HttpErrorExtensionsTest.cs" />
+    <Compile Include="OData\Batch\ODataHttpContentExtensions.cs" />
     <Compile Include="OData\Batch\ODataHttpContentExtensionsTest.cs" />
     <Compile Include="OData\Batch\ODataBatchRequestItemTest.cs" />
     <Compile Include="OData\Batch\ODataBatchHttpRequestMessageExtensionsTest.cs" />
@@ -90,7 +111,7 @@
     <Compile Include="OData\Batch\ChangeSetResponseItemTest.cs" />
     <Compile Include="OData\Batch\ChangeSetRequestItemTest.cs" />
     <Compile Include="OData\Batch\DefaultODataBatchHandlerTest.cs" />
-    <Compile Include="OData\Builder\FunctionLinkBuilderTest.cs" />
+    <Compile Include="OData\Builder\BindingPathHelperTest.cs" />
     <Compile Include="OData\Builder\ComplexTypeConfigurationTest.cs" />
     <Compile Include="OData\Builder\ContainmentPathBuilderTest.cs" />
     <Compile Include="OData\Builder\Conventions\FunctionLinkGenerationConventionTest.cs" />
@@ -112,6 +133,7 @@
     <Compile Include="OData\Builder\LowerCamelCaserTest.cs" />
     <Compile Include="OData\Builder\PropertyConfigurationTest.cs" />
     <Compile Include="OData\Builder\SingletonTest.cs" />
+    <Compile Include="OData\Builder\BindingPathConfigurationOfTStructuralTypeTest.cs" />
     <Compile Include="OData\Builder\StructuralTypeConfigurationOfTStructuralTypeTest.cs" />
     <Compile Include="OData\Builder\StructuralTypeConfigurationTest.cs" />
     <Compile Include="OData\Builder\TestModels\Client.cs" />
@@ -129,10 +151,15 @@
     <Compile Include="OData\Builder\TestModels\PropertyAlias.cs" />
     <Compile Include="OData\Builder\TestModels\SpecialOrderLine.cs" />
     <Compile Include="OData\ClrPropertyInfoAnnotationTest.cs" />
+    <Compile Include="OData\MockContainer.cs" />
+    <Compile Include="OData\DependencyInjectionHelper.cs" />
     <Compile Include="OData\DateAndTimeOfDayTest.cs" />
     <Compile Include="OData\DateTimeTest.cs" />
+    <Compile Include="OData\DefaultContainerBuilderTests.cs" />
+    <Compile Include="OData\DependencyInjectionTests.cs" />
     <Compile Include="OData\EdmEnumObjectCollectionTest.cs" />
     <Compile Include="OData\EdmEnumObjectTest.cs" />
+    <Compile Include="OData\Formatter\Deserialization\ODataEnumDeserializerTests.cs" />
     <Compile Include="OData\Formatter\NullCollectionsTests.cs" />
     <Compile Include="OData\Formatter\ODataFunctionTests.cs" />
     <Compile Include="OData\EdmChangedObjectCollectionTest.cs" />
@@ -157,10 +184,11 @@
     <Compile Include="OData\Formatter\ODataMessageWrapperTest.cs" />
     <Compile Include="OData\Formatter\PresidentController.cs" />
     <Compile Include="OData\Formatter\Serialization\EdmEntityObjectTest.cs" />
-    <Compile Include="OData\EntityInstanceContextTest.cs" />
+    <Compile Include="OData\OpenEntityTypeTest.cs" />
+    <Compile Include="OData\ResourceContextTest.cs" />
     <Compile Include="OData\Formatter\Deserialization\DeserializationHelpersTest.cs" />
     <Compile Include="OData\Formatter\Deserialization\ODataDeserializerTest.cs" />
-    <Compile Include="OData\Formatter\Deserialization\ODataFeedDeserializerTest.cs" />
+    <Compile Include="OData\Formatter\Deserialization\ODataResourceSetDeserializerTest.cs" />
     <Compile Include="OData\Formatter\ODataRawValueMediaTypeMappingTests.cs" />
     <Compile Include="OData\Formatter\ODataValueExtensionsTest.cs" />
     <Compile Include="OData\Formatter\Serialization\ODataEntityReferenceLinksSerializerTest.cs" />
@@ -177,11 +205,11 @@
     <Compile Include="OData\ETagMessageHandlerTest.cs" />
     <Compile Include="OData\ODataNullValueMessageHandlerTest.cs" />
     <Compile Include="OData\Formatter\Serialization\SelectExpandNodeTest.cs" />
+    <Compile Include="OData\ODataPathHandlerExtensions.cs" />
     <Compile Include="OData\ODataSwaggerConverterTest.cs" />
     <Compile Include="OData\ODataSwaggerUtilitiesTest.cs" />
     <Compile Include="OData\ODataUriResolverExtensionTest.cs" />
     <Compile Include="OData\FunctionActionAdvertisedTest.cs" />
-    <Compile Include="OData\OpenEntityTypeTest.cs" />
     <Compile Include="OData\PerRequestContentNegotiatorTest.cs" />
     <Compile Include="OData\ODataRoutingAttributeTest.cs" />
     <Compile Include="OData\Formatter\HttpRequestMessageExtensions.cs" />
@@ -204,8 +232,6 @@
     <Compile Include="OData\Results\UpdatedODataResultTest.cs" />
     <Compile Include="OData\Routing\AttributeRoutingOnSingletonTest.cs" />
     <Compile Include="OData\Routing\ODataPathSegmentTranslatorTest.cs" />
-    <Compile Include="OData\Routing\ComplexCastPathSegmentTest.cs" />
-    <Compile Include="OData\Routing\Conventions\DynamicPropertyPathSegmentTemplateTest.cs" />
     <Compile Include="OData\Routing\Conventions\DynamicPropertyRoutingConventionTest.cs" />
     <Compile Include="OData\Routing\Conventions\MockNavigationSourceRoutingConvention.cs" />
     <Compile Include="OData\Routing\Conventions\NavigationSourceRoutingConventionTest.cs" />
@@ -214,18 +240,20 @@
     <Compile Include="OData\Routing\ODataCountTest.cs" />
     <Compile Include="OData\Routing\ODataLevelsTest.cs" />
     <Compile Include="OData\Routing\ODataSingletonRoutingTest.cs" />
-    <Compile Include="OData\Routing\DynamicPropertyPathSegmentTest.cs" />
-    <Compile Include="OData\Routing\SingletonPathSegmentTest.cs" />
     <Compile Include="OData\Routing\ODataVersionConstraintTests.cs" />
-    <Compile Include="OData\Routing\UnboundFunctionPathSegmentTemplateTest.cs" />
-    <Compile Include="OData\Routing\UnboundActionPathSegmentTest.cs" />
-    <Compile Include="OData\Routing\UnboundFunctionPathSegmentTest.cs" />
+    <Compile Include="OData\Routing\Template\TypeSegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\SingletonSegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\PropertySegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\NavigationPropertySegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\NavigationPropertyLinkSegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\EntitySetSegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\KeySegementTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\PathTemplateSegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\DynamicSegmentTemplateTest.cs" />
+    <Compile Include="OData\Routing\Template\OperationSegmentTemplateTest.cs" />
     <Compile Include="OData\Routing\AttributeRoutingUnboundTest.cs" />
-    <Compile Include="OData\Routing\CastPathSegmentTest.cs" />
     <Compile Include="OData\Routing\Conventions\FunctionRoutingConventionTests.cs" />
-    <Compile Include="OData\Routing\BoundActionPathSegmentTest.cs" />
     <Compile Include="OData\Routing\AttributeRoutingTest.cs" />
-    <Compile Include="OData\Routing\BatchPathSegmentTest.cs" />
     <Compile Include="OData\Routing\Conventions\AttributeRoutingConventionTest.cs" />
     <Compile Include="OData\Routing\Conventions\PropertyRoutingConventionTests.cs" />
     <Compile Include="OData\Query\ExpressionHelpersTest.cs" />
@@ -235,16 +263,12 @@
     <Compile Include="OData\Query\Expressions\SelectExpandWrapperTest.cs" />
     <Compile Include="OData\Query\SelectExpandQueryOptionTest.cs" />
     <Compile Include="OData\Query\Validators\SelectExpandQueryValidatorTest.cs" />
-    <Compile Include="OData\Routing\EntitySetPathSegmentTest.cs" />
-    <Compile Include="OData\Routing\BoundFunctionPathSegmentTemplateTest.cs" />
-    <Compile Include="OData\Routing\BoundFunctionPathSegmentTest.cs" />
     <Compile Include="OData\Routing\KeyValueParserTest.cs" />
-    <Compile Include="OData\Routing\KeyValuePathSegmentTemplateTest.cs" />
     <Compile Include="OData\Routing\ODataPathRouteConstraintTest.cs" />
     <Compile Include="OData\Routing\ODataRouteTest.cs" />
     <Compile Include="OData\Builder\ActionConfigurationTest.cs" />
-    <Compile Include="OData\Builder\ActionLinkBuilderTests.cs" />
-    <Compile Include="OData\Builder\BindableProcedureFinderAnnotationTest.cs" />
+    <Compile Include="OData\Builder\OperationLinkBuilderTests.cs" />
+    <Compile Include="OData\Builder\BindableOperationFinderAnnotationTest.cs" />
     <Compile Include="OData\Builder\NavigationSourceLinkBuilderAnnotationTest.cs" />
     <Compile Include="OData\Builder\MockNavigationSourceLinkBuilderAnnotation.cs" />
     <Compile Include="OData\Builder\Conventions\ActionLinkGenerationConventionTest.cs" />
@@ -330,6 +354,8 @@
     <Compile Include="PublicApi\PublicApiTest.cs" />
     <Compile Include="Resources.cs" />
     <Compile Include="TestCommon\CustomersModelWithInheritance.cs" />
+    <Compile Include="TestCommon\CaseInsensitiveResolver.cs" />
+    <Compile Include="TestCommon\UnqualifiedCaseInsensitiveResolver.cs" />
     <Compile Include="TestCommon\SimpleOpenAddress.cs" />
     <Compile Include="TestCommon\ODataModelBuilderMocks.cs" />
     <Compile Include="TestCommon\SimpleOpenCustomer.cs" />
@@ -363,8 +389,7 @@
     <Compile Include="OData\DeltaTest.cs" />
     <Compile Include="OData\Formatter\Deserialization\DefaultODataDeserializerProviderTests.cs" />
     <Compile Include="OData\Formatter\Deserialization\MockODataRequestMessage.cs" />
-    <Compile Include="OData\Formatter\Deserialization\ODataComplexTypeDeserializerTests.cs" />
-    <Compile Include="OData\Formatter\Deserialization\ODataEntityDeserializerTests.cs" />
+    <Compile Include="OData\Formatter\Deserialization\ODataResourceDeserializerTests.cs" />
     <Compile Include="OData\Formatter\Deserialization\ODataEntityReferenceLinkDeserializerTests.cs" />
     <Compile Include="TestCommon\Models\TestDataModels.cs" />
     <Compile Include="OData\Formatter\ODataFormatterTests.cs" />
@@ -383,9 +408,8 @@
     <Compile Include="OData\Formatter\Serialization\Models\Customer.cs" />
     <Compile Include="OData\Formatter\Serialization\Models\Order.cs" />
     <Compile Include="OData\Formatter\Serialization\ODataCollectionSerializerTests.cs" />
-    <Compile Include="OData\Formatter\Serialization\ODataComplexTypeSerializerTests.cs" />
-    <Compile Include="OData\Formatter\Serialization\ODataEntityTypeSerializerTests.cs" />
-    <Compile Include="OData\Formatter\Serialization\ODataFeedSerializerTests.cs" />
+    <Compile Include="OData\Formatter\Serialization\ODataResourceSerializerTests.cs" />
+    <Compile Include="OData\Formatter\Serialization\ODataResourceSetSerializerTests.cs" />
     <Compile Include="OData\Formatter\Serialization\ODataPayloadKindHelperTests.cs" />
     <Compile Include="OData\Formatter\Serialization\ODataPrimitiveSerializerTests.cs" />
     <Compile Include="TestCommon\EdmTestHelpers.cs" />
@@ -434,7 +458,6 @@
     <EmbeddedResource Include="Resources\DecimalFullMetadata.json" />
     <EmbeddedResource Include="Resources\DoubleFullMetadata.json" />
     <EmbeddedResource Include="Resources\EmployeeEntry.json" />
-    <EmbeddedResource Include="Resources\EnumComplexType.json" />
     <EmbeddedResource Include="Resources\FeedOfEmployee.json" />
     <EmbeddedResource Include="Resources\GuidFullMetadata.json" />
     <EmbeddedResource Include="Resources\Int16FullMetadata.json" />

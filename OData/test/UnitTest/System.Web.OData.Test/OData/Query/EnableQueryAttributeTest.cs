@@ -22,11 +22,12 @@ using System.Web.OData.Query.Validators;
 using System.Web.OData.Routing;
 using System.Web.OData.TestCommon;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Query
 {
@@ -263,9 +264,9 @@ namespace System.Web.OData.Query
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/Customer?$orderby=Name");
-            HttpConfiguration config = new HttpConfiguration();
-            request.SetConfiguration(config);
-            HttpControllerContext controllerContext = new HttpControllerContext(config, new HttpRouteData(new HttpRoute()), request);
+            request.EnableODataDependencyInjectionSupport();
+            request.GetConfiguration().Count().OrderBy().Filter().Expand().MaxTop(null);
+            HttpControllerContext controllerContext = new HttpControllerContext(request.GetConfiguration(), new HttpRouteData(new HttpRoute()), request);
             HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(new HttpConfiguration(), "CustomerHighLevel", typeof(CustomerHighLevelController));
             HttpActionDescriptor actionDescriptor = new ReflectedHttpActionDescriptor(controllerDescriptor, typeof(CustomerHighLevelController).GetMethod(methodName));
             HttpActionContext actionContext = new HttpActionContext(controllerContext, actionDescriptor);
@@ -289,11 +290,10 @@ namespace System.Web.OData.Query
             HttpRequestMessage request = new HttpRequestMessage(
                 HttpMethod.Get,
                 "http://localhost/DollarCountEntities(5)/StringCollectionProp/$count");
-            request.ODataProperties().Path = new ODataPath(new CountPathSegment());
-            HttpConfiguration config = new HttpConfiguration();
-            request.SetConfiguration(config);
+            request.ODataProperties().Path = new ODataPath(CountSegment.Instance);
+            request.EnableODataDependencyInjectionSupport();
             HttpControllerContext controllerContext = new HttpControllerContext(
-                config,
+                request.GetConfiguration(),
                 new HttpRouteData(new HttpRoute()),
                 request);
             HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(
@@ -326,9 +326,8 @@ namespace System.Web.OData.Query
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/Customer/?select");
-            HttpConfiguration config = new HttpConfiguration();
-            request.SetConfiguration(config);
-            HttpControllerContext controllerContext = new HttpControllerContext(config, new HttpRouteData(new HttpRoute()), request);
+            request.EnableODataDependencyInjectionSupport();
+            HttpControllerContext controllerContext = new HttpControllerContext(request.GetConfiguration(), new HttpRouteData(new HttpRoute()), request);
             HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(new HttpConfiguration(), "CustomerHighLevel", typeof(CustomerHighLevelController));
             HttpActionDescriptor actionDescriptor = new ReflectedHttpActionDescriptor(controllerDescriptor, typeof(CustomerHighLevelController).GetMethod("Get"));
             HttpActionContext actionContext = new HttpActionContext(controllerContext, actionDescriptor);
@@ -348,9 +347,8 @@ namespace System.Web.OData.Query
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/Customer/?$custom");
-            HttpConfiguration config = new HttpConfiguration();
-            request.SetConfiguration(config);
-            HttpControllerContext controllerContext = new HttpControllerContext(config, new HttpRouteData(new HttpRoute()), request);
+            request.EnableODataDependencyInjectionSupport();
+            HttpControllerContext controllerContext = new HttpControllerContext(request.GetConfiguration(), new HttpRouteData(new HttpRoute()), request);
             HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(new HttpConfiguration(), "CustomerHighLevel", typeof(CustomerHighLevelController));
             HttpActionDescriptor actionDescriptor = new ReflectedHttpActionDescriptor(controllerDescriptor, typeof(CustomerHighLevelController).GetMethod("Get"));
             HttpActionContext actionContext = new HttpActionContext(controllerContext, actionDescriptor);
@@ -453,9 +451,8 @@ namespace System.Web.OData.Query
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/Primitive/?" + filter);
-            HttpConfiguration config = new HttpConfiguration();
-            request.SetConfiguration(config);
-            HttpControllerContext controllerContext = new HttpControllerContext(config, new HttpRouteData(new HttpRoute()), request);
+            request.EnableODataDependencyInjectionSupport();
+            HttpControllerContext controllerContext = new HttpControllerContext(request.GetConfiguration(), new HttpRouteData(new HttpRoute()), request);
             HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(new HttpConfiguration(), "Primitive", typeof(PrimitiveController));
             HttpActionDescriptor actionDescriptor = new ReflectedHttpActionDescriptor(controllerDescriptor, typeof(PrimitiveController).GetMethod("GetIEnumerableOfInt"));
             HttpActionContext actionContext = new HttpActionContext(controllerContext, actionDescriptor);
@@ -477,8 +474,10 @@ namespace System.Web.OData.Query
         {
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.EnableHttpDependencyInjectionSupport();
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
-            var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), new HttpRequestMessage());
+            var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), request);
 
             // Act & Assert
             Assert.ThrowsArgumentNull(() => attribute.ValidateQuery(null, options), "request");
@@ -504,8 +503,15 @@ namespace System.Web.OData.Query
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?" + query);
+            request.EnableHttpDependencyInjectionSupport();
+            DefaultQuerySettings defaultQuerySettings = request.GetConfiguration().GetDefaultQuerySettings();
+            defaultQuerySettings.EnableFilter = true;
+            defaultQuerySettings.EnableOrderBy = true;
+            defaultQuerySettings.MaxTop = null;
+
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
-            var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), request);
+            var context = new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer), null);
+            var options = new ODataQueryOptions(context, request);
 
             // Act & Assert
             Assert.DoesNotThrow(() => attribute.ValidateQuery(request, options));
@@ -517,6 +523,7 @@ namespace System.Web.OData.Query
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?$xxx");
+            request.EnableHttpDependencyInjectionSupport();
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), request);
 
@@ -543,9 +550,11 @@ namespace System.Web.OData.Query
         public void ApplyQuery_Throws_With_Null_Queryable()
         {
             // Arrange
+            HttpRequestMessage message = new HttpRequestMessage();
+            message.EnableHttpDependencyInjectionSupport();
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
-            var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), new HttpRequestMessage());
+            var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), message);
 
             // Act & Assert
             Assert.ThrowsArgumentNull(() => attribute.ApplyQuery(null, options), "queryable");
@@ -571,6 +580,7 @@ namespace System.Web.OData.Query
             // Arrange
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?" + query);
+            request.EnableHttpDependencyInjectionSupport();
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), request);
 
@@ -589,6 +599,7 @@ namespace System.Web.OData.Query
             mockAttribute.CallBase = false;
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?$top=2");
+            request.EnableHttpDependencyInjectionSupport();
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
             var options = new ODataQueryOptions(new ODataQueryContext(model, typeof(System.Web.OData.Builder.TestModels.Customer)), request);
 
@@ -606,7 +617,8 @@ namespace System.Web.OData.Query
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             attribute.AllowedOrderByProperties = allowedProperties;
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/Customers/?$orderby=Id,Name");
-            ODataQueryOptions queryOptions = new ODataQueryOptions(ValidationTestHelper.CreateCustomerContext(), request);
+            request.EnableHttpDependencyInjectionSupport();
+            ODataQueryOptions queryOptions = new ODataQueryOptions(ValidationTestHelper.CreateCustomerContext(false), request);
 
             Assert.Throws<ODataException>(() => attribute.ValidateQuery(request, queryOptions),
                 "Order by 'Name' is not allowed. To allow it, set the 'AllowedOrderByProperties' property on EnableQueryAttribute or QueryValidationSettings.");
@@ -624,7 +636,13 @@ namespace System.Web.OData.Query
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             attribute.AllowedOrderByProperties = allowedProperties;
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/Customers/?$orderby=Id,Name");
-            ODataQueryOptions queryOptions = new ODataQueryOptions(ValidationTestHelper.CreateCustomerContext(), request);
+            HttpConfiguration config = new HttpConfiguration();
+            config.Count().OrderBy().Filter().Expand().MaxTop(null);
+            request.SetConfiguration(config);
+            request.EnableHttpDependencyInjectionSupport();
+
+            ODataQueryContext context = ValidationTestHelper.CreateCustomerContext(false);
+            ODataQueryOptions queryOptions = new ODataQueryOptions(context, request);
 
             Assert.DoesNotThrow(() => attribute.ValidateQuery(request, queryOptions));
         }
@@ -635,6 +653,7 @@ namespace System.Web.OData.Query
             var entityClrType = typeof(QueryCompositionCustomer);
             var config = new HttpConfiguration();
             var request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/");
+            request.EnableHttpDependencyInjectionSupport();
             var descriptor = new ReflectedHttpActionDescriptor();
             descriptor.Configuration = config;
 
@@ -651,11 +670,10 @@ namespace System.Web.OData.Query
             var builder = new ODataConventionModelBuilder();
             var model = builder.GetEdmModel();
             var entityClrType = typeof(QueryCompositionCustomer);
-            var config = new HttpConfiguration();
             var request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/");
-            request.ODataProperties().Model = model;
+            request.EnableHttpDependencyInjectionSupport(model);
             var descriptor = new ReflectedHttpActionDescriptor();
-            descriptor.Configuration = config;
+            descriptor.Configuration = request.GetConfiguration();
 
             var queryModel = new EnableQueryAttribute().GetModel(entityClrType, request, descriptor);
 
@@ -672,11 +690,10 @@ namespace System.Web.OData.Query
             builder.EntitySet<QueryCompositionCustomer>("customers");
             var model = builder.GetEdmModel();
             var entityClrType = typeof(QueryCompositionCustomer);
-            var config = new HttpConfiguration();
             var request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/");
-            request.ODataProperties().Model = model;
+            request.EnableHttpDependencyInjectionSupport(model);
             var descriptor = new ReflectedHttpActionDescriptor();
-            descriptor.Configuration = config;
+            descriptor.Configuration = request.GetConfiguration();
 
             var queryModel = new EnableQueryAttribute().GetModel(entityClrType, request, descriptor);
 
@@ -748,8 +765,10 @@ namespace System.Web.OData.Query
         [Fact]
         public void ApplyQuery_SingleEntity_ThrowsArgumentNull_Entity()
         {
+            HttpRequestMessage message = new HttpRequestMessage();
+            message.EnableHttpDependencyInjectionSupport();
             EnableQueryAttribute attribute = new EnableQueryAttribute();
-            ODataQueryOptions options = new ODataQueryOptions(new ODataQueryContext(EdmCoreModel.Instance, typeof(int)), new HttpRequestMessage());
+            ODataQueryOptions options = new ODataQueryOptions(new ODataQueryContext(EdmCoreModel.Instance, typeof(int)), message);
 
             Assert.ThrowsArgumentNull(
                 () => attribute.ApplyQuery(entity: null, queryOptions: options),
@@ -773,6 +792,7 @@ namespace System.Web.OData.Query
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             ODataQueryContext context = new ODataQueryContext(EdmCoreModel.Instance, typeof(int));
             HttpRequestMessage request = new HttpRequestMessage();
+            request.EnableHttpDependencyInjectionSupport();
             Mock<ODataQueryOptions> queryOptions = new Mock<ODataQueryOptions>(context, request);
 
             attribute.ApplyQuery(entity, queryOptions.Object);
@@ -936,8 +956,8 @@ namespace System.Web.OData.Query
         [Fact]
         public void OnActionExecuted_SingleResult_ReturnsSingleItemEvenIfThereIsNoSelectExpand()
         {
-            Customer customer = new Customer();
-            SingleResult singleResult = new SingleResult<Customer>(new Customer[] { customer }.AsQueryable());
+            BellevueCustomer customer = new BellevueCustomer();
+            SingleResult singleResult = new SingleResult<BellevueCustomer>(new BellevueCustomer[] { customer }.AsQueryable());
             HttpActionExecutedContext actionExecutedContext = GetActionExecutedContext("http://localhost/", singleResult);
             EnableQueryAttribute attribute = new EnableQueryAttribute();
 
@@ -981,7 +1001,10 @@ namespace System.Web.OData.Query
             var customers = Enumerable.Empty<Customer>().AsQueryable();
             SingleResult result = SingleResult.Create(customers);
             HttpActionExecutedContext actionExecutedContext = GetActionExecutedContext("http://localhost/", result);
-            actionExecutedContext.Request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("C"));
+            var container = new EdmEntityContainer("NS", "Default");
+            var entityType = new EdmEntityType("NS", "entity");
+            var entitySet = new EdmEntitySet(container, "entities", entityType);
+            actionExecutedContext.Request.ODataProperties().Path = new ODataPath(new EntitySetSegment(entitySet));
             EnableQueryAttribute attribute = new EnableQueryAttribute();
 
             // Act
@@ -1024,6 +1047,7 @@ namespace System.Web.OData.Query
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             model.Model.SetAnnotationValue(model.Customer, new ClrTypeAnnotation(typeof(Customer)));
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost?" + parameter);
+            request.EnableHttpDependencyInjectionSupport();
             ODataQueryContext context = new ODataQueryContext(model.Model, typeof(Customer));
             ODataQueryOptions queryOptions = new ODataQueryOptions(context, request);
 
@@ -1041,7 +1065,10 @@ namespace System.Web.OData.Query
             HttpActionExecutedContext actionExecutedContext = GetActionExecutedContext("http://localhost/", singleResult);
             EnableQueryAttribute attribute = new EnableQueryAttribute();
             HttpRequestMessage request = actionExecutedContext.Request;
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment("Customer"));
+            var container = new EdmEntityContainer("NS", "Default");
+            var entityType = new EdmEntityType("NS", "entity");
+            var entitySet = new EdmEntitySet(container, "entities", entityType);
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(entitySet));
 
             // Act
             attribute.OnActionExecuted(actionExecutedContext);
@@ -1058,6 +1085,7 @@ namespace System.Web.OData.Query
         private static HttpActionExecutedContext GetActionExecutedContext<TResponse>(string uri, TResponse result)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.EnableODataDependencyInjectionSupport();
             var actionContext = ContextUtil.CreateActionContext(ContextUtil.CreateControllerContext(request: request));
             var response = request.CreateResponse<TResponse>(HttpStatusCode.OK, result);
             var actionExecutedContext = new HttpActionExecutedContext { ActionContext = actionContext, Response = response };

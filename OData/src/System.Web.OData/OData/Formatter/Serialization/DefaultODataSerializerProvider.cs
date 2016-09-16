@@ -4,7 +4,9 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Web.Http;
-using Microsoft.OData.Core;
+using System.Web.OData.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Formatter.Serialization
@@ -14,44 +16,20 @@ namespace System.Web.OData.Formatter.Serialization
     /// </summary>
     public class DefaultODataSerializerProvider : ODataSerializerProvider
     {
-        private static readonly ODataServiceDocumentSerializer _workspaceSerializer = new ODataServiceDocumentSerializer();
-        private static readonly ODataEntityReferenceLinkSerializer _entityReferenceLinkSerializer = new ODataEntityReferenceLinkSerializer();
-        private static readonly ODataEntityReferenceLinksSerializer _entityReferenceLinksSerializer = new ODataEntityReferenceLinksSerializer();
-        private static readonly ODataErrorSerializer _errorSerializer = new ODataErrorSerializer();
-        private static readonly ODataMetadataSerializer _metadataSerializer = new ODataMetadataSerializer();
-        private static readonly ODataRawValueSerializer _rawValueSerializer = new ODataRawValueSerializer();
-        private static readonly ODataPrimitiveSerializer _primitiveSerializer = new ODataPrimitiveSerializer();
-        private static readonly ODataEnumSerializer _enumSerializer = new ODataEnumSerializer();
-
-        private static readonly DefaultODataSerializerProvider _instance = new DefaultODataSerializerProvider();
-
-        private readonly ODataFeedSerializer _feedSerializer;
-        private readonly ODataDeltaFeedSerializer _deltaFeedSerializer;
-        private readonly ODataCollectionSerializer _collectionSerializer;
-        private readonly ODataComplexTypeSerializer _complexTypeSerializer;
-        private readonly ODataEntityTypeSerializer _entityTypeSerializer;
+        private readonly IServiceProvider _rootContainer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DefaultODataSerializerProvider"/> class.
         /// </summary>
-        public DefaultODataSerializerProvider()
+        /// <param name="rootContainer">The root container.</param>
+        public DefaultODataSerializerProvider(IServiceProvider rootContainer)
         {
-            _feedSerializer = new ODataFeedSerializer(this);
-            _deltaFeedSerializer = new ODataDeltaFeedSerializer(this);
-            _collectionSerializer = new ODataCollectionSerializer(this);
-            _complexTypeSerializer = new ODataComplexTypeSerializer(this);
-            _entityTypeSerializer = new ODataEntityTypeSerializer(this);
-        }
-
-        /// <summary>
-        /// Gets the default instance of the <see cref="DefaultODataSerializerProvider"/>.
-        /// </summary>
-        public static DefaultODataSerializerProvider Instance
-        {
-            get
+            if (rootContainer == null)
             {
-                return _instance;
+                throw Error.ArgumentNull("rootContainer");
             }
+
+            _rootContainer = rootContainer;
         }
 
         /// <inheritdoc />
@@ -65,31 +43,29 @@ namespace System.Web.OData.Formatter.Serialization
             switch (edmType.TypeKind())
             {
                 case EdmTypeKind.Enum:
-                    return _enumSerializer;
+                    return _rootContainer.GetRequiredService<ODataEnumSerializer>();
 
                 case EdmTypeKind.Primitive:
-                    return _primitiveSerializer;
+                    return _rootContainer.GetRequiredService<ODataPrimitiveSerializer>();
 
                 case EdmTypeKind.Collection:
                     IEdmCollectionTypeReference collectionType = edmType.AsCollection();
                     if (collectionType.Definition.IsDeltaFeed())
                     {
-                        return _deltaFeedSerializer;
+                        return _rootContainer.GetRequiredService<ODataDeltaFeedSerializer>();
                     }
-                    else if (collectionType.ElementType().IsEntity())
+                    else if (collectionType.ElementType().IsEntity() || collectionType.ElementType().IsComplex())
                     {
-                        return _feedSerializer;
+                        return _rootContainer.GetRequiredService<ODataResourceSetSerializer>();
                     }
                     else
                     {
-                        return _collectionSerializer;
+                        return _rootContainer.GetRequiredService<ODataCollectionSerializer>();
                     }
 
                 case EdmTypeKind.Complex:
-                    return _complexTypeSerializer;
-
                 case EdmTypeKind.Entity:
-                    return _entityTypeSerializer;
+                    return _rootContainer.GetRequiredService<ODataResourceSerializer>();
 
                 default:
                     return null;
@@ -97,12 +73,8 @@ namespace System.Web.OData.Formatter.Serialization
         }
 
         /// <inheritdoc />
-        public override ODataSerializer GetODataPayloadSerializer(IEdmModel model, Type type, HttpRequestMessage request)
+        public override ODataSerializer GetODataPayloadSerializer(Type type, HttpRequestMessage request)
         {
-            if (model == null)
-            {
-                throw Error.ArgumentNull("model");
-            }
             if (type == null)
             {
                 throw Error.ArgumentNull("type");
@@ -115,26 +87,27 @@ namespace System.Web.OData.Formatter.Serialization
             // handle the special types.
             if (type == typeof(ODataServiceDocument))
             {
-                return _workspaceSerializer;
+                return _rootContainer.GetRequiredService<ODataServiceDocumentSerializer>();
             }
             else if (type == typeof(Uri) || type == typeof(ODataEntityReferenceLink))
             {
-                return _entityReferenceLinkSerializer;
+                return _rootContainer.GetRequiredService<ODataEntityReferenceLinkSerializer>();
             }
             else if (typeof(IEnumerable<Uri>).IsAssignableFrom(type) || type == typeof(ODataEntityReferenceLinks))
             {
-                return _entityReferenceLinksSerializer;
+                return _rootContainer.GetRequiredService<ODataEntityReferenceLinksSerializer>();
             }
             else if (type == typeof(ODataError) || type == typeof(HttpError))
             {
-                return _errorSerializer;
+                return _rootContainer.GetRequiredService<ODataErrorSerializer>();
             }
             else if (typeof(IEdmModel).IsAssignableFrom(type))
             {
-                return _metadataSerializer;
+                return _rootContainer.GetRequiredService<ODataMetadataSerializer>();
             }
 
             // if it is not a special type, assume it has a corresponding EdmType.
+            IEdmModel model = request.GetModel();
             ClrTypeCache typeMappingCache = model.GetTypeMappingCache();
             IEdmTypeReference edmType = typeMappingCache.GetEdmType(type, model);
 
@@ -144,7 +117,7 @@ namespace System.Web.OData.Formatter.Serialization
                     ODataRawValueMediaTypeMapping.IsRawValueRequest(request)) ||
                     ODataCountMediaTypeMapping.IsCountRequest(request))
                 {
-                    return _rawValueSerializer;
+                    return _rootContainer.GetRequiredService<ODataRawValueSerializer>();
                 }
                 else
                 {

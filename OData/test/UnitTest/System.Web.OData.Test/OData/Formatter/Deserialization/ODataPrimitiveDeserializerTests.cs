@@ -9,9 +9,8 @@ using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Formatter.Serialization.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -27,7 +26,6 @@ namespace System.Web.OData.Formatter.Deserialization
             {
                 return new TheoryDataSet<object, object>
                 {
-                    { null, null },
                     { (char)'1', "1" },
                     { (char[]) new char[] {'1'}, "1" },
                     { (UInt16)1, (int)1 },

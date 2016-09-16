@@ -7,15 +7,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter.Serialization.Models;
-using System.Web.OData.Routing;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
-using Moq;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter
 {
@@ -47,7 +46,7 @@ namespace System.Web.OData.Formatter
                         },
                 };
         }
-        
+
         [Fact]
         public void GetValue_Returns_SetValue()
         {
@@ -69,7 +68,7 @@ namespace System.Web.OData.Formatter
             etag.Name = "Name1";
             Assert.Equal("Name1", etag.Name);
         }
-        
+
         [Fact]
         public void GetValue_ThrowsInvalidOperation_IfNotWellFormed()
         {
@@ -218,20 +217,15 @@ namespace System.Web.OData.Formatter
             EntityTagHeaderValue etagHeaderValue = handerl.CreateETag(properties);
 
             HttpRequestMessage request = new HttpRequestMessage();
-            HttpConfiguration cofiguration = new HttpConfiguration();
-            request.SetConfiguration(cofiguration);
 
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<MyETagCustomer>("Customers");
             IEdmModel model = builder.GetEdmModel();
             IEdmEntityType customer = model.SchemaElements.OfType<IEdmEntityType>().FirstOrDefault(e => e.Name == "MyEtagCustomer");
             IEdmEntitySet customers = model.FindDeclaredEntitySet("Customers");
-            Mock<ODataPathSegment> mockSegment = new Mock<ODataPathSegment> { CallBase = true };
-            mockSegment.Setup(s => s.GetEdmType(null)).Returns(customer);
-            mockSegment.Setup(s => s.GetNavigationSource(null)).Returns(customers);
-            ODataPath odataPath = new ODataPath(new[] { mockSegment.Object });
+            ODataPath odataPath = new ODataPath(new[] { new EntitySetSegment(customers) });
+            request.EnableHttpDependencyInjectionSupport(model);
             request.ODataProperties().Path = odataPath;
-            request.ODataProperties().Model = model;
 
             ETag etagCustomer = request.GetETag(etagHeaderValue);
             etagCustomer.EntityType = typeof(MyETagCustomer);
@@ -313,20 +307,14 @@ namespace System.Web.OData.Formatter
             EntityTagHeaderValue etagHeaderValue = handerl.CreateETag(properties);
 
             HttpRequestMessage request = new HttpRequestMessage();
-            HttpConfiguration cofiguration = new HttpConfiguration();
-            request.SetConfiguration(cofiguration);
 
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<MyETagOrder>("Orders");
             IEdmModel model = builder.GetEdmModel();
-            IEdmEntityType order = model.SchemaElements.OfType<IEdmEntityType>().FirstOrDefault(e => e.Name == "MyETagOrder");
             IEdmEntitySet orders = model.FindDeclaredEntitySet("Orders");
-            Mock<ODataPathSegment> mockSegment = new Mock<ODataPathSegment> { CallBase = true };
-            mockSegment.Setup(s => s.GetEdmType(null)).Returns(order);
-            mockSegment.Setup(s => s.GetNavigationSource(null)).Returns(orders);
-            ODataPath odataPath = new ODataPath(new[] { mockSegment.Object });
+            ODataPath odataPath = new ODataPath(new[] {new EntitySetSegment(orders) });
             request.ODataProperties().Path = odataPath;
-            request.ODataProperties().Model = model;
+            request.EnableHttpDependencyInjectionSupport(model);
 
             ETag etagCustomer = request.GetETag(etagHeaderValue);
             etagCustomer.EntityType = typeof(MyETagOrder);

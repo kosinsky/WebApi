@@ -3,6 +3,7 @@
 
 using System.Web.Http;
 using System.Web.Http.Description;
+using System.Web.OData.Extensions;
 using System.Web.OData.Results;
 
 namespace System.Web.OData
@@ -16,7 +17,24 @@ namespace System.Web.OData
     public abstract class ODataController : ApiController
     {
         /// <summary>
-        /// Creates an action result with the specified values that is a response to a POST operation with an entity 
+        /// Releases the unmanaged resources that are used by the object and, optionally,
+        /// releases the managed resources.
+        /// </summary>
+        /// <param name="disposing">
+        /// True to release both managed and unmanaged resources; false to release only unmanaged resources.
+        /// </param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && Request != null)
+            {
+                Request.DeleteRequestContainer(true);
+            }
+
+            base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Creates an action result with the specified values that is a response to a POST operation with an entity
         /// to an entity set.
         /// </summary>
         /// <typeparam name="TEntity">The created entity type.</typeparam>
@@ -33,7 +51,7 @@ namespace System.Web.OData
         }
 
         /// <summary>
-        /// Creates an action result with the specified values that is a response to a PUT, PATCH, or a MERGE operation 
+        /// Creates an action result with the specified values that is a response to a PUT, PATCH, or a MERGE operation
         /// on an OData entity.
         /// </summary>
         /// <typeparam name="TEntity">The updated entity type.</typeparam>

@@ -12,10 +12,12 @@ using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter.Deserialization;
 using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter
 {
@@ -36,6 +38,7 @@ namespace System.Web.OData.Formatter
 
             configuration.Routes.MapHttpRoute("default", "{action}", new { Controller = "Inheritance" });
             configuration.Routes.MapFakeODataRoute();
+            configuration.EnableODataDependencyInjectionSupport();
 
             _server = new HttpServer(configuration);
             _client = new HttpClient(_server);
@@ -238,22 +241,23 @@ namespace System.Web.OData.Formatter
             IODataRequestMessage oDataRequest = new ODataMessageWrapper(content.ReadAsStreamAsync().Result, content.Headers);
             ODataMessageReader reader = new ODataMessageReader(oDataRequest, new ODataMessageReaderSettings(), _model);
 
-            ODataDeserializerProvider deserializerProvider = new DefaultODataDeserializerProvider();
+            ODataDeserializerProvider deserializerProvider = DependencyInjectionHelper.GetDefaultODataDeserializerProvider();
 
             ODataDeserializerContext context = new ODataDeserializerContext { Model = _model };
             IEdmActionImport action = _model.EntityContainer
                 .OperationImports()
                 .Single(f => f.Name == "PostMotorcycle_When_Expecting_Car") as IEdmActionImport;
             Assert.NotNull(action);
-
-            context.Path = new ODataPath(new UnboundActionPathSegment(action));
+            IEdmEntitySetBase actionEntitySet;
+            action.TryGetStaticEntitySet(_model, out actionEntitySet);
+            context.Path = new ODataPath(new OperationImportSegment(new[] { action }, actionEntitySet, null));
 
             // Act & Assert
             Assert.Throws<ODataException>(
-                () => new ODataEntityDeserializer(deserializerProvider).Read(reader, typeof(Car), context),
-                "An entry with type 'System.Web.OData.Builder.TestModels.Motorcycle' was found, " +
+                () => new ODataResourceDeserializer(deserializerProvider).Read(reader, typeof(Car), context),
+                "An resource with type 'System.Web.OData.Builder.TestModels.Motorcycle' was found, " +
                 "but it is not assignable to the expected type 'System.Web.OData.Builder.TestModels.Car'. " +
-                "The type specified in the entry must be equal to either the expected type or a derived type.");
+                "The type specified in the resource must be equal to either the expected type or a derived type.");
         }
 
         private Stream GetResponseStream(string uri, string contentType)
@@ -308,8 +312,7 @@ namespace System.Web.OData.Formatter
         {
             request.ODataProperties().Path = new DefaultODataPathHandler()
                 .Parse(_model, "http://any/", GetODataPath(request.RequestUri.AbsoluteUri));
-            request.ODataProperties().Model = _model;
-            request.SetFakeODataRouteName();
+            request.EnableODataDependencyInjectionSupport(_model);
         }
 
         private static IEdmModel GetEdmModel()
@@ -433,7 +436,7 @@ namespace System.Web.OData.Formatter
 
         public Vehicle PatchMotorcycle_When_Expecting_Vehicle(Delta<Vehicle> patch)
         {
-            Assert.IsType<Motorcycle>(patch.GetEntity());
+            Assert.IsType<Motorcycle>(patch.GetInstance());
             patch.Patch(motorcycle);
             return motorcycle;
         }

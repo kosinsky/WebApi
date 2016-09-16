@@ -9,13 +9,13 @@ using System.Net.Http.Headers;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
-using System.Web.OData.Routing;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter
 {
@@ -48,8 +48,6 @@ namespace System.Web.OData.Formatter
                     {typeof(Single), Single.PositiveInfinity, fullMetadata, "SingleFullMetadata.json"},
                     {typeof(TimeSpan), TimeSpan.FromMinutes(60), fullMetadata, "TimeSpanFullMetadata.json"},
                     {typeof(bool?), (bool?)false, fullMetadata, "NullableBooleanFullMetadata.json"},
-                    {typeof(int?), (int?)null, fullMetadata, "NullableInt32FullMetadata.json"},
-                    {typeof(int?), (int?)null, noMetadata, "NullableInt32NoMetadata.json"},
                 };
             }
         }
@@ -75,9 +73,8 @@ namespace System.Web.OData.Formatter
                 request.SetConfiguration(configuration);
                 IEdmProperty property =
                     model.EntityContainer.EntitySets().Single().EntityType().Properties().First();
-                request.ODataProperties().Model = model;
-                request.ODataProperties().Path = new ODataPath(new PropertyAccessPathSegment(property));
-                request.SetFakeODataRouteName();
+                request.ODataProperties().Path = new ODataPath(new PropertySegment(property as IEdmStructuralProperty));
+                request.EnableODataDependencyInjectionSupport();
 
                 ODataMediaTypeFormatter formatter = CreateFormatter(request);
                 formatter.SupportedMediaTypes.Add(mediaType);
@@ -114,8 +111,96 @@ namespace System.Web.OData.Formatter
                 HttpConfiguration config = new HttpConfiguration();
                 config.MapODataServiceRoute("default", "", model);
                 request.SetConfiguration(config);
-                request.ODataProperties().RouteName = "default";
-                request.ODataProperties().Model = model;
+                request.EnableODataDependencyInjectionSupport("default");
+
+                ODataMediaTypeFormatter formatter = CreateFormatter(request);
+                formatter.SupportedMediaTypes.Add(mediaType);
+
+                using (StringContent content = new StringContent(entity))
+                {
+                    content.Headers.ContentType = mediaType;
+
+                    using (Stream stream = content.ReadAsStreamAsync().Result)
+                    {
+                        actualValue = formatter.ReadFromStreamAsync(valueType, stream, content,
+                            new Mock<IFormatterLogger>().Object).Result;
+                    }
+                }
+            }
+
+            Assert.Equal(expectedValue, actualValue);
+        }
+
+        public static TheoryDataSet<Type, object, MediaTypeHeaderValue, string> NullPrimitiveValueToTest
+        {
+            get
+            {
+                MediaTypeHeaderValue fullMetadata = ODataMediaTypes.ApplicationJsonODataFullMetadata;
+                MediaTypeHeaderValue noMetadata = ODataMediaTypes.ApplicationJsonODataNoMetadata;
+
+                return new TheoryDataSet<Type, object, MediaTypeHeaderValue, string>
+                {
+                    // TODO: please remove the *.json file after ODL fixes the @odata.null issue.
+                    {typeof(int?), (int?)null, fullMetadata, "NullableInt32FullMetadata.json"},
+                    {typeof(int?), (int?)null, noMetadata, "NullableInt32NoMetadata.json"}
+                };
+            }
+        }
+
+        [Theory]
+        [PropertyData("NullPrimitiveValueToTest")]
+        public void NullPrimitiveValueSerializeAsODataThrows(Type valueType, object value, MediaTypeHeaderValue mediaType, string notUsed)
+        {
+            ODataConventionModelBuilder modelBuilder = new ODataConventionModelBuilder();
+            modelBuilder.EntitySet<WorkItem>("WorkItems");
+            IEdmModel model = modelBuilder.GetEdmModel();
+
+
+            using (HttpConfiguration configuration = CreateConfiguration())
+            using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get,
+                "http://localhost/WorkItems(10)/ID"))
+            {
+                request.SetConfiguration(configuration);
+                IEdmProperty property =
+                    model.EntityContainer.EntitySets().Single().EntityType().Properties().First();
+                request.ODataProperties().Path = new ODataPath(new PropertySegment(property as IEdmStructuralProperty));
+                request.EnableODataDependencyInjectionSupport();
+
+                ODataMediaTypeFormatter formatter = CreateFormatter(request);
+                formatter.SupportedMediaTypes.Add(mediaType);
+
+                Type type = (value != null) ? value.GetType() : typeof(Nullable<int>);
+
+                using (ObjectContent content = new ObjectContent(type, value, formatter))
+                {
+                    Assert.Throws<ODataException>(() => content.ReadAsStringAsync().Result,
+                        "A null top-level property is not allowed to be serialized.");
+                }
+            }
+        }
+
+        [Theory]
+        [PropertyData("NullPrimitiveValueToTest")]
+        public void NullPrimitiveValueDeserializeAsOData(Type valueType, object value, MediaTypeHeaderValue mediaType,
+            string resourceName)
+        {
+            string entity = Resources.GetString(resourceName);
+            Assert.NotNull(entity);
+
+            object expectedValue = value;
+
+            ODataConventionModelBuilder modelBuilder = new ODataConventionModelBuilder();
+            modelBuilder.EntitySet<WorkItem>("WorkItems");
+            IEdmModel model = modelBuilder.GetEdmModel();
+
+            object actualValue;
+
+            using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/WorkItems(10)/ID"))
+            {
+                HttpConfiguration config = new HttpConfiguration();
+                config.MapODataServiceRoute("default", "", model);
+                request.SetConfiguration(config);
+                request.EnableODataDependencyInjectionSupport("default");
 
                 ODataMediaTypeFormatter formatter = CreateFormatter(request);
                 formatter.SupportedMediaTypes.Add(mediaType);
@@ -139,6 +224,7 @@ namespace System.Web.OData.Formatter
         {
             HttpConfiguration configuration = new HttpConfiguration();
             configuration.Routes.MapFakeODataRoute();
+            configuration.EnableODataDependencyInjectionSupport();
             return configuration;
         }
 

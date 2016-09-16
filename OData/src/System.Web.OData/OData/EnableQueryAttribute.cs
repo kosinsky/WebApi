@@ -15,7 +15,8 @@ using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
 using System.Web.OData.Query;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData
@@ -112,7 +113,7 @@ namespace System.Web.OData
         /// Denial of Service attacks.
         /// </summary>
         /// <value>
-        /// The maxiumum depth of the Any or All elements nested inside the query. The default value is 1.
+        /// The maximum depth of the Any or All elements nested inside the query. The default value is 1.
         /// </value>
         public int MaxAnyAllExpressionDepth
         {
@@ -183,7 +184,7 @@ namespace System.Web.OData
         /// <list type="definition">
         /// <item>
         /// <term>String related:</term>
-        /// <description>substringof, endswith, startswith, length, indexof, substring, tolower, toupper, trim,
+        /// <description>contains, endswith, startswith, length, indexof, substring, tolower, toupper, trim,
         /// concat e.g. ~/Customers?$filter=length(CompanyName) eq 19</description>
         /// </item>
         /// <item>
@@ -250,7 +251,7 @@ namespace System.Web.OData
         }
 
         /// <summary>
-        /// <para>Gets or sets a string with comma seperated list of property names. The queryable result can only be
+        /// <para>Gets or sets a string with comma separated list of property names. The queryable result can only be
         /// ordered by those properties defined in this list.</para>
         ///
         /// <para>Note, by default this string is null, which means it can be ordered by any property.</para>
@@ -389,21 +390,29 @@ namespace System.Web.OData
                         response.Content.GetType().FullName);
                 }
 
+                ODataQueryContext queryContext = null;
+
+                if (!_querySettings.PageSize.HasValue && responseContent.Value != null)
+                {
+                    GetModelBoundPageSize(queryContext, responseContent, request, actionDescriptor, actionExecutedContext);
+                }
+
                 // Apply the query if there are any query options, if there is a page size set, in the case of
                 // SingleResult or in the case of $count request.
                 bool shouldApplyQuery = responseContent.Value != null &&
                     request.RequestUri != null &&
                     (!String.IsNullOrWhiteSpace(request.RequestUri.Query) ||
                     _querySettings.PageSize.HasValue ||
+                    _querySettings.ModelBoundPageSize.HasValue ||
                     responseContent.Value is SingleResult ||
                     ODataCountMediaTypeMapping.IsCountRequest(request) ||
-                    ContainsAutoExpandProperty(responseContent.Value, request, actionDescriptor));
+                    ContainsAutoSelectExpandProperty(responseContent.Value, request, actionDescriptor));
 
                 if (shouldApplyQuery)
                 {
                     try
                     {
-                        object queryResult = ExecuteQuery(responseContent.Value, request, actionDescriptor);
+                        object queryResult = ExecuteQuery(responseContent.Value, request, actionDescriptor, queryContext);
                         if (queryResult == null && request.ODataProperties().Path == null)
                         {
                             // This is the case in which a regular OData service uses the EnableQuery attribute.
@@ -527,9 +536,7 @@ namespace System.Web.OData
             return queryOptions.ApplyTo(entity, _querySettings);
         }
 
-        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
-            Justification = "Response disposed after being sent.")]
-        private object ExecuteQuery(object response, HttpRequestMessage request, HttpActionDescriptor actionDescriptor)
+        private ODataQueryContext GetODataQueryContext(object response, HttpRequestMessage request, HttpActionDescriptor actionDescriptor)
         {
             Type elementClrType = GetElementType(response, actionDescriptor);
 
@@ -539,10 +546,44 @@ namespace System.Web.OData
                 throw Error.InvalidOperation(SRResources.QueryGetModelMustNotReturnNull);
             }
 
-            ODataQueryContext queryContext = new ODataQueryContext(
-                model,
-                elementClrType,
-                request.ODataProperties().Path);
+            return new ODataQueryContext(model, elementClrType, request.ODataProperties().Path);
+        }
+
+        private void GetModelBoundPageSize(ODataQueryContext queryContext, ObjectContent responseContent,
+            HttpRequestMessage request, HttpActionDescriptor actionDescriptor,
+            HttpActionExecutedContext actionExecutedContext)
+        {
+            try
+            {
+                queryContext = GetODataQueryContext(responseContent.Value, request, actionDescriptor);
+            }
+            catch (InvalidOperationException e)
+            {
+                actionExecutedContext.Response = request.CreateErrorResponse(
+                    HttpStatusCode.BadRequest,
+                    Error.Format(SRResources.UriQueryStringInvalid, e.Message),
+                    e);
+                return;
+            }
+
+            ModelBoundQuerySettings querySettings = EdmLibHelpers.GetModelBoundQuerySettings(queryContext.TargetProperty,
+                queryContext.TargetStructuredType,
+                queryContext.Model);
+            if (querySettings != null && querySettings.PageSize.HasValue)
+            {
+                _querySettings.ModelBoundPageSize = querySettings.PageSize;
+            }
+        }
+
+        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
+            Justification = "Response disposed after being sent.")]
+        private object ExecuteQuery(object response, HttpRequestMessage request, HttpActionDescriptor actionDescriptor, ODataQueryContext queryContext)
+        {
+            if (queryContext == null)
+            {
+                queryContext = GetODataQueryContext(response, request, actionDescriptor);
+            }
+
             ODataQueryOptions queryOptions = new ODataQueryOptions(queryContext, request);
 
             ValidateQuery(request, queryOptions);
@@ -601,9 +642,9 @@ namespace System.Web.OData
             HttpActionDescriptor actionDescriptor)
         {
             // Get model for the request
-            IEdmModel model = request.ODataProperties().Model;
+            IEdmModel model = request.GetModel();
 
-            if (model == null || model.GetEdmType(elementClrType) == null)
+            if (model == EdmCoreModel.Instance || model.GetEdmType(elementClrType) == null)
             {
                 // user has not configured anything or has registered a model without the element type
                 // let's create one just for this type and cache it in the action descriptor
@@ -686,7 +727,8 @@ namespace System.Web.OData
             }
         }
 
-        private bool ContainsAutoExpandProperty(object response, HttpRequestMessage request, HttpActionDescriptor actionDescriptor)
+        private bool ContainsAutoSelectExpandProperty(object response, HttpRequestMessage request,
+            HttpActionDescriptor actionDescriptor)
         {
             Type elementClrType = GetElementType(response, actionDescriptor);
 
@@ -696,21 +738,67 @@ namespace System.Web.OData
                 throw Error.InvalidOperation(SRResources.QueryGetModelMustNotReturnNull);
             }
 
-            IEdmEntityType entityType = model.GetEdmType(elementClrType) as IEdmEntityType;
-            if (entityType != null)
+            IEdmEntityType baseEntityType = model.GetEdmType(elementClrType) as IEdmEntityType;
+            IEdmStructuredType structuredType = model.GetEdmType(elementClrType) as IEdmStructuredType;
+            IEdmProperty property = null;
+            if (request.ODataProperties().Path != null)
             {
-                var navigationProperties = entityType.NavigationProperties();
-                if (navigationProperties != null)
+                string name;
+                EdmLibHelpers.GetPropertyAndStructuredTypeFromPath(request.ODataProperties().Path.Segments, out property,
+                    out structuredType,
+                    out name);
+            }
+
+            if (baseEntityType != null)
+            {
+                List<IEdmEntityType> entityTypes = new List<IEdmEntityType>();
+                entityTypes.Add(baseEntityType);
+                entityTypes.AddRange(EdmLibHelpers.GetAllDerivedEntityTypes(baseEntityType, model));
+                foreach (var entityType in entityTypes)
                 {
-                    foreach (var navigationProperty in navigationProperties)
+                    IEnumerable<IEdmNavigationProperty> navigationProperties = entityType == baseEntityType
+                        ? entityType.NavigationProperties()
+                        : entityType.DeclaredNavigationProperties();
+                    if (navigationProperties != null)
                     {
-                        if (EdmLibHelpers.IsAutoExpand(navigationProperty, model))
+                        if (navigationProperties.Any(
+                                navigationProperty =>
+                                    EdmLibHelpers.IsAutoExpand(navigationProperty, property, entityType, model)))
+                        {
+                            return true;
+                        }
+                    }
+
+                    IEnumerable<IEdmStructuralProperty> properties = entityType == baseEntityType
+                        ? entityType.StructuralProperties()
+                        : entityType.DeclaredStructuralProperties();
+                    if (properties != null)
+                    {
+                        foreach (var edmProperty in properties)
+                        {
+                            if (EdmLibHelpers.IsAutoSelect(edmProperty, property, entityType, model))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (structuredType != null)
+            {
+                IEnumerable<IEdmStructuralProperty> properties = structuredType.StructuralProperties();
+                if (properties != null)
+                {
+                    foreach (var edmProperty in properties)
+                    {
+                        if (EdmLibHelpers.IsAutoSelect(edmProperty, property, structuredType, model))
                         {
                             return true;
                         }
                     }
                 }
             }
+
             return false;
         }
     }

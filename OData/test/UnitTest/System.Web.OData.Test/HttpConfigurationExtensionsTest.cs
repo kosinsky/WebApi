@@ -13,11 +13,14 @@ using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using System.Web.OData.Query;
 using System.Web.OData.Routing;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Edm.Library;
+using System.Web.OData.Routing.Conventions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
+using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
+using ServiceLifetime = Microsoft.OData.ServiceLifetime;
 
 namespace System.Web.OData
 {
@@ -175,77 +178,6 @@ namespace System.Web.OData
         }
 
         [Fact]
-        public void GetResolverSettings_ReturnDefaultResolverSettings_IfNotSet()
-        {
-            // Arrange
-            HttpConfiguration config = new HttpConfiguration();
-
-            // Act
-            ODataUriResolverSetttings resolverSetttings = config.GetResolverSettings();
-
-            // Assert
-            Assert.False(resolverSetttings.CaseInsensitive);
-            Assert.False(resolverSetttings.UnqualifiedNameCall);
-            Assert.False(resolverSetttings.EnumPrefixFree);
-        }
-
-        [Fact]
-        public void EnableCaseInsensitive_Sets_KeyWordAndMetadataFlag()
-        {
-            // Arrange
-            HttpConfiguration config = new HttpConfiguration();
-
-            // Act
-            config.EnableCaseInsensitive(caseInsensitive: true);
-            ODataUriResolverSetttings resolverSetttings = config.GetResolverSettings();
-
-            // Assert
-            Assert.True(resolverSetttings.CaseInsensitive);
-        }
-
-        [Fact]
-        public void EnableUnqualifedCall_Sets_UnqualifedCallFlag()
-        {
-            // Arrange
-            HttpConfiguration config = new HttpConfiguration();
-
-            // Act
-            config.EnableUnqualifiedNameCall(unqualifiedNameCall: true);
-            ODataUriResolverSetttings resolverSetttings = config.GetResolverSettings();
-
-            // Assert
-            Assert.True(resolverSetttings.UnqualifiedNameCall);
-        }
-
-        [Fact]
-        public void EnableEnumPrefixFree_Sets_EnumPrefixFreeFlag()
-        {
-            // Arrange
-            HttpConfiguration config = new HttpConfiguration();
-
-            // Act
-            config.EnableEnumPrefixFree(enumPrefixFree: true);
-            ODataUriResolverSetttings resolverSetttings = config.GetResolverSettings();
-
-            // Assert
-            Assert.True(resolverSetttings.EnumPrefixFree);
-        }
-
-        [Fact]
-        public void EnableAlternateKeys_Sets_AlternateKeyFlag()
-        {
-            // Arrange
-            HttpConfiguration config = new HttpConfiguration();
-
-            // Act
-            config.EnableAlternateKeys(true);
-            ODataUriResolverSetttings resolverSetttings = config.GetResolverSettings();
-
-            // Assert
-            Assert.True(resolverSetttings.AlternateKeys);
-        }
-
-        [Fact]
         public void EnableContinueOnError_Sets_ContinueOnErrorKeyFlag()
         {
             // Arrange
@@ -259,34 +191,203 @@ namespace System.Web.OData
         }
 
         [Fact]
-        public void SetUrlConvension_Sets_UrlConvension()
+        public void SetUrlKeyDelimiter_Sets_UrlKeyDelimiter()
         {
             // Arrange
             HttpConfiguration config = new HttpConfiguration();
 
             // Act
-            config.SetUrlConventions(ODataUrlConventions.ODataSimplified);
-            ODataRoute route = config.MapODataServiceRoute("odata", "odata", new EdmModel());
-            var pathHandler = route.PathRouteConstraint.PathHandler as DefaultODataPathHandler;
+            config.SetUrlKeyDelimiter(ODataUrlKeyDelimiter.Slash);
+            config.MapODataServiceRoute("odata", "odata", new EdmModel());
+            var pathResolver = GetPathHandler(config);
 
             // Assert
-            Assert.NotNull(pathHandler);
-            Assert.Equal(pathHandler.ResolverSetttings.UrlConventions, ODataUrlConventions.ODataSimplified);
+            Assert.NotNull(pathResolver);
+            Assert.Equal(pathResolver.UrlKeyDelimiter, ODataUrlKeyDelimiter.Slash);
         }
 
         [Fact]
-        public void SetUrlConvension_Sets_DefaultValue()
+        public void SetUrlKeyDelimiter_Sets_DefaultValue()
         {
             // Arrange
             HttpConfiguration config = new HttpConfiguration();
 
             // Act
-            ODataRoute route = config.MapODataServiceRoute("odata", "odata", new EdmModel());
-            var pathHandler = route.PathRouteConstraint.PathHandler as DefaultODataPathHandler;
+            config.MapODataServiceRoute("odata", "odata", new EdmModel());
+            var pathResolver = GetPathHandler(config);
 
             // Assert
-            Assert.NotNull(pathHandler);
-            Assert.Equal(pathHandler.ResolverSetttings.UrlConventions, ODataUrlConventions.Default);
+            Assert.NotNull(pathResolver);
+            Assert.Null(pathResolver.UrlKeyDelimiter);
+        }
+
+        [Fact]
+        public void ConfigureServices_ImplicitlySets_RootContainer()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            config.MapODataServiceRoute("odata", "odata", builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService2>(ServiceLifetime.Singleton));
+            IServiceProvider rootContainer = config.GetODataRootContainer("odata");
+            ITestService o1 = rootContainer.GetRequiredService<ITestService>();
+            ITestService o2 = rootContainer.GetRequiredService<ITestService>();
+
+            // Assert
+            Assert.Equal(o1, o2);
+        }
+
+        [Fact]
+        public void ConfigureServices_Using_MapHttpRoute()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            config.EnableDependencyInjection(builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService2>(ServiceLifetime.Singleton));
+            config.Routes.MapHttpRoute("odata", "odata");
+            IServiceProvider rootContainer = config.GetNonODataRootContainer();
+            ITestService o1 = rootContainer.GetRequiredService<ITestService>();
+            ITestService o2 = rootContainer.GetRequiredService<ITestService>();
+
+            // Assert
+            Assert.Equal(o1, o2);
+        }
+
+        [Fact]
+        public void ConfigureServices_Throws_WhenNoODataRoute()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            Action action = () => config.GetODataRootContainer("odata");
+
+            // Assert
+            Assert.Throws<InvalidOperationException>(action);
+        }
+
+        [Fact]
+        public void ConfigureServices_Throws_WhenDependencyInjectionNotEnabled()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            Action action = () => config.GetNonODataRootContainer();
+
+            // Assert
+            Assert.Throws<InvalidOperationException>(action);
+        }
+
+        [Fact]
+        public void ConfigureServices_CanMap_TwoDifferentODataRoutes()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            config.MapODataServiceRoute("odata1", "odata1", builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService2>(ServiceLifetime.Singleton));
+            config.MapODataServiceRoute("odata2", "odata2", builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService2>(ServiceLifetime.Singleton));
+            IServiceProvider rootContainer1 = config.GetODataRootContainer("odata1");
+            IServiceProvider rootContainer2 = config.GetODataRootContainer("odata2");
+            ITestService o1 = rootContainer1.GetRequiredService<ITestService>();
+            ITestService o2 = rootContainer2.GetRequiredService<ITestService>();
+
+            // Assert
+            Assert.NotEqual(o1, o2);
+        }
+
+        [Fact]
+        public void ConfigureServices_CanMap_OneODataRoute_And_OneHttpRoute()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            config.MapODataServiceRoute("odata", "odata", builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService2>(ServiceLifetime.Singleton));
+            config.EnableDependencyInjection(builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService2>(ServiceLifetime.Singleton));
+            config.Routes.MapHttpRoute("odata2", "odata2");
+            IServiceProvider rootContainer = config.GetODataRootContainer("odata");
+            IServiceProvider nonODataRootContainer = config.GetNonODataRootContainer();
+            ITestService o1 = rootContainer.GetRequiredService<ITestService>();
+            ITestService o2 = nonODataRootContainer.GetRequiredService<ITestService>();
+
+            // Assert
+            Assert.NotEqual(o1, o2);
+        }
+
+        [Fact]
+        public void ConfigureServices_CanMap_TwoDifferentHttpRoutes()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            config.EnableDependencyInjection(builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService2>(ServiceLifetime.Singleton));
+            config.Routes.MapHttpRoute("odata1", "odata1");
+            config.Routes.MapHttpRoute("odata2", "odata2");
+            IServiceProvider nonODataRootContainer = config.GetNonODataRootContainer();
+            ITestService o1 = nonODataRootContainer.GetRequiredService<ITestService>();
+            ITestService o2 = nonODataRootContainer.GetRequiredService<ITestService>();
+
+            // Assert
+            Assert.Equal(o1, o2);
+        }
+
+        [Fact]
+        public void ConfigureServices_CanSet_CustomContainer()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            config.UseCustomContainerBuilder(() => new DerivedContainerBuilder());
+            config.MapODataServiceRoute("odata", "odata", builder =>
+                builder.AddService<IEdmModel, EdmModel>(ServiceLifetime.Singleton)
+                       .AddService<ITestService, TestService>(ServiceLifetime.Singleton));
+            IServiceProvider rootContainer = config.GetODataRootContainer("odata");
+            ITestService testService = rootContainer.GetRequiredService<ITestService>();
+
+            // Assert
+            Assert.Equal(typeof(TestService2), testService.GetType());
+        }
+
+        [Fact]
+        public void ConfigureServices_CanSet_QueryConfiguration()
+        {
+            // Arrange
+            HttpConfiguration config = new HttpConfiguration();
+
+            // Act
+            config.Filter().Count(QueryOptionSetting.Disabled).Expand().OrderBy().MaxTop(10);
+            DefaultQuerySettings defaultQuerySettings = config.GetDefaultQuerySettings();
+
+            // Assert
+            Assert.Equal(true, defaultQuerySettings.EnableFilter);
+            Assert.Equal(false, defaultQuerySettings.EnableCount);
+            Assert.Equal(true, defaultQuerySettings.EnableExpand);
+            Assert.Equal(true, defaultQuerySettings.EnableOrderBy);
+            Assert.Equal(10, defaultQuerySettings.MaxTop);
+        }
+
+        private static IODataPathHandler GetPathHandler(HttpConfiguration config)
+        {
+            return config.GetODataRootContainer("odata").GetRequiredService<IODataPathHandler>();
         }
 
         private static ODataMediaTypeFormatter CreateODataFormatter()
@@ -301,5 +402,27 @@ namespace System.Web.OData
             {
             }
         }
+
+        private class DerivedContainerBuilder : DefaultContainerBuilder
+        {
+            public override IContainerBuilder AddService(
+                ServiceLifetime lifetime,
+                Type serviceType,
+                Type implementationType)
+            {
+                if (serviceType == typeof(ITestService))
+                {
+                    return base.AddService(lifetime, serviceType, typeof(TestService2));
+                }
+
+                return base.AddService(lifetime, serviceType, implementationType);
+            }
+        }
+
+        private interface ITestService { }
+
+        private class TestService : ITestService { }
+
+        private class TestService2 : ITestService { }
     }
 }

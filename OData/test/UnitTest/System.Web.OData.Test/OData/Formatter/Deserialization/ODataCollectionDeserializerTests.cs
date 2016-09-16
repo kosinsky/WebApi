@@ -2,18 +2,13 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Runtime.Serialization;
 using System.Web.OData.Builder;
 using System.Web.OData.Formatter.Serialization;
-using System.Web.OData.Formatter.Serialization.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -21,28 +16,36 @@ namespace System.Web.OData.Formatter.Deserialization
 {
     public class ODataCollectionDeserializerTests
     {
-        private static IEdmModel _model = GetEdmModel();
-        private static ODataDeserializerProvider _deserializerProvider = new DefaultODataDeserializerProvider();
-        private static IEdmTypeReference _addressType = _model.GetEdmTypeReference(typeof(Address)).AsComplex();
-        private static IEdmCollectionTypeReference _addressCollectionType =
-            new EdmCollectionTypeReference(new EdmCollectionType(_addressType));
-        private static IEdmCollectionTypeReference _intCollectionType =
-            new EdmCollectionTypeReference(new EdmCollectionType(_model.GetEdmTypeReference(typeof(int))));
+        private static readonly IEdmModel Model = GetEdmModel();
+
+        private static readonly ODataSerializerProvider SerializerProvider = DependencyInjectionHelper.GetDefaultODataSerializerProvider();
+
+        private static readonly ODataDeserializerProvider DeserializerProvider = DependencyInjectionHelper.GetDefaultODataDeserializerProvider();
+
+        private static readonly IEdmEnumTypeReference ColorType =
+            new EdmEnumTypeReference(Model.SchemaElements.OfType<IEdmEnumType>().First(c => c.Name == "Color"),
+                isNullable: true);
+
+        private static readonly IEdmCollectionTypeReference ColorCollectionType = new EdmCollectionTypeReference(new EdmCollectionType((ColorType)));
+
+        private static readonly IEdmCollectionTypeReference IntCollectionType =
+            new EdmCollectionTypeReference(new EdmCollectionType(Model.GetEdmTypeReference(typeof(int))));
 
         [Fact]
         public void Ctor_ThrowsArgumentNull_DeserializerProvider()
         {
-            IEdmCollectionTypeReference collectionType = new Mock<IEdmCollectionTypeReference>().Object;
-            Assert.ThrowsArgumentNull(
-                () => new ODataCollectionDeserializer(deserializerProvider: null),
+            // Arrange & Act & Assert
+            Assert.ThrowsArgumentNull(() => new ODataCollectionDeserializer(deserializerProvider: null),
                 "deserializerProvider");
         }
 
         [Fact]
         public void Read_ThrowsArgumentNull_MessageReader()
         {
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
+            // Arrange
+            var deserializer = new ODataCollectionDeserializer(DeserializerProvider);
 
+            // Act & Assert
             Assert.ThrowsArgumentNull(
                 () => deserializer.Read(messageReader: null, type: typeof(int[]), readContext: new ODataDeserializerContext()),
                 "messageReader");
@@ -51,53 +54,34 @@ namespace System.Web.OData.Formatter.Deserialization
         [Fact]
         public void Read_ThrowsArgumentMustBeOfType_Type()
         {
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
-
-            Assert.ThrowsArgument(
-                () => deserializer.Read(messageReader: ODataTestUtil.GetMockODataMessageReader(), type: typeof(int),
-                    readContext: new ODataDeserializerContext { Model = _model }),
-                "type", "The argument must be of type 'Collection'.");
-        }
-
-        [Fact]
-        public void Read_ReturnsEdmComplexObjectCollection_TypelessMode()
-        {
             // Arrange
-            HttpContent content = new StringContent("{ 'value': [ { 'City' : 'Redmond' } ] }");
-            content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
-            IODataRequestMessage request = new ODataMessageWrapper(content.ReadAsStreamAsync().Result, content.Headers);
-            ODataMessageReader reader = new ODataMessageReader(request, new ODataMessageReaderSettings(), _model);
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
-            ODataDeserializerContext readContext = new ODataDeserializerContext
-            {
-                Model = _model,
-                ResourceType = typeof(IEdmObject),
-                ResourceEdmType = _addressCollectionType
-            };
+            var deserializer = new ODataCollectionDeserializer(DeserializerProvider);
 
-            // Act
-            var result = deserializer.Read(reader, typeof(IEdmObject), readContext);
-
-            // Assert
-            IEdmObject edmObject = Assert.IsType<EdmComplexObjectCollection>(result);
-            Assert.Equal(_addressCollectionType, edmObject.GetEdmType());
+            // Act & Assert
+            Assert.ThrowsArgument(() => deserializer.Read(messageReader: ODataTestUtil.GetMockODataMessageReader(),
+                type: typeof(int), readContext: new ODataDeserializerContext { Model = Model }),
+                "type", "The argument must be of type 'Collection'.");
         }
 
         [Fact]
         public void ReadInline_ThrowsArgument_ArgumentMustBeOfType()
         {
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
+            // Arrange
+            var deserializer = new ODataCollectionDeserializer(DeserializerProvider);
 
+            // Act & Assert
             Assert.Throws<ArgumentException>(
-                () => deserializer.ReadInline(42, _intCollectionType, new ODataDeserializerContext()),
+                () => deserializer.ReadInline(42, IntCollectionType, new ODataDeserializerContext()),
                 "The argument must be of type 'ODataCollectionValue'.\r\nParameter name: item");
         }
 
         [Fact]
         public void ReadInline_ThrowsArgumentNull_EdmType()
         {
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
+            // Arrange
+            var deserializer = new ODataCollectionDeserializer(DeserializerProvider);
 
+            // Act & Assert
             Assert.ThrowsArgumentNull(
                 () => deserializer.ReadInline(42, null, new ODataDeserializerContext()),
                 "edmType");
@@ -106,23 +90,26 @@ namespace System.Web.OData.Formatter.Deserialization
         [Fact]
         public void ReadInline_ReturnsNull_IfItemIsNull()
         {
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
-            Assert.Null(deserializer.ReadInline(item: null, edmType: _intCollectionType, readContext: new ODataDeserializerContext()));
+            // Arrange
+            var deserializer = new ODataCollectionDeserializer(DeserializerProvider);
+
+            // Act & Assert
+            Assert.Null(deserializer.ReadInline(item: null, edmType: IntCollectionType, readContext: new ODataDeserializerContext()));
         }
 
         [Fact]
         public void ReadInline_Calls_ReadCollectionValue()
         {
             // Arrange
-            Mock<ODataCollectionDeserializer> deserializer = new Mock<ODataCollectionDeserializer>(new DefaultODataDeserializerProvider());
+            Mock<ODataCollectionDeserializer> deserializer = new Mock<ODataCollectionDeserializer>(DeserializerProvider);
             ODataCollectionValue collectionValue = new ODataCollectionValue();
             ODataDeserializerContext readContext = new ODataDeserializerContext();
 
             deserializer.CallBase = true;
-            deserializer.Setup(s => s.ReadCollectionValue(collectionValue, _intCollectionType.ElementType(), readContext)).Verifiable();
+            deserializer.Setup(s => s.ReadCollectionValue(collectionValue, IntCollectionType.ElementType(), readContext)).Verifiable();
 
             // Act
-            deserializer.Object.ReadInline(collectionValue, _intCollectionType, readContext);
+            deserializer.Object.ReadInline(collectionValue, IntCollectionType, readContext);
 
             // Assert
             deserializer.Verify();
@@ -131,19 +118,22 @@ namespace System.Web.OData.Formatter.Deserialization
         [Fact]
         public void ReadCollectionValue_ThrowsArgumentNull_CollectionValue()
         {
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
+            // Arrange
+            var deserializer = new ODataCollectionDeserializer(DeserializerProvider);
 
-            Assert.ThrowsArgumentNull(
-                () => deserializer.ReadCollectionValue(collectionValue: null, elementType: _intCollectionType.ElementType(),
-                    readContext: new ODataDeserializerContext()).GetEnumerator().MoveNext(),
+            // Act & Assert
+            Assert.ThrowsArgumentNull(() => deserializer.ReadCollectionValue(collectionValue: null,
+                elementType: IntCollectionType.ElementType(), readContext: new ODataDeserializerContext()).GetEnumerator().MoveNext(),
                 "collectionValue");
         }
 
         [Fact]
         public void ReadCollectionValue_ThrowsArgumentNull_ElementType()
         {
-            var deserializer = new ODataCollectionDeserializer(new DefaultODataDeserializerProvider());
+            // Arrange
+            var deserializer = new ODataCollectionDeserializer(DeserializerProvider);
 
+            // Act & Assert
             Assert.ThrowsArgumentNull(
                 () => deserializer.ReadCollectionValue(new ODataCollectionValue(), elementType: null,
                     readContext: new ODataDeserializerContext()).GetEnumerator().MoveNext(),
@@ -153,54 +143,28 @@ namespace System.Web.OData.Formatter.Deserialization
         [Fact]
         public void ReadCollectionValue_Throws_IfElementTypeCannotBeDeserialized()
         {
+            // Arrange
             Mock<ODataDeserializerProvider> deserializerProvider = new Mock<ODataDeserializerProvider>();
-            deserializerProvider.Setup(p => p.GetEdmTypeDeserializer(_addressType)).Returns<ODataEntityDeserializer>(null);
+            deserializerProvider.Setup(p => p.GetEdmTypeDeserializer(ColorType)).Returns<ODataResourceDeserializer>(null);
             var deserializer = new ODataCollectionDeserializer(deserializerProvider.Object);
 
+            // Act & Assert
             Assert.Throws<SerializationException>(
-                () => deserializer.ReadCollectionValue(new ODataCollectionValue() { Items = new[] { 1, 2, 3 } },
-                    _addressCollectionType.ElementType(), new ODataDeserializerContext())
+                () => deserializer.ReadCollectionValue(new ODataCollectionValue() { Items = new[] { 1, 2, 3 }.Cast<object>() },
+                    ColorCollectionType.ElementType(), new ODataDeserializerContext())
                     .GetEnumerator()
                     .MoveNext(),
-                "'System.Web.OData.Formatter.Serialization.Models.Address' cannot be deserialized using the ODataMediaTypeFormatter.");
-        }
-
-        [Fact]
-        public void Read_Roundtrip_ComplexCollection()
-        {
-            Address[] addresses = new[]
-                {
-                    new Address { City ="Redmond", ZipCode ="1", Street ="A", State ="123"},
-                    new Address { City ="Seattle", ZipCode ="2", Street ="S", State ="321"}
-                };
-            ODataCollectionSerializer serializer = new ODataCollectionSerializer(new DefaultODataSerializerProvider());
-            ODataCollectionDeserializer deserializer = new ODataCollectionDeserializer(_deserializerProvider);
-
-            MemoryStream stream = new MemoryStream();
-            ODataMessageWrapper message = new ODataMessageWrapper(stream);
-            ODataMessageWriterSettings settings = new ODataMessageWriterSettings
-            {
-                ODataUri = new ODataUri { ServiceRoot = new Uri("http://any/") }
-            };
-            ODataMessageWriter messageWriter = new ODataMessageWriter(message as IODataResponseMessage, settings, _model);
-            ODataMessageReader messageReader = new ODataMessageReader(message as IODataResponseMessage, new ODataMessageReaderSettings(), _model);
-            ODataSerializerContext writeContext = new ODataSerializerContext { RootElementName = "Property", Model = _model };
-            ODataDeserializerContext readContext = new ODataDeserializerContext() { Model = _model };
-
-            serializer.WriteObject(addresses, addresses.GetType(), messageWriter, writeContext);
-            stream.Seek(0, SeekOrigin.Begin);
-            IEnumerable readAddresses = deserializer.Read(messageReader, typeof(Address[]), readContext) as IEnumerable;
-
-            Assert.Equal(addresses, readAddresses.Cast<Address>(), new AddressComparer());
+                "'NS.Color' cannot be deserialized using the ODataMediaTypeFormatter.");
         }
 
         [Fact]
         public void Read_Roundtrip_PrimitiveCollection()
         {
+            // Arrange
             int[] numbers = Enumerable.Range(0, 100).ToArray();
 
-            ODataCollectionSerializer serializer = new ODataCollectionSerializer(new DefaultODataSerializerProvider());
-            ODataCollectionDeserializer deserializer = new ODataCollectionDeserializer(_deserializerProvider);
+            ODataCollectionSerializer serializer = new ODataCollectionSerializer(SerializerProvider);
+            ODataCollectionDeserializer deserializer = new ODataCollectionDeserializer(DeserializerProvider);
 
             MemoryStream stream = new MemoryStream();
             ODataMessageWrapper message = new ODataMessageWrapper(stream);
@@ -208,36 +172,61 @@ namespace System.Web.OData.Formatter.Deserialization
             {
                 ODataUri = new ODataUri { ServiceRoot = new Uri("http://any/") }
             };
-            ODataMessageWriter messageWriter = new ODataMessageWriter(message as IODataResponseMessage, settings, _model);
-            ODataMessageReader messageReader = new ODataMessageReader(message as IODataResponseMessage, new ODataMessageReaderSettings(), _model);
-            ODataSerializerContext writeContext = new ODataSerializerContext { RootElementName = "Property", Model = _model };
-            ODataDeserializerContext readContext = new ODataDeserializerContext() { Model = _model };
+            ODataMessageWriter messageWriter = new ODataMessageWriter(message as IODataResponseMessage, settings, Model);
+            ODataMessageReader messageReader = new ODataMessageReader(message as IODataResponseMessage, new ODataMessageReaderSettings(), Model);
+            ODataSerializerContext writeContext = new ODataSerializerContext { RootElementName = "Property", Model = Model };
+            ODataDeserializerContext readContext = new ODataDeserializerContext() { Model = Model };
 
+            // Act
             serializer.WriteObject(numbers, numbers.GetType(), messageWriter, writeContext);
             stream.Seek(0, SeekOrigin.Begin);
             IEnumerable readnumbers = deserializer.Read(messageReader, typeof(int[]), readContext) as IEnumerable;
 
+            // Assert
             Assert.Equal(numbers, readnumbers.Cast<int>());
+        }
+
+        [Fact]
+        public void Read_Roundtrip_EnumCollection()
+        {
+            // Arrange
+            Color[] colors = {Color.Blue, Color.Green};
+
+            ODataCollectionSerializer serializer = new ODataCollectionSerializer(SerializerProvider);
+            ODataCollectionDeserializer deserializer = new ODataCollectionDeserializer(DeserializerProvider);
+
+            MemoryStream stream = new MemoryStream();
+            ODataMessageWrapper message = new ODataMessageWrapper(stream);
+            ODataMessageWriterSettings settings = new ODataMessageWriterSettings
+            {
+                ODataUri = new ODataUri { ServiceRoot = new Uri("http://any/") }
+            };
+            ODataMessageWriter messageWriter = new ODataMessageWriter(message as IODataResponseMessage, settings, Model);
+            ODataMessageReader messageReader = new ODataMessageReader(message as IODataResponseMessage, new ODataMessageReaderSettings(), Model);
+            ODataSerializerContext writeContext = new ODataSerializerContext { RootElementName = "Property", Model = Model };
+            ODataDeserializerContext readContext = new ODataDeserializerContext() { Model = Model };
+
+            // Act
+            serializer.WriteObject(colors, colors.GetType(), messageWriter, writeContext);
+            stream.Seek(0, SeekOrigin.Begin);
+            IEnumerable readAddresses = deserializer.Read(messageReader, typeof(Color[]), readContext) as IEnumerable;
+
+            // Assert
+            Assert.Equal(colors, readAddresses.Cast<Color>());
         }
 
         private static IEdmModel GetEdmModel()
         {
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.ComplexType<Address>();
+            builder.EnumType<Color>().Namespace = "NS";
             return builder.GetEdmModel();
         }
 
-        private class AddressComparer : IEqualityComparer<Address>
+        public enum Color
         {
-            public bool Equals(Address x, Address y)
-            {
-                return x.City == y.City && x.Country == y.Country && x.State == y.State && x.Street == y.Street && x.ZipCode == y.ZipCode;
-            }
-
-            public int GetHashCode(Address obj)
-            {
-                throw new NotImplementedException();
-            }
+            Red,
+            Blue,
+            Green
         }
     }
 }

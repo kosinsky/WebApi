@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Batch;
 using System.Web.OData.Extensions;
-using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 
 namespace System.Web.OData.Batch
 {
@@ -125,14 +125,10 @@ namespace System.Web.OData.Batch
                 throw Error.ArgumentNull("request");
             }
 
-            ODataMessageReaderSettings oDataReaderSettings = new ODataMessageReaderSettings
-            {
-                DisableMessageStreamDisposal = true,
-                MessageQuotas = MessageQuotas,
-                BaseUri = GetBaseUri(request)
-            };
+            IServiceProvider requestContainer = request.CreateRequestContainer(ODataRouteName);
+            requestContainer.GetRequiredService<ODataMessageReaderSettings>().BaseUri = GetBaseUri(request);
 
-            ODataMessageReader reader = await request.Content.GetODataMessageReaderAsync(oDataReaderSettings, cancellationToken);
+            ODataMessageReader reader = await request.Content.GetODataMessageReaderAsync(requestContainer, cancellationToken);
             request.RegisterForDispose(reader);
 
             List<ODataBatchRequestItem> requests = new List<ODataBatchRequestItem>();
@@ -146,6 +142,7 @@ namespace System.Web.OData.Batch
                     foreach (HttpRequestMessage changeSetRequest in changeSetRequests)
                     {
                         changeSetRequest.CopyBatchRequestProperties(request);
+                        changeSetRequest.DeleteRequestContainer(false);
                     }
                     requests.Add(new ChangeSetRequestItem(changeSetRequests));
                 }
@@ -153,6 +150,7 @@ namespace System.Web.OData.Batch
                 {
                     HttpRequestMessage operationRequest = await batchReader.ReadOperationRequestAsync(batchId, bufferContentStream: true, cancellationToken: cancellationToken);
                     operationRequest.CopyBatchRequestProperties(request);
+                    operationRequest.DeleteRequestContainer(false);
                     requests.Add(new OperationRequestItem(operationRequest));
                 }
             }

@@ -7,8 +7,8 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Web.OData.Formatter;
-using Microsoft.OData.Core.UriParser.Aggregation;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser.Aggregation;
 
 namespace System.Web.OData.Query.Expressions
 {
@@ -82,7 +82,7 @@ namespace System.Web.OData.Query.Expressions
         {
             var an = new AssemblyName(typeSignature);
 
-            // Create GC collectable assembly. It will be collected after usage and we don't need to worry about memmory usage
+            // Create GC collectable assembly. It will be collected after usage and we don't need to worry about memory usage
             AssemblyBuilder assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(an,
                 AssemblyBuilderAccess.RunAndCollect);
             ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule(ModuleName);

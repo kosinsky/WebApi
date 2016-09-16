@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Web.Http;
+using System.Web.OData.Query;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Builder
@@ -91,6 +92,11 @@ namespace System.Web.OData.Builder
             {
                 return _configuration.IsOpen;
             }
+        }
+
+        internal StructuralTypeConfiguration Configuration
+        {
+            get { return _configuration; }
         }
 
         /// <summary>
@@ -244,6 +250,420 @@ namespace System.Web.OData.Builder
             PropertyInfo propertyInfo = PropertySelectorVisitor.GetSelectedProperty(propertyExpression);
 
             _configuration.AddDynamicPropertyDictionary(propertyInfo);
+        }
+
+        /// <summary>
+        /// Configures a many relationship from this structural type.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for the relationship. For example, in C# <c>t => t.MyProperty</c> and in Visual Basic .NET <c>Function(t) t.MyProperty</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters", Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration HasMany<TTargetEntity>(Expression<Func<TStructuralType, IEnumerable<TTargetEntity>>> navigationPropertyExpression) where TTargetEntity : class
+        {
+            return GetOrCreateNavigationProperty(navigationPropertyExpression, EdmMultiplicity.Many);
+        }
+
+        /// <summary>
+        /// Configures an optional relationship from this structural type.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for the relationship. For example, in C# <c>t => t.MyProperty</c> and in Visual Basic .NET <c>Function(t) t.MyProperty</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters", Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration HasOptional<TTargetEntity>(Expression<Func<TStructuralType, TTargetEntity>> navigationPropertyExpression) where TTargetEntity : class
+        {
+            return GetOrCreateNavigationProperty(navigationPropertyExpression, EdmMultiplicity.ZeroOrOne);
+        }
+
+        /// <summary>
+        /// Configures an optional relationship with referential constraint from this structural type.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for the relationship.
+        /// For example, in C# <c>t =&gt; t.Customer</c> and in Visual Basic .NET <c>Function(t) t.Customer</c>.</param>
+        /// <param name="referentialConstraintExpression">A lambda expression representing the referential constraint. For example,
+        ///  in C# <c>(o, c) =&gt; o.CustomerId == c.Id</c> and in Visual Basic .NET <c>Function(o, c) c.CustomerId == c.Id</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures",
+            Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters",
+            Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration HasOptional<TTargetEntity>(
+            Expression<Func<TStructuralType, TTargetEntity>> navigationPropertyExpression,
+            Expression<Func<TStructuralType, TTargetEntity, bool>> referentialConstraintExpression) where TTargetEntity : class
+        {
+            NavigationPropertyConfiguration navigation =
+                GetOrCreateNavigationProperty(navigationPropertyExpression, EdmMultiplicity.ZeroOrOne);
+
+            IDictionary<PropertyInfo, PropertyInfo> referentialConstraints =
+                PropertyPairSelectorVisitor.GetSelectedProperty(referentialConstraintExpression);
+
+            foreach (KeyValuePair<PropertyInfo, PropertyInfo> constraint in referentialConstraints)
+            {
+                navigation.HasConstraint(constraint);
+            }
+
+            return navigation;
+        }
+
+        /// <summary>
+        /// Configures a required relationship from this structural type.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for the relationship. For example, in C# <c>t => t.MyProperty</c> and in Visual Basic .NET <c>Function(t) t.MyProperty</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters", Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration HasRequired<TTargetEntity>(Expression<Func<TStructuralType, TTargetEntity>> navigationPropertyExpression) where TTargetEntity : class
+        {
+            return GetOrCreateNavigationProperty(navigationPropertyExpression, EdmMultiplicity.One);
+        }
+
+        /// <summary>
+        /// Configures a required relationship with referential constraint from this structural type.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for the relationship.
+        /// For example, in C# <c>t =&gt; t.Customer</c> and in Visual Basic .NET <c>Function(t) t.Customer</c>.</param>
+        /// <param name="referentialConstraintExpression">A lambda expression representing the referential constraint. For example,
+        ///  in C# <c>(o, c) =&gt; o.CustomerId == c.Id</c> and in Visual Basic .NET <c>Function(o, c) c.CustomerId == c.Id</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures",
+            Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters",
+            Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration HasRequired<TTargetEntity>(
+            Expression<Func<TStructuralType, TTargetEntity>> navigationPropertyExpression,
+            Expression<Func<TStructuralType, TTargetEntity, bool>> referentialConstraintExpression) where TTargetEntity : class
+        {
+            NavigationPropertyConfiguration navigation =
+                GetOrCreateNavigationProperty(navigationPropertyExpression, EdmMultiplicity.One);
+
+            IDictionary<PropertyInfo, PropertyInfo> referentialConstraints =
+                PropertyPairSelectorVisitor.GetSelectedProperty(referentialConstraintExpression);
+
+            foreach (KeyValuePair<PropertyInfo, PropertyInfo> constraint in referentialConstraints)
+            {
+                navigation.HasConstraint(constraint);
+            }
+
+            return navigation;
+        }
+
+        /// <summary>
+        /// Configures a relationship from this structural type to a contained collection navigation property.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for
+        ///  the relationship. For example, in C# <c>t => t.MyProperty</c> and in Visual Basic .NET
+        ///  <c>Function(t) t.MyProperty</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures",
+            Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters",
+            Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration ContainsMany<TTargetEntity>(
+            Expression<Func<TStructuralType, IEnumerable<TTargetEntity>>> navigationPropertyExpression)
+            where TTargetEntity : class
+        {
+            return GetOrCreateContainedNavigationProperty(navigationPropertyExpression, EdmMultiplicity.Many);
+        }
+
+        /// <summary>
+        /// Configures an optional relationship from this structural type to a single contained navigation property.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for
+        ///  the relationship. For example, in C# <c>t => t.MyProperty</c> and in Visual Basic .NET
+        ///  <c>Function(t) t.MyProperty</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures",
+            Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters",
+            Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration ContainsOptional<TTargetEntity>(
+            Expression<Func<TStructuralType, TTargetEntity>> navigationPropertyExpression) where TTargetEntity : class
+        {
+            return GetOrCreateContainedNavigationProperty(navigationPropertyExpression, EdmMultiplicity.ZeroOrOne);
+        }
+
+        /// <summary>
+        /// Configures a required relationship from this structural type to a single contained navigation property.
+        /// </summary>
+        /// <typeparam name="TTargetEntity">The type of the entity at the other end of the relationship.</typeparam>
+        /// <param name="navigationPropertyExpression">A lambda expression representing the navigation property for
+        ///  the relationship. For example, in C# <c>t => t.MyProperty</c> and in Visual Basic .NET
+        ///  <c>Function(t) t.MyProperty</c>.</param>
+        /// <returns>A configuration object that can be used to further configure the relationship.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures",
+            Justification = "Nested generic appropriate here")]
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters",
+            Justification = "Explicit Expression generic type is more clear")]
+        public NavigationPropertyConfiguration ContainsRequired<TTargetEntity>(
+            Expression<Func<TStructuralType, TTargetEntity>> navigationPropertyExpression) where TTargetEntity : class
+        {
+            return GetOrCreateContainedNavigationProperty(navigationPropertyExpression, EdmMultiplicity.One);
+        }
+
+        /// <summary>
+        /// Sets this property is countable of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Count()
+        {
+            _configuration.QueryConfiguration.SetCount(true);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets whether this property is countable of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Count(QueryOptionSetting setting)
+        {
+            _configuration.QueryConfiguration.SetCount(setting == QueryOptionSetting.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets sortable properties depends on <see cref="QueryOptionSetting"/> of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> OrderBy(QueryOptionSetting setting, params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetOrderBy(properties, setting == QueryOptionSetting.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets sortable properties of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> OrderBy(params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetOrderBy(properties, true);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets whether all properties of this structural type is sortable.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> OrderBy(QueryOptionSetting setting)
+        {
+            _configuration.QueryConfiguration.SetOrderBy(null, setting == QueryOptionSetting.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets all properties of this structural type is sortable.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> OrderBy()
+        {
+            _configuration.QueryConfiguration.SetOrderBy(null, true);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets filterable properties depends on <see cref="QueryOptionSetting"/> of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Filter(QueryOptionSetting setting, params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetFilter(properties, setting == QueryOptionSetting.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets filterable properties of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Filter(params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetFilter(properties, true);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets whether all properties of this structural type is filterable.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Filter(QueryOptionSetting setting)
+        {
+            _configuration.QueryConfiguration.SetFilter(null, setting == QueryOptionSetting.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets all properties of this structural type is filterable.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Filter()
+        {
+            _configuration.QueryConfiguration.SetFilter(null, true);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets selectable properties depends on <see cref="SelectExpandType"/> of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Select(SelectExpandType selectType,
+            params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetSelect(properties, selectType);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets selectable properties of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Select(params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetSelect(properties, SelectExpandType.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets <see cref="SelectExpandType"/> of all properties of this structural type is selectable.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Select(SelectExpandType selectType)
+        {
+            _configuration.QueryConfiguration.SetSelect(null, selectType);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets all properties of this structural type is selectable.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Select()
+        {
+            _configuration.QueryConfiguration.SetSelect(null, SelectExpandType.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the max value of $top of this structural type that a client can request
+        /// and the maximum number of query results of this entity type to return.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Page(int? maxTopValue, int? pageSizeValue)
+        {
+            _configuration.QueryConfiguration.SetMaxTop(maxTopValue);
+            _configuration.QueryConfiguration.SetPageSize(pageSizeValue);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the properties of this structural type enable paging.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Page()
+        {
+            _configuration.QueryConfiguration.SetMaxTop(null);
+            _configuration.QueryConfiguration.SetPageSize(null);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the maximum depth of expand result,
+        /// expandable properties and their <see cref="SelectExpandType"/> of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand(int maxDepth, SelectExpandType expandType, params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetExpand(properties, maxDepth, expandType);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the expandable properties of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand(params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetExpand(properties, null, SelectExpandType.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the maximum depth of expand result,
+        /// expandable properties of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand(int maxDepth, params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetExpand(properties, maxDepth, SelectExpandType.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the expandable properties and their <see cref="SelectExpandType"/> of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand(SelectExpandType expandType, params string[] properties)
+        {
+            _configuration.QueryConfiguration.SetExpand(properties, null, expandType);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets <see cref="SelectExpandType"/> of all properties with maximum depth of expand result of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand(SelectExpandType expandType, int maxDepth)
+        {
+            _configuration.QueryConfiguration.SetExpand(null, maxDepth, expandType);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets all properties expandable with maximum depth of expand result of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand(int maxDepth)
+        {
+            _configuration.QueryConfiguration.SetExpand(null, maxDepth, SelectExpandType.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets <see cref="SelectExpandType"/> of all properties of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand(SelectExpandType expandType)
+        {
+            _configuration.QueryConfiguration.SetExpand(null, null, expandType);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets all properties expandable of this structural type.
+        /// </summary>
+        public StructuralTypeConfiguration<TStructuralType> Expand()
+        {
+            _configuration.QueryConfiguration.SetExpand(null, null, SelectExpandType.Allowed);
+            _configuration.AddedExplicitly = true;
+            return this;
+        }
+
+        internal NavigationPropertyConfiguration GetOrCreateNavigationProperty(Expression navigationPropertyExpression, EdmMultiplicity multiplicity)
+        {
+            PropertyInfo navigationProperty = PropertySelectorVisitor.GetSelectedProperty(navigationPropertyExpression);
+            return _configuration.AddNavigationProperty(navigationProperty, multiplicity);
+        }
+
+        internal NavigationPropertyConfiguration GetOrCreateContainedNavigationProperty(Expression navigationPropertyExpression, EdmMultiplicity multiplicity)
+        {
+            PropertyInfo navigationProperty = PropertySelectorVisitor.GetSelectedProperty(navigationPropertyExpression);
+            return _configuration.AddContainedNavigationProperty(navigationProperty, multiplicity);
         }
 
         private PrimitivePropertyConfiguration GetPrimitivePropertyConfiguration(Expression propertyExpression, bool optional)

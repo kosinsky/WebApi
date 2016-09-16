@@ -4,23 +4,16 @@
 using System.Diagnostics.Contracts;
 using System.Web.OData.Builder;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Annotations;
-using Microsoft.OData.Edm.Values;
+using Microsoft.OData.Edm.Vocabularies;
 
 namespace System.Web.OData.Formatter.Serialization
 {
     internal static class EdmDirectValueAnnotationsManagerExtensions
     {
-        public static void SetActionLinkBuilder(this IEdmDirectValueAnnotationsManager manager, IEdmElement element,
-            ActionLinkBuilder value)
+        public static void SetOperationLinkBuilder(this IEdmDirectValueAnnotationsManager manager, IEdmElement element,
+            OperationLinkBuilder value)
         {
-            SetCoreAnnotation<ActionLinkBuilder>(manager, element, value);
-        }
-
-        public static void SetFunctionLinkBuilder(this IEdmDirectValueAnnotationsManager manager, IEdmElement element,
-            FunctionLinkBuilder value)
-        {
-            SetCoreAnnotation<FunctionLinkBuilder>(manager, element, value);
+            SetCoreAnnotation<OperationLinkBuilder>(manager, element, value);
         }
 
         public static void SetIsAlwaysBindable(this IEdmDirectValueAnnotationsManager manager, IEdmOperation operation)

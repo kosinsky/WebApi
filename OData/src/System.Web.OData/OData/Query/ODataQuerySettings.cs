@@ -12,6 +12,7 @@ namespace System.Web.OData.Query
     {
         private HandleNullPropagationOption _handleNullPropagationOption = HandleNullPropagationOption.Default;
         private int? _pageSize;
+        private int? _modelBoundPageSize;
 
         /// <summary>
         /// Instantiates a new instance of the <see cref="ODataQuerySettings"/> class
@@ -24,15 +25,27 @@ namespace System.Web.OData.Query
         }
 
         /// <summary>
-        /// Initialize a new instance of the <see cref="ODataQuerySettings"/> class based on an existing one. 
+        /// Gets or sets the maximum number of query results to return based on the type or property.
         /// </summary>
-        /// <param name="settings">The setting to copy from.</param>
-        public ODataQuerySettings(ODataQuerySettings settings)
+        /// <value>
+        /// The maximum number of query results to return based on the type or property,
+        /// or <c>null</c> if there is no limit.
+        /// </value>
+        internal int? ModelBoundPageSize
         {
-            EnsureStableOrdering = settings.EnsureStableOrdering;
-            EnableConstantParameterization = settings.EnableConstantParameterization;
-            HandleNullPropagation = settings.HandleNullPropagation;
-            PageSize = settings.PageSize;
+            get
+            {
+                return _modelBoundPageSize;
+            }
+            set
+            {
+                if (value.HasValue && value <= 0)
+                {
+                    throw Error.ArgumentMustBeGreaterThanOrEqualTo("value", value, 1);
+                }
+
+                _modelBoundPageSize = value;
+            }
         }
 
         /// <summary>
@@ -49,7 +62,7 @@ namespace System.Web.OData.Query
 
         /// <summary>
         /// Gets or sets a value indicating how null propagation should
-        /// be handled during query composition. 
+        /// be handled during query composition.
         /// </summary>
         /// <value>
         /// The default is <see cref="HandleNullPropagationOption.Default"/>.
@@ -68,7 +81,7 @@ namespace System.Web.OData.Query
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether constants should be parameterized. Parameterizing constants 
+        /// Gets or sets a value indicating whether constants should be parameterized. Parameterizing constants
         /// would result in better performance with Entity framework.
         /// </summary>
         /// <value>The default value is <c>true</c>.</value>
@@ -95,6 +108,15 @@ namespace System.Web.OData.Query
 
                 _pageSize = value;
             }
+        }
+
+        internal void CopyFrom(ODataQuerySettings settings)
+        {
+            EnsureStableOrdering = settings.EnsureStableOrdering;
+            EnableConstantParameterization = settings.EnableConstantParameterization;
+            HandleNullPropagation = settings.HandleNullPropagation;
+            PageSize = settings.PageSize;
+            ModelBoundPageSize = settings.ModelBoundPageSize;
         }
     }
 }

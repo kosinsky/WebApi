@@ -1,12 +1,16 @@
-﻿using System.Linq;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.OData;
 using System.Web.OData.Extensions;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json.Linq;
 using Nuwa;
@@ -44,6 +48,7 @@ namespace WebStack.QA.Test.OData.ForeignKey
 
             configuration.Routes.Clear();
             configuration.GetHttpServer();
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
             configuration.MapODataServiceRoute(routeName: "explicit", routePrefix: "explicit",
                 model: ForeignKeyEdmModel.GetExplicitModel(foreignKey: true));
 
@@ -99,6 +104,8 @@ namespace WebStack.QA.Test.OData.ForeignKey
                             "          <OnDelete Action=\"Cascade\" />\r\n" + 
                             "          <ReferentialConstraint Property=\"CustomerId\" ReferencedProperty=\"Id\" />\r\n" + 
                             "        </NavigationProperty>";
+            // Remove indentation
+            expect = Regex.Replace(expect, @"\r\n\s*<", @"<");
 
             string requestUri = string.Format("{0}/{1}/$metadata", this.BaseAddress, modelMode);
             HttpResponseMessage response = await Client.GetAsync(requestUri);

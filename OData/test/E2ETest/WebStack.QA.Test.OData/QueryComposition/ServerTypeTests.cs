@@ -14,6 +14,7 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Filters;
 using System.Web.Http.Hosting;
 using System.Web.OData;
+using System.Web.OData.Extensions;
 using WebStack.QA.Common.XUnit;
 using WebStack.QA.Instancing;
 using WebStack.QA.Test.OData.ModelBuilder;
@@ -198,7 +199,9 @@ namespace WebStack.QA.Test.OData.QueryComposition
             EnableQueryAttribute q = new EnableQueryAttribute();
             var configuration = new HttpConfiguration();
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
+            configuration.Count().Filter().OrderBy().Expand().MaxTop(null).Select();
             configuration.Routes.MapHttpRoute("ApiDefault", "api/{controller}/{id}", new { id = RouteParameter.Optional });
+            configuration.EnableDependencyInjection();
             var request = new HttpRequestMessage(HttpMethod.Get, "http://test/api/Objects?" + queryString);
             request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, configuration);
             var controllerContext = new HttpControllerContext(
@@ -229,9 +232,11 @@ namespace WebStack.QA.Test.OData.QueryComposition
                 // Ignore<System.Security.Cryptography.X509Certificates.X509Certificate2>() 
                 // on 'System.Web.OData.Builder.ODataModelBuilder'.
                 Assert.True(ae.Message.Contains("The type 'System.DateTime' of property")
+                    || ae.Message.Contains("System.Windows.Forms.AxHost")
                     || ae.Message.Contains("Found more than one dynamic property container in type"),
 
-                    "The exception should contains \"The type 'System.DateTime' of property\", or " +
+                    "The exception should contains \"The type 'System.DateTime' of property\", or " + 
+                    "\"System.Windows.Forms.AxHost\" or" +
                     "\"Found more than one dynamic property container in type\", but actually, it is:" +
                     ae.Message);
             }

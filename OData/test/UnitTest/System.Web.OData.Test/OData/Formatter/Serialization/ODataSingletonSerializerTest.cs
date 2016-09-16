@@ -11,10 +11,11 @@ using System.Web.Http.Routing;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter.Serialization;
-using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter.Deserialization
 {
@@ -39,12 +40,12 @@ namespace System.Web.OData.Formatter.Deserialization
                 NavigationSource = singleton
             };
 
-            ODataSerializerProvider serializerProvider = new DefaultODataSerializerProvider();
+            ODataSerializerProvider serializerProvider = DependencyInjectionHelper.GetDefaultODataSerializerProvider();
             EmployeeModel boss = new EmployeeModel {EmployeeId = 987, EmployeeName = "John Mountain"};
             MemoryStream bufferedStream = new MemoryStream();
 
             // Act
-            ODataEntityTypeSerializer serializer = new ODataEntityTypeSerializer(serializerProvider);
+            ODataResourceSerializer serializer = new ODataResourceSerializer(serializerProvider);
             serializer.WriteObject(boss, typeof(EmployeeModel), GetODataMessageWriter(model, bufferedStream), readContext);
 
             // Assert
@@ -65,10 +66,8 @@ namespace System.Web.OData.Formatter.Deserialization
             config.MapODataServiceRoute("odata", "odata", model);
             HttpRequestMessage request = new HttpRequestMessage();
             request.SetConfiguration(config);
-            request.ODataProperties().PathHandler = new DefaultODataPathHandler();
             request.ODataProperties().RouteName = "odata";
-            request.ODataProperties().Model = model;
-            request.ODataProperties().Path = new ODataPath(new[] { new SingletonPathSegment(singleton) });
+            request.ODataProperties().Path = new ODataPath(new[] { new SingletonSegment(singleton) });
             request.RequestUri = new Uri("http://localhost/odata/Boss");
             return request;
         }
@@ -80,7 +79,7 @@ namespace System.Web.OData.Formatter.Deserialization
 
             ODataMessageWriterSettings writerSettings = new ODataMessageWriterSettings()
             {
-                PayloadBaseUri = new Uri("http://localhost/odata"),
+                BaseUri = new Uri("http://localhost/odata"),
                 Version = ODataVersion.V4,
                 ODataUri = new ODataUri { ServiceRoot = new Uri("http://localhost/odata") }
             };

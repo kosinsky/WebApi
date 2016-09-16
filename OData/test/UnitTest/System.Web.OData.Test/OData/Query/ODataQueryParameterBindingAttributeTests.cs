@@ -16,11 +16,12 @@ using System.Web.Http.Routing;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Query.Controllers;
-using System.Web.OData.Routing;
 using System.Web.OData.TestCommon.Models;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Query
 {
@@ -62,12 +63,16 @@ namespace System.Web.OData.Query
         public void DifferentReturnTypeWorks(string methodName, Type entityClrType)
         {
             // Arrange
+            ODataModelBuilder odataModel = new ODataModelBuilder();
+            string setName = typeof(Customer).Name;
+            odataModel.EntityType<Customer>().HasKey(c => c.Id);
+            odataModel.EntitySet<Customer>(setName);
+            IEdmModel model = odataModel.GetEdmModel();
             ODataQueryParameterBindingAttribute attribute = new ODataQueryParameterBindingAttribute();
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/Customer/?$orderby=Name");
-            HttpConfiguration config = new HttpConfiguration();
-            request.SetConfiguration(config);
-            HttpControllerContext controllerContext = new HttpControllerContext(config, new HttpRouteData(new HttpRoute()), request);
-            HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(new HttpConfiguration(), "CustomerLowLevel", typeof(CustomerHighLevelController));
+            request.EnableODataDependencyInjectionSupport(model);
+            HttpControllerContext controllerContext = new HttpControllerContext(request.GetConfiguration(), new HttpRouteData(new HttpRoute()), request);
+            HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(request.GetConfiguration(), "CustomerLowLevel", typeof(CustomerHighLevelController));
             MethodInfo methodInfo = typeof(CustomerLowLevelController).GetMethod(methodName);
             ParameterInfo parameterInfo = methodInfo.GetParameters().First();
             HttpActionDescriptor actionDescriptor = new ReflectedHttpActionDescriptor(controllerDescriptor, methodInfo);
@@ -178,8 +183,6 @@ namespace System.Web.OData.Query
             HttpRequestMessage request = new HttpRequestMessage(
                 HttpMethod.Get,
                 "http://localhost/Customer/?$orderby=Name");
-            HttpConfiguration config = new HttpConfiguration();
-            request.SetConfiguration(config);
 
             // Get EDM model, and set path to request.
             ODataModelBuilder odataModel = new ODataModelBuilder();
@@ -188,16 +191,16 @@ namespace System.Web.OData.Query
             odataModel.EntitySet<Customer>(setName);
             IEdmModel model = odataModel.GetEdmModel();
             IEdmEntitySet entitySet = model.EntityContainer.FindEntitySet(setName);
-            request.ODataProperties().Model = model;
-            request.ODataProperties().Path = new ODataPath(new EntitySetPathSegment(entitySet));
+            request.ODataProperties().Path = new ODataPath(new EntitySetSegment(entitySet));
+            request.EnableODataDependencyInjectionSupport(model);
 
             // Setup action context and parameter descriptor.
             HttpControllerContext controllerContext = new HttpControllerContext(
-                config,
+                request.GetConfiguration(),
                 new HttpRouteData(new HttpRoute()),
                 request);
             HttpControllerDescriptor controllerDescriptor = new HttpControllerDescriptor(
-                config,
+                request.GetConfiguration(),
                 "CustomerLowLevel",
                 typeof(CustomerHighLevelController));
             MethodInfo methodInfo = typeof(CustomerLowLevelController).GetMethod(methodName);

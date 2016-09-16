@@ -7,10 +7,9 @@ using System.Web.OData.Builder;
 using System.Web.OData.Builder.TestModels;
 using System.Web.OData.Query.Validators;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -77,7 +76,7 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var orderby = new OrderByQueryOption("Name,Website", context);
 
             ICollection<OrderByNode> nodes = orderby.OrderByNodes;
@@ -101,7 +100,7 @@ namespace System.Web.OData.Query
         public void ApplyInValidOrderbyQueryThrows(string orderbyValue)
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetEdmModel();
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var orderby = new OrderByQueryOption(orderbyValue, context);
 
             Assert.Throws<ODataException>(() =>
@@ -113,7 +112,8 @@ namespace System.Web.OData.Query
         public void CanApplyOrderBy()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Name", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Name", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Name = "Andy" },
@@ -132,7 +132,8 @@ namespace System.Web.OData.Query
         public void CanApplyOrderByAsc()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Name asc", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Name asc", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Name = "Andy" },
@@ -151,7 +152,8 @@ namespace System.Web.OData.Query
         public void CanApplyOrderByDescending()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Name desc", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Name desc", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Name = "Andy" },
@@ -170,7 +172,8 @@ namespace System.Web.OData.Query
         public void CanApplyOrderByThenBy()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Name,Website", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Name,Website", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Name = "ACME", Website = "http://www.acme.net" },
@@ -189,7 +192,8 @@ namespace System.Web.OData.Query
         public void CanApplyOrderByDescThenBy()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Name desc,Website", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Name desc,Website", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Name = "ACME", Website = "http://www.acme.net" },
@@ -208,7 +212,8 @@ namespace System.Web.OData.Query
         public void CanApplyOrderByDescThenByDesc()
         {
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Name desc,Website desc", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Name desc,Website desc", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Name = "ACME", Website = "http://www.acme.net" },
@@ -230,7 +235,7 @@ namespace System.Web.OData.Query
             builder.EntitySet<EnumModel>("EnumModels");
             var model = builder.GetEdmModel();
 
-            var context = new ODataQueryContext(model, typeof(EnumModel));
+            var context = new ODataQueryContext(model, typeof(EnumModel)) { RequestContainer = new MockContainer() };
             var orderbyOption = new OrderByQueryOption("Flag", context);
             IEnumerable<EnumModel> enumModels = FilterQueryOptionTest.EnumModelTestData;
 
@@ -255,7 +260,7 @@ namespace System.Web.OData.Query
             builder.EntitySet<PropertyAlias>("PropertyAliases");
             var model = builder.GetEdmModel();
 
-            var context = new ODataQueryContext(model, typeof(PropertyAlias));
+            var context = new ODataQueryContext(model, typeof(PropertyAlias)) { RequestContainer = new MockContainer(model) };
             var orderByOption = new OrderByQueryOption(propertyName, context);
             IEnumerable<PropertyAlias> propertyAliases = FilterQueryOptionTest.PropertyAliasTestData;
 
@@ -306,7 +311,7 @@ namespace System.Web.OData.Query
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType().Add_Customers_EntitySet().GetServiceModel();
 
-            var context = new ODataQueryContext(model, typeof(Customer));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
             var orderbyOption = new OrderByQueryOption("Name, Name", context);
 
             // Act
@@ -329,11 +334,27 @@ namespace System.Web.OData.Query
         }
 
         [Fact]
+        public void OrderByDuplicatePropertyOfComplexTypeThrows()
+        {
+            // Arrange
+            var model = new ODataModelBuilder().Add_Customer_EntityType_With_Address().Add_Customers_EntitySet().GetServiceModel();
+
+            var context = new ODataQueryContext(model, typeof(Customer)){ RequestContainer = new MockContainer() };
+            var orderbyOption = new OrderByQueryOption("Address/City, Address/City", context);
+
+            // Act
+            Assert.Throws<ODataException>(
+                () => orderbyOption.ApplyTo(Enumerable.Empty<Customer>().AsQueryable()),
+                "Duplicate property named 'Address/City' is not supported in '$orderby'.");
+        }
+
+        [Fact]
         public void ApplyTo_NestedProperties_Succeeds()
         {
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_Address().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Address/City asc", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Address/City asc", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Address = new Address { City = "C" } },
@@ -356,7 +377,8 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_Address().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Address/City,City", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Address/City,City", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, City = "A", Address = new Address { City = "A" } },
@@ -374,11 +396,64 @@ namespace System.Web.OData.Query
         }
 
         [Fact]
+        public void ApplyTo_NestedProperties_WithDuplicatePathType_Succeeds()
+        {
+            // Arrange
+            var model =
+                new ODataModelBuilder().Add_Customer_EntityType_With_DuplicatedAddress()
+                    .Add_Customers_EntitySet()
+                    .GetServiceModel();
+            var context = new ODataQueryContext(model, typeof(Customer)) {RequestContainer = new MockContainer()};
+            var orderByOption = new OrderByQueryOption("City,Address/City,WorkAddress/City", context);
+            var customers = (new List<Customer>
+            {
+                new Customer
+                {
+                    CustomerId = 1,
+                    City = "B",
+                    Address = new Address {City = "B"},
+                    WorkAddress = new Address {City = "B"}
+                },
+                new Customer
+                {
+                    CustomerId = 2,
+                    City = "B",
+                    Address = new Address {City = "B"},
+                    WorkAddress = new Address {City = "A"}
+                },
+                new Customer
+                {
+                    CustomerId = 3,
+                    City = "B",
+                    Address = new Address {City = "A"},
+                    WorkAddress = new Address {City = "A"}
+                },
+                new Customer
+                {
+                    CustomerId = 4,
+                    City = "A",
+                    Address = new Address {City = "A"},
+                    WorkAddress = new Address {City = "A"}
+                }
+            }).AsQueryable();
+
+            // Act
+            var results = orderByOption.ApplyTo(customers).ToArray();
+
+            // Assert
+            Assert.Equal(4, results[0].CustomerId);
+            Assert.Equal(3, results[1].CustomerId);
+            Assert.Equal(2, results[2].CustomerId);
+            Assert.Equal(1, results[3].CustomerId);
+        }
+
+        [Fact]
         public void ApplyTo_NestedProperties_HandlesNullPropagation_Succeeds()
         {
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_Address().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Address/City asc", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Address/City asc", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Address = null },
@@ -400,7 +475,8 @@ namespace System.Web.OData.Query
         {
             // Arrange
             var model = new ODataModelBuilder().Add_Customer_EntityType_With_Address().Add_Customers_EntitySet().GetServiceModel();
-            var orderByOption = new OrderByQueryOption("Address/City asc", new ODataQueryContext(model, typeof(Customer)));
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("Address/City asc", context);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Address = null },
@@ -451,7 +527,8 @@ namespace System.Web.OData.Query
                 model.FindDeclaredNavigationSource("Default.Container.Customers"),
                 new Dictionary<string, string> { { "$orderby", "@q desc,@p asc" }, { "@q", "Address/HouseNumber" }, { "@p", "CustomerId" } });
 
-            var orderByOption = new OrderByQueryOption("@q desc,@p asc", new ODataQueryContext(model, typeof(Customer)), parser);
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("@q desc,@p asc", context, parser);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Address = new Address{HouseNumber = 2}},
@@ -484,7 +561,8 @@ namespace System.Web.OData.Query
                 model.FindDeclaredNavigationSource("Default.Container.Customers"),
                 new Dictionary<string, string> { { "$orderby", "@p1" }, { "@p2", "Name" }, { "@p1", "@p2" } });
 
-            var orderByOption = new OrderByQueryOption("@p1", new ODataQueryContext(model, typeof(Customer)), parser);
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var orderByOption = new OrderByQueryOption("@p1", context, parser);
 
             var customers = (new List<Customer>{
                 new Customer { CustomerId = 1, Name = "Andy" },

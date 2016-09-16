@@ -1,13 +1,17 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
-using System.Web.OData.Routing;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Nuwa;
 using WebStack.QA.Test.OData.Common;
 using WebStack.QA.Test.OData.Common.Models.ProductFamilies;
@@ -55,8 +59,8 @@ namespace WebStack.QA.Test.OData.ModelBuilder
                         new
                         {
                             odataPath = entityContext.Url.CreateODataLink(
-                                new EntitySetPathSegment(entityContext.NavigationSource.Name),
-                                new KeyValuePathSegment(id.ToString()))
+                                new EntitySetSegment(entityContext.NavigationSource as IEdmEntitySet),
+                                new KeySegment(new[] { new KeyValuePair<string, object>("ID", id) }, entityContext.StructuredType as IEdmEntityType, null))
                         }));
                 }, true);
 
@@ -69,8 +73,8 @@ namespace WebStack.QA.Test.OData.ModelBuilder
                         new
                         {
                             odataPath = entityContext.Url.CreateODataLink(
-                                new EntitySetPathSegment(entityContext.NavigationSource.Name),
-                                new KeyValuePathSegment(id.ToString()))
+                                new EntitySetSegment(entityContext.NavigationSource as IEdmEntitySet),
+                                new KeySegment(new[] { new KeyValuePair<string, object>("ID", id) }, entityContext.StructuredType as IEdmEntityType, null))
                         }));
                 }, true);
 
@@ -83,8 +87,8 @@ namespace WebStack.QA.Test.OData.ModelBuilder
                         new
                         {
                             odataPath = entityContext.Url.CreateODataLink(
-                                new EntitySetPathSegment(entityContext.NavigationSource.Name),
-                                new KeyValuePathSegment(id.ToString()))
+                                new EntitySetSegment(entityContext.NavigationSource as IEdmEntitySet),
+                                new KeySegment(new[] { new KeyValuePair<string, object>("ID", id) }, entityContext.StructuredType as IEdmEntityType, null))
                         }));
                 }, true);
 
@@ -131,9 +135,9 @@ namespace WebStack.QA.Test.OData.ModelBuilder
                 new
                 {
                     odataPath = entityContext.Url.CreateODataLink(
-                        new EntitySetPathSegment(entityContext.NavigationSource.Name),
-                        new KeyValuePathSegment(id.ToString()),
-                        new NavigationPathSegment(navigationProperty))
+                        new EntitySetSegment(entityContext.NavigationSource as IEdmEntitySet),
+                        new KeySegment(new[] { new KeyValuePair<string, object>("ID", id) }, entityContext.StructuredType as IEdmEntityType, null),
+                        new NavigationPropertySegment(navigationProperty, null))
                 }));
                 }, true);
 
@@ -147,9 +151,9 @@ namespace WebStack.QA.Test.OData.ModelBuilder
                 new
                 {
                     odataPath = entityContext.Url.CreateODataLink(
-                        new EntitySetPathSegment(entityContext.NavigationSource.Name),
-                        new KeyValuePathSegment(id.ToString()),
-                        new NavigationPathSegment(navigationProperty))
+                        new EntitySetSegment(entityContext.NavigationSource as IEdmEntitySet),
+                        new KeySegment(new[] { new KeyValuePair<string, object>("ID", id) }, entityContext.StructuredType as IEdmEntityType, null),
+                        new NavigationPropertySegment(navigationProperty, null))
                 }));
                 }, true);
 
@@ -164,9 +168,9 @@ namespace WebStack.QA.Test.OData.ModelBuilder
                 new
                 {
                     odataPath = entityContext.Url.CreateODataLink(
-                        new EntitySetPathSegment(entityContext.NavigationSource.Name),
-                        new KeyValuePathSegment(id.ToString()),
-                        new NavigationPathSegment(navigationProperty))
+                        new EntitySetSegment(entityContext.NavigationSource as IEdmEntitySet),
+                        new KeySegment(new[] { new KeyValuePair<string, object>("ID", id) }, entityContext.StructuredType as IEdmEntityType, null),
+                        new NavigationPropertySegment(navigationProperty, null))
                 }));
                 }, true);
 
@@ -193,12 +197,12 @@ namespace WebStack.QA.Test.OData.ModelBuilder
             Assert.Equal("Address", address.Name);
             Assert.Equal(5, address.Properties().Count());
 
-            var product = edmModel.SchemaElements.Where(e => e.Name == "Product").First() as IEdmEntityType;
+            var product = edmModel.SchemaElements.First(e => e.Name == "Product") as IEdmEntityType;
             Assert.Equal(1, product.Key().Count());
             Assert.Equal("ID", product.Key().First().Name);
             Assert.Equal(5, product.Properties().Count());
 
-            var supplier = edmModel.SchemaElements.Where(e => e.Name == "Supplier").First() as IEdmEntityType;
+            var supplier = edmModel.SchemaElements.First(e => e.Name == "Supplier") as IEdmEntityType;
             Assert.Equal(1, supplier.Key().Count());
             Assert.Equal("ID", supplier.Key().First().Name);
             Assert.Equal(6, supplier.Properties().Count());

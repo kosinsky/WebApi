@@ -70,20 +70,20 @@
     <Reference Include="Microsoft.Data.OData, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\..\packages\Microsoft.Data.OData.5.6.0\lib\net40\Microsoft.Data.OData.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.OData.Client, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.OData.Client.6.15.0\lib\net40\Microsoft.OData.Client.dll</HintPath>
+    <Reference Include="Microsoft.OData.Client, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.OData.Client.7.0.0-Nightly20160808\lib\net45\Microsoft.OData.Client.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.OData.Core, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.OData.Core.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Core.dll</HintPath>
+    <Reference Include="Microsoft.OData.Core, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.OData.Core.7.0.0\lib\portable-net45+win8+wpa81\Microsoft.OData.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.OData.Edm, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.OData.Edm.6.15.0\lib\portable-net45+win+wpa81\Microsoft.OData.Edm.dll</HintPath>
+    <Reference Include="Microsoft.OData.Edm, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.OData.Edm.7.0.0\lib\portable-net45+win8+wpa81\Microsoft.OData.Edm.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.Spatial, Version=6.15.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.Spatial.6.15.0\lib\portable-net45+win+wpa81\Microsoft.Spatial.dll</HintPath>
+    <Reference Include="Microsoft.Spatial, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Spatial.7.0.0\lib\portable-net45+win8+wpa81\Microsoft.Spatial.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -154,6 +154,7 @@
     <Compile Include="Batch\Client\UnbufferedBatchGeneratedClient.cs" />
     <Compile Include="Batch\Tests\DataServicesClient\DefaultODataBatchHandlerTests.cs" />
     <Compile Include="Batch\Tests\DataServicesClient\UnbufferedODataBatchHandlerTests.cs" />
+    <Compile Include="Common\HttpControllerContextExtensions.cs" />
     <Compile Include="ComplexTypeInheritance\ComplexTypeInheritanceSerializeTest.cs" />
     <Compile Include="DateAndTimeOfDay\DateAndTimeOfDayContext.cs" />
     <Compile Include="DateAndTimeOfDay\DateAndTimeOfDayController.cs" />
@@ -162,19 +163,46 @@
     <Compile Include="DateAndTimeOfDay\DateAndTimeOfDayTest.cs" />
     <Compile Include="DateAndTimeOfDay\DateAndTimeOfDayWithEfTest.cs" />
     <Compile Include="DateAndTimeOfDay\DateWithEfTest.cs" />
+    <Compile Include="DependencyInjection\CustomizeCountQueryValidatorTest.cs" />
+    <Compile Include="DependencyInjection\CustomizeSerializerTest.cs" />
+    <Compile Include="DependencyInjection\DependencyInjectionController.cs" />
+    <Compile Include="DependencyInjection\DependencyInjectionEdmModel.cs" />
     <Compile Include="DollarLevels\DollarLevelsController.cs" />
     <Compile Include="DollarLevels\DollarLevelsDataModel.cs" />
     <Compile Include="DollarLevels\DollarLevelsEdmModel.cs" />
     <Compile Include="DollarLevels\DollarLevelsTest.cs" />
+    <Compile Include="ModelBoundQuerySettings\CombinedTest\CombinedController.cs" />
+    <Compile Include="ModelBoundQuerySettings\CombinedTest\CombinedEdmModel.cs" />
+    <Compile Include="ModelBoundQuerySettings\CombinedTest\CombinedTest.cs" />
+    <Compile Include="ModelBoundQuerySettings\CountAttributeTest\CountAtrributeController.cs" />
+    <Compile Include="ModelBoundQuerySettings\CountAttributeTest\CountAttributeEdmModel.cs" />
+    <Compile Include="ModelBoundQuerySettings\CountAttributeTest\CountAttributeTest.cs" />
+    <Compile Include="ModelBoundQuerySettings\ExpandAttributeTest\ExpandAtrributeController.cs" />
+    <Compile Include="ModelBoundQuerySettings\ExpandAttributeTest\ExpandAttributeEdmModel.cs" />
+    <Compile Include="ModelBoundQuerySettings\ExpandAttributeTest\ExpandAttributeTest.cs" />
+    <Compile Include="ModelBoundQuerySettings\FilterAttributeTest\FilterAtrributeController.cs" />
+    <Compile Include="ModelBoundQuerySettings\FilterAttributeTest\FilterAttributeEdmModel.cs" />
+    <Compile Include="ModelBoundQuerySettings\FilterAttributeTest\FilterAttributeTest.cs" />
+    <Compile Include="ModelBoundQuerySettings\SelectAttributeTest\SelectAttributeController.cs" />
+    <Compile Include="ModelBoundQuerySettings\SelectAttributeTest\SelectAttributeEdmModel.cs" />
+    <Compile Include="ModelBoundQuerySettings\SelectAttributeTest\SelectAttributeTest.cs" />
+    <Compile Include="ModelBoundQuerySettings\OrderByAttributeTest\OrderByAttributeEdmModel.cs" />
+    <Compile Include="ModelBoundQuerySettings\OrderByAttributeTest\OrderByAtrributeController.cs" />
+    <Compile Include="ModelBoundQuerySettings\OrderByAttributeTest\OrderByAttributeTest.cs" />
+    <Compile Include="ModelBoundQuerySettings\PageAttributeTest\PageAttributeEdmModel.cs" />
+    <Compile Include="ModelBoundQuerySettings\PageAttributeTest\PageAttributeController.cs" />
+    <Compile Include="ModelBoundQuerySettings\PageAttributeTest\PageAttributeTest.cs" />
     <Compile Include="ETags\DominiosController.cs" />
     <Compile Include="ETags\ETagCurrencyTokenEfContext.cs" />
     <Compile Include="ETags\ETagCurrencyTokenEfContextTest.cs" />
     <Compile Include="ETags\ETagsOtherTypesTest.cs" />
+    <Compile Include="ETags\ETagsUntypedTests.cs" />
     <Compile Include="Formatter\ODataFeedSerializeWithoutNavigationSourceTests.cs" />
     <Compile Include="ODataCountTest\CountController.cs" />
     <Compile Include="ODataCountTest\CountDataModel.cs" />
     <Compile Include="ODataCountTest\CountEdmModel.cs" />
     <Compile Include="ODataCountTest\CountTest.cs" />
+    <Compile Include="ODataPathHandlerExtensions.cs" />
     <Compile Include="QueryComposition\IsOf\IsOfController.cs" />
     <Compile Include="QueryComposition\IsOf\IsofDataSource.cs" />
     <Compile Include="QueryComposition\IsOf\IsofEdmModel.cs" />
@@ -188,6 +216,7 @@
     <Compile Include="Swagger\SwaggerPathHandler.cs" />
     <Compile Include="Swagger\SwaggerPathSegment.cs" />
     <Compile Include="Swagger\SwaggerRoutingConvention.cs" />
+    <Compile Include="UriParserExtension\CaseInsensitiveResolver.cs" />
     <Compile Include="UriParserExtension\CaseInsensitiveTest.cs" />
     <Compile Include="UriParserExtension\EnumPrefixFreeTest.cs" />
     <Compile Include="UriParserExtension\UnqualifiedCallTest.cs" />
@@ -232,7 +261,6 @@
     <Compile Include="LowerCamelCase\LowerCamelCaseEdmModel.cs" />
     <Compile Include="LowerCamelCase\LowerCamelCaseTest.cs" />
     <Compile Include="Common\AssertExtension.cs" />
-    <Compile Include="Common\AzureODataPathHandler.cs" />
     <Compile Include="Common\DataServiceContextAsyncExtension.cs" />
     <Compile Include="Common\Container.cs" />
     <Compile Include="Common\Controllers\AsyncInMemoryODataController.cs" />

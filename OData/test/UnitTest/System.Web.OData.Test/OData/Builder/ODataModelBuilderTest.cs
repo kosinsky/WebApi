@@ -4,12 +4,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
 using System.Web.OData.TestCommon;
 using System.Web.OData.TestCommon.Models;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Annotations;
-using Microsoft.OData.Edm.Expressions;
+using Microsoft.OData.Edm.Vocabularies;
 using Microsoft.OData.Edm.Vocabularies.V1;
 using Microsoft.TestCommon;
 using Moq;
@@ -44,35 +44,35 @@ namespace System.Web.OData.Builder
         }
 
         [Fact]
-        public void CanRemoveProcedureByName()
+        public void CanRemoveOperationByName()
         {
             // Arrange
             // Act
             ODataModelBuilder builder = new ODataModelBuilder();
             ActionConfiguration action = builder.Action("Format");
-            bool removed = builder.RemoveProcedure("Format");
+            bool removed = builder.RemoveOperation("Format");
 
             // Assert      
-            Assert.Equal(0, builder.Procedures.Count());
+            Assert.Equal(0, builder.Operations.Count());
         }
 
         [Fact]
-        public void CanRemoveProcedure()
+        public void CanRemoveOperation()
         {
             // Arrange
             // Act
             ODataModelBuilder builder = new ODataModelBuilder();
             ActionConfiguration action = builder.Action("Format");
-            ProcedureConfiguration procedure = builder.Procedures.SingleOrDefault();
-            bool removed = builder.RemoveProcedure(procedure);
+            OperationConfiguration operation = builder.Operations.SingleOrDefault();
+            bool removed = builder.RemoveOperation(operation);
 
             // Assert
             Assert.True(removed);
-            Assert.Equal(0, builder.Procedures.Count());
+            Assert.Equal(0, builder.Operations.Count());
         }
 
         [Fact]
-        public void RemoveProcedureByNameThrowsWhenAmbiguous()
+        public void RemoveOperationByNameThrowsWhenAmbiguous()
         {
             // Arrange
             // Act
@@ -84,12 +84,12 @@ namespace System.Web.OData.Builder
 
             Assert.Throws<InvalidOperationException>(() =>
             {
-                builder.RemoveProcedure("Format");
+                builder.RemoveOperation("Format");
             });
         }
 
         [Fact]
-        public void BuilderIncludesMapFromEntityTypeToBindableProcedures()
+        public void BuilderIncludesMapFromEntityTypeToBindableOperations()
         {
             // Arrange
             ODataModelBuilder builder = new ODataModelBuilder();
@@ -101,12 +101,12 @@ namespace System.Web.OData.Builder
             IEdmEntityType customerType = model.SchemaElements.OfType<IEdmEntityType>().SingleOrDefault();
 
             // Act
-            BindableProcedureFinder finder = model.GetAnnotationValue<BindableProcedureFinder>(model);
+            BindableOperationFinder finder = model.GetAnnotationValue<BindableOperationFinder>(model);
 
             // Assert
             Assert.NotNull(finder);
-            Assert.NotNull(finder.FindProcedures(customerType).SingleOrDefault());
-            Assert.Equal("Reward", finder.FindProcedures(customerType).SingleOrDefault().Name);
+            Assert.NotNull(finder.FindOperations(customerType).SingleOrDefault());
+            Assert.Equal("Reward", finder.FindOperations(customerType).SingleOrDefault().Name);
         }
 
         [Fact]
@@ -149,7 +149,7 @@ namespace System.Web.OData.Builder
             bindingParameterTypeMock.Setup(o => o.ClrType).Returns(entityType);
             configuration.SetBindingParameter("IgnoreParameter", bindingParameterTypeMock.Object);
             configuration.HasActionLink((a) => { throw new NotImplementedException(); }, followsConventions: value);
-            builder.AddProcedure(configuration);
+            builder.AddOperation(configuration);
             builder.AddEntityType(entityType);
 
             // Act
@@ -157,7 +157,7 @@ namespace System.Web.OData.Builder
 
             // Assert
             var action = Assert.Single(model.SchemaElements.OfType<IEdmAction>());
-            ActionLinkBuilder actionLinkBuilder = model.GetActionLinkBuilder(action);
+            OperationLinkBuilder actionLinkBuilder = model.GetOperationLinkBuilder(action);
             Assert.NotNull(actionLinkBuilder);
             Assert.Equal(value, actionLinkBuilder.FollowsConventions);
         }
@@ -177,7 +177,7 @@ namespace System.Web.OData.Builder
             bindingParameterTypeMock.Setup(o => o.ClrType).Returns(entityType);
             configuration.SetBindingParameter("IgnoreParameter", bindingParameterTypeMock.Object);
             configuration.HasFunctionLink((a) => { throw new NotImplementedException(); }, followsConventions: value);
-            builder.AddProcedure(configuration);
+            builder.AddOperation(configuration);
             builder.AddEntityType(entityType);
 
             // Act
@@ -185,7 +185,7 @@ namespace System.Web.OData.Builder
 
             // Assert
             var function = Assert.Single(model.SchemaElements.OfType<IEdmFunction>());
-            FunctionLinkBuilder functionLinkBuilder = model.GetFunctionLinkBuilder(function);
+            OperationLinkBuilder functionLinkBuilder = model.GetOperationLinkBuilder(function);
             Assert.NotNull(functionLinkBuilder);
             Assert.Equal(value, functionLinkBuilder.FollowsConventions);
         }
@@ -199,6 +199,7 @@ namespace System.Web.OData.Builder
             customer.HasKey(c => c.Id);
             customer.Property(c => c.Id);
             customer.Property(c => c.Name).IsConcurrencyToken();
+            builder.EntitySet<Customer>("Customers");
 
             // Act
             IEdmModel model = builder.GetEdmModel();
@@ -207,7 +208,13 @@ namespace System.Web.OData.Builder
             IEdmEntityType type = model.AssertHasEntityType(typeof(Customer));
             IEdmStructuralProperty property =
                 type.AssertHasPrimitiveProperty(model, "Name", EdmPrimitiveTypeKind.String, isNullable: true);
-            Assert.Equal(EdmConcurrencyMode.Fixed, property.ConcurrencyMode);
+
+            IEdmEntitySet customers = model.EntityContainer.FindEntitySet("Customers");
+            Assert.NotNull(customers);
+
+            IEnumerable<IEdmStructuralProperty> currencyProperties = model.GetConcurrencyProperties(customers);
+            IEdmStructuralProperty currencyProperty = Assert.Single(currencyProperties);
+            Assert.Same(property, currencyProperty);
         }
 
         [Fact]
@@ -228,8 +235,8 @@ namespace System.Web.OData.Builder
             var customers = model.FindDeclaredEntitySet("Customers");
             Assert.NotNull(customers);
 
-            var annotations = model.FindVocabularyAnnotations<IEdmValueAnnotation>(customers, CoreVocabularyModel.ConcurrencyTerm);
-            IEdmValueAnnotation concurrencyAnnotation = Assert.Single(annotations);
+            var annotations = model.FindVocabularyAnnotations<IEdmVocabularyAnnotation>(customers, CoreVocabularyModel.ConcurrencyTerm);
+            IEdmVocabularyAnnotation concurrencyAnnotation = Assert.Single(annotations);
 
             IEdmCollectionExpression properties = concurrencyAnnotation.Value as IEdmCollectionExpression;
             Assert.NotNull(properties);
@@ -238,7 +245,7 @@ namespace System.Web.OData.Builder
             var element = properties.Elements.First() as IEdmPathExpression;
             Assert.NotNull(element);
 
-            string path = Assert.Single(element.Path);
+            string path = Assert.Single(element.PathSegments);
             Assert.Equal("Name", path);
         }
 

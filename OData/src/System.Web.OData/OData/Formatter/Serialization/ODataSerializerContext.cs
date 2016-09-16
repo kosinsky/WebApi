@@ -9,7 +9,7 @@ using System.Web.Http.Routing;
 using System.Web.OData.Properties;
 using System.Web.OData.Routing;
 using Microsoft.OData.Edm;
-using SelectExpandClause = Microsoft.OData.Core.UriParser.Semantic.SelectExpandClause;
+using SelectExpandClause = Microsoft.OData.UriParser.SelectExpandClause;
 
 namespace System.Web.OData.Formatter.Serialization
 {
@@ -31,27 +31,24 @@ namespace System.Web.OData.Formatter.Serialization
         /// <summary>
         /// Initializes a new instance of the <see cref="ODataSerializerContext"/> class.
         /// </summary>
-        /// <param name="entity">The entity whose navigation property is being expanded.</param>
+        /// <param name="resource">The resource whose navigation property is being expanded.</param>
         /// <param name="selectExpandClause">The <see cref="SelectExpandClause"/> for the navigation property being expanded.</param>
-        /// <param name="navigationProperty">The navigation property being expanded.</param>
-        /// <remarks>This constructor is used to construct the serializer context for writing expanded properties.</remarks>
-        public ODataSerializerContext(EntityInstanceContext entity, SelectExpandClause selectExpandClause, IEdmNavigationProperty navigationProperty)
+        /// <param name="edmProperty">The complex property being nested or the navigation property being expanded.
+        /// If the resource property is the dynamic complex, the resource property is null.
+        /// </param>
+        /// <remarks>This constructor is used to construct the serializer context for writing nested and expanded properties.</remarks>
+        public ODataSerializerContext(ResourceContext resource, SelectExpandClause selectExpandClause, IEdmProperty edmProperty)
         {
-            if (entity == null)
+            if (resource == null)
             {
-                throw Error.ArgumentNull("entity");
-            }
-            if (navigationProperty == null)
-            {
-                throw Error.ArgumentNull("navigationProperty");
+                throw Error.ArgumentNull("resource");
             }
 
-            ODataSerializerContext context = entity.SerializerContext;
+            ODataSerializerContext context = resource.SerializerContext;
 
             Request = context.Request;
             RequestContext = context.RequestContext;
             Url = context.Url;
-            NavigationSource = context.NavigationSource;
             Model = context.Model;
             Path = context.Path;
             RootElementName = context.RootElementName;
@@ -59,11 +56,18 @@ namespace System.Web.OData.Formatter.Serialization
             MetadataLevel = context.MetadataLevel;
             Items = context.Items;
 
-            ExpandedEntity = entity;
+            ExpandedResource = resource; // parent resource
             SelectExpandClause = selectExpandClause;
-            NavigationProperty = navigationProperty;
+            EdmProperty = edmProperty; // should be nested property
 
-            NavigationSource = context.NavigationSource.FindNavigationTarget(navigationProperty);
+            if (context.NavigationSource != null)
+            {
+                IEdmNavigationProperty navigationProperty = edmProperty as IEdmNavigationProperty;
+                if (navigationProperty != null)
+                {
+                    NavigationSource = context.NavigationSource.FindNavigationTarget(NavigationProperty);
+                }
+            }
         }
 
         /// <summary>
@@ -97,8 +101,7 @@ namespace System.Web.OData.Formatter.Serialization
         public ODataPath Path { get; set; }
 
         /// <summary>
-        /// Gets or sets the root element name which is used when writing primitive types
-        /// and complex types.
+        /// Gets or sets the root element name which is used when writing primitive and enum types
         /// </summary>
         public string RootElementName { get; set; }
 
@@ -118,14 +121,25 @@ namespace System.Web.OData.Formatter.Serialization
         public SelectExpandClause SelectExpandClause { get; set; }
 
         /// <summary>
-        /// Gets or sets the entity that is being expanded.
+        /// Gets or sets the resource that is being expanded.
         /// </summary>
-        public EntityInstanceContext ExpandedEntity { get; set; }
+        public ResourceContext ExpandedResource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the complex property being nested or navigation property being expanded.
+        /// </summary>
+        public IEdmProperty EdmProperty { get; set; }
 
         /// <summary>
         /// Gets or sets the navigation property being expanded.
         /// </summary>
-        public IEdmNavigationProperty NavigationProperty { get; set; }
+        public IEdmNavigationProperty NavigationProperty
+        {
+            get
+            {
+                return EdmProperty as IEdmNavigationProperty;
+            }
+        }
 
         /// <summary>
         /// Gets a property bag associated with this context to store any generic data.
@@ -176,7 +190,7 @@ namespace System.Web.OData.Formatter.Serialization
 
                     if (edmType == null)
                     {
-                            throw Error.InvalidOperation(SRResources.ClrTypeNotInModel, type);
+                        throw Error.InvalidOperation(SRResources.ClrTypeNotInModel, type);
                     }
                 }
                 else if (instance != null)

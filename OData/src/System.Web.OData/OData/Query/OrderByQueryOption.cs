@@ -9,11 +9,9 @@ using System.Web.Http;
 using System.Web.OData.Properties;
 using System.Web.OData.Query.Expressions;
 using System.Web.OData.Query.Validators;
-using System.Web.OData.Routing;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace System.Web.OData.Query
 {
@@ -27,7 +25,7 @@ namespace System.Web.OData.Query
         private ODataQueryOptionParser _queryOptionParser;
 
         /// <summary>
-        /// Initialize a new instance of <see cref="OrderByQueryOption"/> based on the raw $orderby value and 
+        /// Initialize a new instance of <see cref="OrderByQueryOption"/> based on the raw $orderby value and
         /// an EdmModel from <see cref="ODataQueryContext"/>.
         /// </summary>
         /// <param name="rawValue">The raw value for $orderby query. It can be null or empty.</param>
@@ -52,7 +50,7 @@ namespace System.Web.OData.Query
 
             Context = context;
             RawValue = rawValue;
-            Validator = new OrderByQueryValidator();
+            Validator = OrderByQueryValidator.GetOrderByQueryValidator(context);
             _queryOptionParser = queryOptionParser;
         }
 
@@ -71,7 +69,7 @@ namespace System.Web.OData.Query
 
             Context = context;
             RawValue = rawValue;
-            Validator = new OrderByQueryValidator();
+            Validator = OrderByQueryValidator.GetOrderByQueryValidator(context);
             _queryOptionParser = new ODataQueryOptionParser(
                 context.Model,
                 context.ElementType,
@@ -207,7 +205,7 @@ namespace System.Web.OData.Query
             bool alreadyOrdered = false;
             IQueryable querySoFar = query;
 
-            HashSet<IEdmProperty> propertiesSoFar = new HashSet<IEdmProperty>();
+            HashSet<object> propertiesSoFar = new HashSet<object>();
             HashSet<string> openPropertiesSoFar = new HashSet<string>();
             bool orderByItSeen = false;
 
@@ -218,15 +216,17 @@ namespace System.Web.OData.Query
 
                 if (propertyNode != null)
                 {
-                    IEdmProperty property = propertyNode.Property;
+                    // Use autonomy class to achieve value equality for HasSet.
+                    var edmPropertyWithPath = new { propertyNode.Property, propertyNode.PropertyPath };
                     OrderByDirection direction = propertyNode.Direction;
 
                     // This check prevents queries with duplicate properties (e.g. $orderby=Id,Id,Id,Id...) from causing stack overflows
-                    if (propertiesSoFar.Contains(property))
+                    if (propertiesSoFar.Contains(edmPropertyWithPath))
                     {
-                        throw new ODataException(Error.Format(SRResources.OrderByDuplicateProperty, property.Name));
+                        throw new ODataException(Error.Format(SRResources.OrderByDuplicateProperty, edmPropertyWithPath.PropertyPath));
                     }
-                    propertiesSoFar.Add(property);
+
+                    propertiesSoFar.Add(edmPropertyWithPath);
 
                     if (propertyNode.OrderByClause != null)
                     {
@@ -234,8 +234,9 @@ namespace System.Web.OData.Query
                     }
                     else
                     {
-                        querySoFar = ExpressionHelpers.OrderByProperty(querySoFar, Context.Model, property, direction, Context.ElementClrType, alreadyOrdered);
+                        querySoFar = ExpressionHelpers.OrderByProperty(querySoFar, Context.Model, edmPropertyWithPath.Property, direction, Context.ElementClrType, alreadyOrdered);
                     }
+
                     alreadyOrdered = true;
                 }
                 else if (openPropertyNode != null)
@@ -243,8 +244,9 @@ namespace System.Web.OData.Query
                     // This check prevents queries with duplicate properties (e.g. $orderby=Id,Id,Id,Id...) from causing stack overflows
                     if (openPropertiesSoFar.Contains(openPropertyNode.PropertyName))
                     {
-                        throw new ODataException(Error.Format(SRResources.OrderByDuplicateProperty, openPropertyNode.PropertyName));
+                        throw new ODataException(Error.Format(SRResources.OrderByDuplicateProperty, openPropertyNode.PropertyPath));
                     }
+
                     openPropertiesSoFar.Add(openPropertyNode.PropertyName);
                     Contract.Assert(openPropertyNode.OrderByClause != null);
                     querySoFar = AddOrderByQueryForProperty(query, querySettings, openPropertyNode.OrderByClause, querySoFar, openPropertyNode.Direction, alreadyOrdered);
@@ -270,17 +272,10 @@ namespace System.Web.OData.Query
         private IQueryable AddOrderByQueryForProperty(IQueryable query, ODataQuerySettings querySettings,
             OrderByClause orderbyClause, IQueryable querySoFar, OrderByDirection direction, bool alreadyOrdered)
         {
-            // Ensure we have decided how to handle null propagation
-            ODataQuerySettings updatedSettings = querySettings;
-            if (querySettings.HandleNullPropagation == HandleNullPropagationOption.Default)
-            {
-                updatedSettings = new ODataQuerySettings(updatedSettings);
-                updatedSettings.HandleNullPropagation =
-                    HandleNullPropagationOptionHelper.GetDefaultHandleNullPropagationOption(query);
-            }
+            Context.UpdateQuerySettings(querySettings, query);
 
             LambdaExpression orderByExpression =
-                FilterBinder.Bind(orderbyClause, Context.ElementClrType, Context.Model, updatedSettings);
+                FilterBinder.Bind(orderbyClause, Context.ElementClrType, Context.RequestContainer);
             querySoFar = ExpressionHelpers.OrderBy(querySoFar, orderByExpression, direction, Context.ElementClrType,
                 alreadyOrdered);
             return querySoFar;

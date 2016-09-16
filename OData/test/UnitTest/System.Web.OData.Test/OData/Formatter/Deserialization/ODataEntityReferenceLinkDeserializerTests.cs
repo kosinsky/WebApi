@@ -4,11 +4,12 @@
 using System.Linq;
 using System.Net.Http;
 using System.Web.OData.Builder;
-using System.Web.OData.Routing;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Formatter.Deserialization
 {
@@ -64,7 +65,7 @@ namespace System.Web.OData.Formatter.Deserialization
             ODataDeserializerContext context = new ODataDeserializerContext
             {
                 Request = new HttpRequestMessage(),
-                Path = new ODataPath(new NavigationPathSegment(GetNavigationProperty(model)))
+                Path = new ODataPath(new NavigationPropertySegment(GetNavigationProperty(model), navigationSource: null))
             };
 
             // Act
@@ -94,7 +95,7 @@ namespace System.Web.OData.Formatter.Deserialization
             ODataDeserializerContext context = new ODataDeserializerContext
             {
                 Request = new HttpRequestMessage(),
-                Path = new ODataPath(new NavigationPathSegment(navigationProperty))
+                Path = new ODataPath(new NavigationPropertySegment(navigationProperty, navigationSource: null))
             };
 
             // Act
@@ -113,6 +114,7 @@ namespace System.Web.OData.Formatter.Deserialization
             NavigationPropertyConfiguration entityToRelated =
                 entities.EntityType.HasOptional<RelatedEntity>((e) => e.Related);
             entities.HasNavigationPropertyLink(entityToRelated, (a, b) => new Uri("aa:b"), false);
+            entities.HasOptionalBinding((e) => e.Related, "related");
 
             return builder.GetEdmModel();
         }

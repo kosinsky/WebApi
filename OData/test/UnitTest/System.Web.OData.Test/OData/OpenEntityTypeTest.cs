@@ -11,8 +11,6 @@ using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.Formatter;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
-using Microsoft.OData.Edm.Library.Values;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
 
@@ -43,7 +41,7 @@ namespace System.Web.OData
             // Assert
             Assert.True(response.IsSuccessStatusCode);
             JObject result = JObject.Parse(response.Content.ReadAsStringAsync().Result);
-            Assert.Equal("http://localhost/odata/$metadata#SimpleOpenCustomers/$entity", result["@odata.context"]);
+            Assert.Equal("http://localhost/odata/$metadata#SimpleOpenCustomers/System.Web.OData.SimpleVipCustomer/$entity", result["@odata.context"]);
             Assert.Equal("#System.Web.OData.SimpleVipCustomer", result["@odata.type"]);
             Assert.Equal(9, result["CustomerId"]);
             Assert.Equal("VipCustomer", result["Name"]);
@@ -212,7 +210,9 @@ namespace System.Web.OData
                 "\"Token\":\"4DB52263-4382-4BCB-A63E-3129C1B5FA0D\"," +
                 "\"Number\":990" +
               "}," +
-              "\"Website\": \"WebSite #6\",\"Country\":\"My Dynamic Country\",\"Token@odata.type\":\"#Guid\",\"Token\":\"2c1f450a-a2a7-4fe1-a25d-4d9332fc0694\"," +
+              "\"Website\": \"WebSite #6\"," +
+              "\"Country@odata.type\":\"#String\",\"Country\":\"My Dynamic Country\"," + // odata.type is necessary, otherwise it will get an ODataUntypedValue
+              "\"Token@odata.type\":\"#Guid\",\"Token\":\"2c1f450a-a2a7-4fe1-a25d-4d9332fc0694\"," +
               "\"DoubleList@odata.type\":\"#Collection(Double)\"," +
               "\"DoubleList\":[5.5, 4.4, 3.3]" +
             "}";
@@ -239,8 +239,8 @@ namespace System.Web.OData
         { 
             // Arrange
             const string Payload = "{" + 
-              "\"@odata.context\":\"http://localhost/odata/$metadata#UntypedSimpleOpenCustomer/$entity\"," +
-              "\"CustomerId\":6,\"Name\":\"FirstName 6\"," +
+              "\"@odata.context\":\"http://localhost/odata/$metadata#UntypedSimpleOpenCustomers/$entity\"," +
+              "\"CustomerId\":6,\"Name@odata.type\":\"#String\",\"Name\":\"FirstName 6\"," +
               "\"Address\":{" +
                 "\"@odata.type\":\"#NS.Address\",\"Street\":\"Street 6\",\"City\":\"City 6\"" +
               "}," + 
@@ -256,7 +256,6 @@ namespace System.Web.OData
               "\"FavoriteColors@odata.type\":\"#Collection(NS.Color)\"," +
               "\"FavoriteColors\":[\"0\", \"1\"]" +
             "}";
-
 
             var configuration = new[] { typeof(UntypedSimpleOpenCustomersController) }.GetHttpConfiguration();
             configuration.MapODataServiceRoute("odata", "odata", GetUntypedEdmModel());
@@ -351,8 +350,14 @@ namespace System.Web.OData
             return builder.GetEdmModel();
         }
 
-        private static IEdmModel GetUntypedEdmModel()
+        private static IEdmModel _untypedEdmModel;
+        public static IEdmModel GetUntypedEdmModel()
         {
+            if (_untypedEdmModel != null)
+            {
+                return _untypedEdmModel;
+            }
+
             var model = new EdmModel();
             // complex type address
             EdmComplexType address = new EdmComplexType("NS", "Address", null, false, true);
@@ -362,7 +367,7 @@ namespace System.Web.OData
 
             // enum type color
             EdmEnumType color = new EdmEnumType("NS", "Color");
-            color.AddMember(new EdmEnumMember(color, "Red", new EdmIntegerConstant(0)));
+            color.AddMember(new EdmEnumMember(color, "Red", new EdmEnumMemberValue(0)));
             model.AddElement(color);
             IEdmCollectionTypeReference enumCollectionType = new EdmCollectionTypeReference(new EdmCollectionType(color.ToEdmTypeReference(false)));
 
@@ -394,6 +399,7 @@ namespace System.Web.OData
             container.AddEntitySet("UntypedSimpleOpenCustomers", customer);
 
             model.AddElement(container);
+            _untypedEdmModel = model;
             return model;
         }
     }
@@ -425,6 +431,18 @@ namespace System.Web.OData
             }
 
             return Ok(customer);
+        }
+
+        public IHttpActionResult GetAddress(int key)
+        {
+            IList<SimpleOpenCustomer> customers = CreateCustomers();
+            SimpleOpenCustomer customer = customers.FirstOrDefault(c => c.CustomerId == key);
+            if (customer == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(customer.Address);
         }
 
         public IHttpActionResult PostSimpleOpenCustomer([FromBody]SimpleOpenCustomer customer)
@@ -660,18 +678,20 @@ namespace System.Web.OData
 
             Assert.NotNull(cityValue);
             Assert.Equal(typeof(String), cityType);
-            Assert.Equal("City 6", cityValue);
+            Assert.Equal("City 6", cityValue); // It reads as ODataUntypedValue, and the RawValue is the string with the ""
 
             return Ok(customer);
         }
+
         private static EdmEntityObjectCollection GetCustomers()
         {
             if (_untypedSimpleOpenCustormers != null)
             {
                 return _untypedSimpleOpenCustormers;
             }
-            EdmEntityType customerType = new EdmEntityType("NS", "UntypedSimpleOpenCustomer", null, false, true);
-            customerType.AddKeys(customerType.AddStructuralProperty("CustomerId", EdmPrimitiveTypeKind.Int32));
+
+            IEdmModel edmModel = OpenEntityTypeTest.GetUntypedEdmModel();
+            IEdmEntityType customerType = edmModel.SchemaElements.OfType<IEdmEntityType>().First(c => c.Name == "UntypedSimpleOpenCustomer");
             EdmEntityObject customer = new EdmEntityObject(customerType);
             customer.TrySetPropertyValue("CustomerId", 1);
 
@@ -679,9 +699,7 @@ namespace System.Web.OData
             customer.TrySetPropertyValue("DeclaredNumbers", new[] { 1, 2 });
 
             //Add Color, Colors enum(collection) property
-            EdmEnumType colorType = new EdmEnumType("NS", "Color");
-            colorType.AddMember(new EdmEnumMember(colorType, "Red", new EdmIntegerConstant(0)));
-
+            IEdmEnumType colorType = edmModel.SchemaElements.OfType<IEdmEnumType>().First(c => c.Name == "Color");
             EdmEnumObject color = new EdmEnumObject(colorType, "Red");
             EdmEnumObject color2 = new EdmEnumObject(colorType, "0");
             EdmEnumObject color3 = new EdmEnumObject(colorType, "Red");
@@ -696,10 +714,9 @@ namespace System.Web.OData
             customer.TrySetPropertyValue("Colors", colors);
             customer.TrySetPropertyValue("DeclaredColors", colors);
 
-            //Add Addresses complex(collection) property 
-            EdmComplexType addressType = new EdmComplexType("NS", "Address", null, false, true);
-            addressType.AddStructuralProperty("Street", EdmPrimitiveTypeKind.String);
-
+            //Add Addresses complex(collection) property
+            EdmComplexType addressType =
+                edmModel.SchemaElements.OfType<IEdmComplexType>().First(c => c.Name == "Address") as EdmComplexType;
             EdmComplexObject address = new EdmComplexObject(addressType);
             address.TrySetPropertyValue("Street", "No1");
             EdmComplexObject address2 = new EdmComplexObject(addressType);

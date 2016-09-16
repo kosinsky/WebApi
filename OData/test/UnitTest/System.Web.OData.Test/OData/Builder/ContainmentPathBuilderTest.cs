@@ -4,11 +4,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
+using ODataPath = System.Web.OData.Routing.ODataPath;
 
 namespace System.Web.OData.Builder
 {
@@ -48,9 +47,9 @@ namespace System.Web.OData.Builder
         [InlineData("Clubs/ns.SeniorClub(1)/Members(1)/ns.VIP/MyBenefits", "Clubs(1)/Members(1)/ns.VIP")]
         [InlineData("Clubs/ns.SeniorClub(1)/Members/ns.VIP(1)/MyBenefits", "Clubs(1)/Members(1)/ns.VIP")]
         // With redundant EntitySet path
-        [InlineData("Clubs(1)/ns.SeniorClub/Members(1)/ns.VIP/MyAccounts(101)/MyPaymentInstruments", "Accounts(101)")]
-        [InlineData("Clubs/ns.SeniorClub(1)/Members(1)/ns.VIP/MyAccounts(101)/MyPaymentInstruments", "Accounts(101)")]
-        [InlineData("Clubs/ns.SeniorClub(1)/Members/ns.VIP(1)/MyAccounts(101)/MyPaymentInstruments", "Accounts(101)")]
+        [InlineData("Clubs(1)/ns.SeniorClub/Members(1)/ns.VIP/MyAccounts(101)/MyPaymentInstruments", "Clubs(1)/Members(1)/MyAccounts(101)")]
+        [InlineData("Clubs/ns.SeniorClub(1)/Members(1)/ns.VIP/MyAccounts(101)/MyPaymentInstruments", "Clubs(1)/Members(1)/MyAccounts(101)")]
+        [InlineData("Clubs/ns.SeniorClub(1)/Members/ns.VIP(1)/MyAccounts(101)/MyPaymentInstruments", "Clubs(1)/Members(1)/MyAccounts(101)")]
         // With single valued navigation property (point to entity set)
         [InlineData("People(1)/MyLatestAccount/MyPaymentInstruments", "People(1)/MyLatestAccount")]
         // With single valued navigation property (point to singleton)
@@ -230,12 +229,12 @@ namespace System.Web.OData.Builder
         private ODataPath CreatePathFromUri(Uri requestUri)
         {
             var parser = new ODataUriParser(GetModel(), _serviceRoot, requestUri);
-            return parser.ParsePath();
+            return new ODataPath(parser.ParsePath());
         }
 
         private Uri CreateUriFromPath(ODataPath path)
         {
-            var segments = path;
+            var segments = path.Segments;
             var computedUri = _serviceRoot;
 
             // Append each segment to base uri

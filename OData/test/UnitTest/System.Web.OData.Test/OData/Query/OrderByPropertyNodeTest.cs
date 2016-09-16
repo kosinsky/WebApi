@@ -6,9 +6,8 @@ using System.Linq;
 using System.Web.OData.Builder;
 using System.Web.OData.Builder.TestModels;
 using System.Web.OData.TestCommon;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Moq;
 
@@ -52,8 +51,8 @@ namespace System.Web.OData.Query
             // Arrange
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             IEdmProperty property = model.Customer.FindProperty("ID");
-            EntityRangeVariable variable = new EntityRangeVariable("it", model.Customer.AsReference(), model.Customers);
-            SingleValuePropertyAccessNode node = new SingleValuePropertyAccessNode(new EntityRangeVariableReferenceNode("it", variable), property);
+            ResourceRangeVariable variable = new ResourceRangeVariable("it", model.Customer.AsReference(), model.Customers);
+            SingleValuePropertyAccessNode node = new SingleValuePropertyAccessNode(new ResourceRangeVariableReferenceNode("it", variable), property);
             OrderByClause orderBy = new OrderByClause(thenBy: null, expression: node, direction: OrderByDirection.Ascending, rangeVariable: variable);
 
             // Act
@@ -64,14 +63,14 @@ namespace System.Web.OData.Query
         }
 
         [Fact]
-        public void Ctor_TakingOrderByClause_InitializesProperty_Direction()
+        public void Ctor_TakingOrderByClause_InitializesProperty_Direction_and_PropertyPath()
         {
             // Arrange
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             IEdmProperty property = model.Customer.FindProperty("ID");
             OrderByDirection direction = OrderByDirection.Ascending;
-            EntityRangeVariable variable = new EntityRangeVariable("it", model.Customer.AsReference(), model.Customers);
-            SingleValuePropertyAccessNode node = new SingleValuePropertyAccessNode(new EntityRangeVariableReferenceNode("it", variable), property);
+            ResourceRangeVariable variable = new ResourceRangeVariable("it", model.Customer.AsReference(), model.Customers);
+            SingleValuePropertyAccessNode node = new SingleValuePropertyAccessNode(new ResourceRangeVariableReferenceNode("it", variable), property);
             OrderByClause orderBy = new OrderByClause(thenBy: null, expression: node, direction: direction, rangeVariable: variable);
 
             // Act
@@ -79,6 +78,7 @@ namespace System.Web.OData.Query
 
             // Assert
             Assert.Equal(direction, orderByNode.Direction);
+            Assert.Equal("ID", orderByNode.PropertyPath);
         }
 
         [Fact]
@@ -107,9 +107,11 @@ namespace System.Web.OData.Query
             Assert.Equal(2, propertyNodes.Count());
             Assert.Equal("Property1", propertyNodes.First().Property.Name);
             Assert.Equal(OrderByDirection.Descending, propertyNodes.First().Direction);
+            Assert.Equal("Property1", propertyNodes.First().PropertyPath);
 
             Assert.ReferenceEquals("Property2", propertyNodes.Last().Property.Name);
             Assert.Equal(OrderByDirection.Ascending, nodes.Last().Direction);
+            Assert.Equal("Property2", propertyNodes.Last().PropertyPath);
         }
 
         [Theory]
@@ -140,9 +142,11 @@ namespace System.Web.OData.Query
             Assert.Equal(2, propertyNodes.Count());
             Assert.Equal(propertyName, propertyNodes.First().Property.Name);
             Assert.Equal(OrderByDirection.Descending, propertyNodes.First().Direction);
+            Assert.Equal(propertyName, propertyNodes.First().PropertyPath);
 
             Assert.ReferenceEquals("Id", propertyNodes.Last().Property.Name);
             Assert.Equal(OrderByDirection.Ascending, nodes.Last().Direction);
+            Assert.Equal("Id", propertyNodes.Last().PropertyPath);
         }
 
         [Fact]
@@ -151,7 +155,7 @@ namespace System.Web.OData.Query
             // Arrange
             CustomersModelWithInheritance model = new CustomersModelWithInheritance();
             ODataQueryOptionParser parser = new ODataQueryOptionParser(model.Model, model.Customer, model.Customers,
-                new Dictionary<string, string> { { "$orderby", "Address/Street desc, Address/City asc" } });
+                new Dictionary<string, string> { { "$orderby", "Address/Street desc, Address/City asc, Account/BankAddress/City asc" } });
 
             OrderByClause orderByNode = parser.ParseOrderBy();
 
@@ -159,11 +163,18 @@ namespace System.Web.OData.Query
             ICollection<OrderByNode> nodes = OrderByNode.CreateCollection(orderByNode);
 
             // Assert
-            Assert.Equal(2, nodes.Count());
+            Assert.Equal(3, nodes.Count());
             Assert.Equal("Street", (nodes.ToList()[0] as OrderByPropertyNode).Property.Name);
             Assert.Equal(OrderByDirection.Descending, nodes.ToList()[0].Direction);
+            Assert.Equal("Address/Street", nodes.ToList()[0].PropertyPath);
+
             Assert.Equal("City", (nodes.ToList()[1] as OrderByPropertyNode).Property.Name);
             Assert.Equal(OrderByDirection.Ascending, nodes.ToList()[1].Direction);
+            Assert.Equal("Address/City", nodes.ToList()[1].PropertyPath);
+
+            Assert.Equal("City", (nodes.ToList()[2] as OrderByPropertyNode).Property.Name);
+            Assert.Equal(OrderByDirection.Ascending, nodes.ToList()[2].Direction);
+            Assert.Equal("Account/BankAddress/City", nodes.ToList()[2].PropertyPath);
         }
 
         private class SampleClass

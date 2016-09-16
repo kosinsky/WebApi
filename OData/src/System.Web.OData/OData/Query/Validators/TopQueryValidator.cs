@@ -2,8 +2,11 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System.Web.Http;
+using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
-using Microsoft.OData.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
+using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Query.Validators
 {
@@ -31,8 +34,34 @@ namespace System.Web.OData.Query.Validators
 
             if (topQueryOption.Value > validationSettings.MaxTop)
             {
-                throw new ODataException(Error.Format(SRResources.SkipTopLimitExceeded, validationSettings.MaxTop, AllowedQueryOptions.Top, topQueryOption.Value));
+                throw new ODataException(Error.Format(SRResources.SkipTopLimitExceeded, validationSettings.MaxTop,
+                    AllowedQueryOptions.Top, topQueryOption.Value));
             }
+
+            int maxTop;
+            IEdmProperty property = topQueryOption.Context.TargetProperty;
+            IEdmStructuredType structuredType = topQueryOption.Context.TargetStructuredType;
+
+            if (EdmLibHelpers.IsTopLimitExceeded(
+                property,
+                structuredType,
+                topQueryOption.Context.Model,
+                topQueryOption.Value, topQueryOption.Context.DefaultQuerySettings, 
+                out maxTop))
+            {
+                throw new ODataException(Error.Format(SRResources.SkipTopLimitExceeded, maxTop,
+                    AllowedQueryOptions.Top, topQueryOption.Value));
+            }
+        }
+
+        internal static TopQueryValidator GetTopQueryValidator(ODataQueryContext context)
+        {
+            if (context == null || context.RequestContainer == null)
+            {
+                return new TopQueryValidator();
+            }
+
+            return context.RequestContainer.GetRequiredService<TopQueryValidator>();
         }
     }
 }

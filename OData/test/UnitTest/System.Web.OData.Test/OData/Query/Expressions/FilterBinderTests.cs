@@ -10,11 +10,9 @@ using System.Reflection;
 using System.Web.Http.Dispatcher;
 using System.Web.OData.Builder;
 using System.Xml.Linq;
-using Microsoft.OData.Core;
-using Microsoft.OData.Core.UriParser;
-using Microsoft.OData.Core.UriParser.Semantic;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 
 namespace System.Web.OData.Query.Expressions
@@ -533,10 +531,10 @@ namespace System.Web.OData.Query.Expressions
                      {
                          Category = new Category
                          {
-                             EnumerableProducts = new Product[] 
-                        { 
-                            new Product { ProductName = "Snacks" }, 
-                            new Product { ProductName = "NonSnacks" } 
+                             EnumerableProducts = new Product[]
+                        {
+                            new Product { ProductName = "Snacks" },
+                            new Product { ProductName = "NonSnacks" }
                         }
                          }
                      },
@@ -547,9 +545,9 @@ namespace System.Web.OData.Query.Expressions
                 {
                     Category = new Category
                     {
-                        EnumerableProducts = new Product[] 
-                        { 
-                            new Product { ProductName = "NonSnacks" } 
+                        EnumerableProducts = new Product[]
+                        {
+                            new Product { ProductName = "NonSnacks" }
                         }
                     }
                 },
@@ -569,10 +567,10 @@ namespace System.Web.OData.Query.Expressions
                     {
                         Category = new Category
                         {
-                            QueryableProducts = new Product[] 
-                        { 
-                            new Product { ProductName = "Snacks" }, 
-                            new Product { ProductName = "NonSnacks" } 
+                            QueryableProducts = new Product[]
+                        {
+                            new Product { ProductName = "Snacks" },
+                            new Product { ProductName = "NonSnacks" }
                         }.AsQueryable()
                         }
                     },
@@ -583,9 +581,9 @@ namespace System.Web.OData.Query.Expressions
                 {
                     Category = new Category
                     {
-                        QueryableProducts = new Product[] 
-                        { 
-                            new Product { ProductName = "NonSnacks" } 
+                        QueryableProducts = new Product[]
+                        {
+                            new Product { ProductName = "NonSnacks" }
                         }.AsQueryable()
                     }
                 },
@@ -614,9 +612,9 @@ namespace System.Web.OData.Query.Expressions
                 {
                     Category = new Category
                     {
-                        EnumerableProducts = new Product[] 
-                        { 
-                            new Product { ProductName = "Snacks" } 
+                        EnumerableProducts = new Product[]
+                        {
+                            new Product { ProductName = "Snacks" }
                         }
                     }
                 },
@@ -645,9 +643,9 @@ namespace System.Web.OData.Query.Expressions
                 {
                     Category = new Category
                     {
-                        EnumerableProducts = new Product[] 
-                        { 
-                            new Product { ProductName = "Snacks" } 
+                        EnumerableProducts = new Product[]
+                        {
+                            new Product { ProductName = "Snacks" }
                         }
                     }
                 },
@@ -840,7 +838,7 @@ namespace System.Web.OData.Query.Expressions
         [InlineData(null, false, typeof(NullReferenceException))]
         [InlineData("Abcd", true, true)]
         [InlineData("Abd", false, false)]
-        public void StringSubstringOf(string productName, bool withNullPropagation, object withoutNullPropagation)
+        public void StringContains(string productName, bool withNullPropagation, object withoutNullPropagation)
         {
             // In OData, the order of parameters is actually reversed in the resulting
             // String.Contains expression
@@ -2256,8 +2254,7 @@ namespace System.Web.OData.Query.Expressions
         {
             // Arrange
             var expectedMessage =
-                "An instance of SingleValueFunctionCallNode can only be created with a primitive, complex or enum type. " +
-                "For functions returning a single entity, use SingleEntityFunctionCallNode instead.";
+                "Instance property 'DerivedCategoryName' is not defined for type 'System.Object'";
 
             // Act & Assert
             Assert.Throws<ArgumentException>(() => Bind<Product>(filter), expectedMessage);
@@ -2618,7 +2615,9 @@ namespace System.Web.OData.Query.Expressions
             IDictionary<string, string> queryOptions = new Dictionary<string, string> { { "$filter", filter } };
             queryOptions.Add("@p", parameterAliasValue);
             ODataQueryOptionParser parser = new ODataQueryOptionParser(model, targetEdmType, targetNavigationSource, queryOptions);
-            FilterClause filterClause = new FilterQueryOption(filter, new ODataQueryContext(model, typeof(DataTypes)), parser).FilterClause;
+            ODataQueryContext context = new ODataQueryContext(model, typeof(DataTypes));
+            context.RequestContainer = new MockContainer();
+            FilterClause filterClause = new FilterQueryOption(filter, context, parser).FilterClause;
 
             // Act
             Expression actualExpression = FilterBinder.Bind(
@@ -2648,7 +2647,9 @@ namespace System.Web.OData.Query.Expressions
             IEdmNavigationSource targetNavigationSource = model.FindDeclaredEntitySet("System.Web.OData.Query.Expressions.Products");
             IDictionary<string, string> queryOptions = new Dictionary<string, string> { { "$filter", filter } };
             ODataQueryOptionParser parser = new ODataQueryOptionParser(model, targetEdmType, targetNavigationSource, queryOptions);
-            FilterClause filterClause = new FilterQueryOption(filter, new ODataQueryContext(model, typeof(DataTypes)), parser).FilterClause;
+            ODataQueryContext context = new ODataQueryContext(model, typeof(DataTypes));
+            context.RequestContainer = new MockContainer();
+            FilterClause filterClause = new FilterQueryOption(filter, context, parser).FilterClause;
 
             // Act
             Expression actualExpression = FilterBinder.Bind(
@@ -2676,7 +2677,9 @@ namespace System.Web.OData.Query.Expressions
                 targetNavigationSource,
                 new Dictionary<string, string> { { "$filter", "IntProp eq @p1" }, { "@p1", "@p2" }, { "@p2", "123" } });
 
-            FilterClause filterClause = new FilterQueryOption("IntProp eq @p1", new ODataQueryContext(model, typeof(DataTypes)), parser).FilterClause;
+            ODataQueryContext context = new ODataQueryContext(model, typeof(DataTypes));
+            context.RequestContainer = new MockContainer();
+            FilterClause filterClause = new FilterQueryOption("IntProp eq @p1", context, parser).FilterClause;
 
             // Act
             Expression actualExpression = FilterBinder.Bind(

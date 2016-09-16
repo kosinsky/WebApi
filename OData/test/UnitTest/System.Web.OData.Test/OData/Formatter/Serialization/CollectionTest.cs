@@ -2,15 +2,13 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.OData.Builder;
 using System.Web.OData.Extensions;
 using System.Web.OData.TestCommon.Models;
-using Microsoft.OData.Core;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Library;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
 
@@ -232,32 +230,11 @@ namespace System.Web.OData.Formatter.Serialization
             JsonAssert.Equal(expect, content.ReadAsStringAsync().Result);
         }
 
-        [Fact]
-        public void CollectionOfComplexTypeSerializesAsOData()
-        {
-            // Arrange
-            IEnumerable<Person> collectionOfPerson = new Collection<Person>() 
-            {
-                (Person)TypeInitializer.GetInstance(SupportedTypes.Person, 0),
-                (Person)TypeInitializer.GetInstance(SupportedTypes.Person, 1),
-                (Person)TypeInitializer.GetInstance(SupportedTypes.Person, 2)
-            };
-
-            ObjectContent<IEnumerable<Person>> content = new ObjectContent<IEnumerable<Person>>(collectionOfPerson,
-                _formatter, ODataMediaTypes.ApplicationJsonODataMinimalMetadata);
-
-            // Act & Assert
-            JsonAssert.Equal(Resources.CollectionOfPerson, content.ReadAsStringAsync().Result);
-        }
-
         private static HttpRequestMessage GetSampleRequest()
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/property");
-            request.ODataProperties().Model = GetSampleModel();
-            HttpConfiguration configuration = new HttpConfiguration();
-            configuration.Routes.MapFakeODataRoute();
-            request.SetConfiguration(configuration);
-            request.SetFakeODataRouteName();
+            request.EnableODataDependencyInjectionSupport();
+            request.GetConfiguration().Routes.MapFakeODataRoute();
             return request;
         }
 

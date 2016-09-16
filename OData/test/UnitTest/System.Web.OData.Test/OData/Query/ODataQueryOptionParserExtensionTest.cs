@@ -4,11 +4,10 @@
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
-using System.Web.OData.Extensions;
 using System.Web.OData.Routing;
-using Microsoft.OData.Core.UriParser.Semantic;
-using Microsoft.OData.Core.UriParser.TreeNodeKinds;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using ODataPath = System.Web.OData.Routing.ODataPath;
 
@@ -91,10 +90,14 @@ namespace System.Web.OData.Query
             string uri = "Http://localhost/RoutingCustomers?" + queryOption;
 
             HttpConfiguration configuration = new HttpConfiguration();
-            configuration.EnableCaseInsensitive(true);
+            ODataUriResolver resolver = new ODataUriResolver
+            {
+                EnableCaseInsensitive = true
+            };
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.SetConfiguration(configuration);
+            request.EnableHttpDependencyInjectionSupport(b => b.AddService(ServiceLifetime.Singleton, sp => resolver));
 
             IEdmModel model = ODataRoutingModel.GetModel();
 
@@ -102,7 +105,7 @@ namespace System.Web.OData.Query
             IEdmEntityType entityType =
                 model.SchemaElements.OfType<IEdmEntityType>().Single(e => e.Name == "RoutingCustomer");
 
-            ODataPath path = new ODataPath(new[] { new EntitySetPathSegment(entityset) });
+            ODataPath path = new ODataPath(new[] { new EntitySetSegment(entityset) });
             ODataQueryContext context = new ODataQueryContext(model, entityType, path);
             return new ODataQueryOptions(context, request);
         }
