@@ -391,7 +391,7 @@ namespace System.Web.OData.Query
             return result;
         }
 
-        private List<string> GetApplySortOptions(ApplyClause apply)
+        private static List<string> GetApplySortOptions(ApplyClause apply)
         {
             Func<TransformationNode, bool> transformPredicate = t => t.Kind == TransformationNodeKind.Aggregate || t.Kind == TransformationNodeKind.GroupBy;
             if (apply == null || !apply.Transformations.Any(transformPredicate))
