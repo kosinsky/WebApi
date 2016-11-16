@@ -589,8 +589,8 @@ namespace System.Web.OData.Query
             else
             {
                 propertyFunc = node => node.Property.Name;
-
             }
+
             HashSet<string> usedPropertyNames =
             new HashSet<string>(orderBy.OrderByNodes.OfType<OrderByPropertyNode>().Select(propertyFunc));
 
@@ -620,8 +620,6 @@ namespace System.Web.OData.Query
                     }
                 }
             }
-
-
 
             return orderBy;
         }
