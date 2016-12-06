@@ -240,7 +240,9 @@ namespace System.Web.OData.Query.Expressions
                         //var averageMethod = averageGenericMethod.MakeGenericMethod(this._elementType);
                         //aggregationExpression = Expression.Call(null, averageMethod, asQuerableExpression, propertyLambda);
 
-                        var customMethodAnnotation = Model.GetAnnotationValue<CustomAggregationFunctionAnnotation>(Model);
+                        var customMethodAnnotations = Model.GetAnnotationValue<IList<CustomAggregationFunctionAnnotation>>(Model);
+                        var customMethodAnnotation = customMethodAnnotations.First(a => a.Name == "AX.StdDev");
+
                         MethodInfo stdDevMethod;
                         if (!customMethodAnnotation.Methods.TryGetValue(propertyLambda.Body.Type, out stdDevMethod))
                         {
