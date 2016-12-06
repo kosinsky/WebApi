@@ -29,7 +29,7 @@ namespace System.Web.OData.Query.Expressions
         private IEnumerable<GroupByPropertyNode> _groupingProperties;
 
         private Type _groupByClrType;
-        
+
         private bool _linqToObjectMode = false;
         private IQueryable _baseQuery;
         private IDictionary<string, Expression> _flattenPropertyContainer;
@@ -200,66 +200,79 @@ namespace System.Web.OData.Query.Expressions
             switch (expression.Method)
             {
                 case AggregationMethod.Min:
-                {
-                    var minMethod = ExpressionHelperMethods.QueryableMin.MakeGenericMethod(this._elementType,
-                        propertyLambda.Body.Type);
-                    aggregationExpression = Expression.Call(null, minMethod, asQuerableExpression, propertyLambda);
-                }
+                    {
+                        var minMethod = ExpressionHelperMethods.QueryableMin.MakeGenericMethod(this._elementType,
+                            propertyLambda.Body.Type);
+                        aggregationExpression = Expression.Call(null, minMethod, asQuerableExpression, propertyLambda);
+                    }
                     break;
                 case AggregationMethod.Max:
-                {
-                    var maxMethod = ExpressionHelperMethods.QueryableMax.MakeGenericMethod(this._elementType,
-                        propertyLambda.Body.Type);
-                    aggregationExpression = Expression.Call(null, maxMethod, asQuerableExpression, propertyLambda);
-                }
+                    {
+                        var maxMethod = ExpressionHelperMethods.QueryableMax.MakeGenericMethod(this._elementType,
+                            propertyLambda.Body.Type);
+                        aggregationExpression = Expression.Call(null, maxMethod, asQuerableExpression, propertyLambda);
+                    }
                     break;
                 case AggregationMethod.Sum:
-                {
-                    MethodInfo sumGenericMethod;
-                    if (
-                        !ExpressionHelperMethods.QueryableSumGenerics.TryGetValue(propertyLambda.Body.Type,
-                            out sumGenericMethod))
                     {
-                        throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForType,
-                            expression.Method, expression.Expression, propertyLambda.Body.Type));
+                        MethodInfo sumGenericMethod;
+                        if (
+                            !ExpressionHelperMethods.QueryableSumGenerics.TryGetValue(propertyLambda.Body.Type,
+                                out sumGenericMethod))
+                        {
+                            throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForType,
+                                expression.Method, expression.Expression, propertyLambda.Body.Type));
+                        }
+                        var sumMethod = sumGenericMethod.MakeGenericMethod(this._elementType);
+                        aggregationExpression = Expression.Call(null, sumMethod, asQuerableExpression, propertyLambda);
                     }
-                    var sumMethod = sumGenericMethod.MakeGenericMethod(this._elementType);
-                    aggregationExpression = Expression.Call(null, sumMethod, asQuerableExpression, propertyLambda);
-                }
                     break;
                 case AggregationMethod.Average:
-                {
-                    MethodInfo averageGenericMethod;
-                    if (
-                        !ExpressionHelperMethods.QueryableAverageGenerics.TryGetValue(propertyLambda.Body.Type,
-                            out averageGenericMethod))
                     {
-                        throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForType,
-                            expression.Method, expression.Expression, propertyLambda.Body.Type));
+                        //MethodInfo averageGenericMethod;
+                        //if (
+                        //    !ExpressionHelperMethods.QueryableAverageGenerics.TryGetValue(propertyLambda.Body.Type,
+                        //        out averageGenericMethod))
+                        //{
+                        //    throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForType,
+                        //        expression.Method, expression.Expression, propertyLambda.Body.Type));
+                        //}
+                        //var averageMethod = averageGenericMethod.MakeGenericMethod(this._elementType);
+                        //aggregationExpression = Expression.Call(null, averageMethod, asQuerableExpression, propertyLambda);
+
+                        var customMethodAnnotation = Model.GetAnnotationValue<CustomAggregationFunctionAnnotation>(Model);
+                        MethodInfo stdDevMethod;
+                        if (!customMethodAnnotation.Methods.TryGetValue(propertyLambda.Body.Type, out stdDevMethod))
+                        {
+                            throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForType,
+                                expression.Method, expression.Expression, propertyLambda.Body.Type));
+                        }
+                        var selectMethod =
+                            ExpressionHelperMethods.QueryableSelectGeneric.MakeGenericMethod(this._elementType,
+                                propertyLambda.Body.Type);
+                        var selectExpression = Expression.Call(null, selectMethod, asQuerableExpression, propertyLambda);
+                        aggregationExpression = Expression.Call(null, stdDevMethod, selectExpression);
                     }
-                    var averageMethod = averageGenericMethod.MakeGenericMethod(this._elementType);
-                    aggregationExpression = Expression.Call(null, averageMethod, asQuerableExpression, propertyLambda);
-                }
                     break;
                 case AggregationMethod.CountDistinct:
-                {
-                    // I select the specific field 
-                    var selectMethod =
-                        ExpressionHelperMethods.QueryableSelectGeneric.MakeGenericMethod(this._elementType,
-                            propertyLambda.Body.Type);
-                    Expression queryableSelectExpression = Expression.Call(null, selectMethod, asQuerableExpression,
-                        propertyLambda);
+                    {
+                        // I select the specific field 
+                        var selectMethod =
+                            ExpressionHelperMethods.QueryableSelectGeneric.MakeGenericMethod(this._elementType,
+                                propertyLambda.Body.Type);
+                        Expression queryableSelectExpression = Expression.Call(null, selectMethod, asQuerableExpression,
+                            propertyLambda);
 
-                    // I run distinct over the set of items
-                    var distinctMethod =
-                        ExpressionHelperMethods.QueryableDistinct.MakeGenericMethod(propertyLambda.Body.Type);
-                    Expression distinctExpression = Expression.Call(null, distinctMethod, queryableSelectExpression);
+                        // I run distinct over the set of items
+                        var distinctMethod =
+                            ExpressionHelperMethods.QueryableDistinct.MakeGenericMethod(propertyLambda.Body.Type);
+                        Expression distinctExpression = Expression.Call(null, distinctMethod, queryableSelectExpression);
 
-                    // I count the distinct items as the aggregation expression
-                    var countMethod =
-                        ExpressionHelperMethods.QueryableCountGeneric.MakeGenericMethod(propertyLambda.Body.Type);
-                    aggregationExpression = Expression.Call(null, countMethod, distinctExpression);
-                }
+                        // I count the distinct items as the aggregation expression
+                        var countMethod =
+                            ExpressionHelperMethods.QueryableCountGeneric.MakeGenericMethod(propertyLambda.Body.Type);
+                        aggregationExpression = Expression.Call(null, countMethod, distinctExpression);
+                    }
                     break;
                 default:
                     throw new ODataException(Error.Format(SRResources.AggregationMethodNotSupported, expression.Method));
@@ -379,7 +392,7 @@ namespace System.Web.OData.Query.Expressions
                 //                                      }) 
                 List<NamedPropertyExpression> properties = CreateGroupByMemberAssignments2(_groupingProperties);
 
-                
+
                 var wrapperProperty = typeof(GroupByWrapper).GetProperty("GroupByContainer");
                 List<MemberAssignment> wta = new List<MemberAssignment>();
                 wta.Add(Expression.Bind(wrapperProperty, AggregationPropertyContainer.CreateNextNamedPropertyContainer(properties)));
