@@ -33,6 +33,7 @@ namespace System.Web.OData.Query.Expressions
         private bool _linqToObjectMode = false;
         private IQueryable _baseQuery;
         private IDictionary<string, Expression> _flattenPropertyContainer;
+        private static readonly string _dictionaryStringObjectIndexerName = typeof(Dictionary<string, object>).GetDefaultMembers()[0].Name;
 
         internal AggregationBinder(ODataQuerySettings settings, IAssembliesResolver assembliesResolver, Type elementType,
             IEdmModel model, TransformationNode transformation)
@@ -298,7 +299,30 @@ namespace System.Web.OData.Query.Expressions
                     var openNode = node as SingleValueOpenPropertyAccessNode;
                     if (_flattenPropertyContainer == null)
                     {
-                        return Expression.Property(BindAccessor(openNode.Source), openNode.Name);
+                        PropertyInfo prop = GetDynamicPropertyContainer(openNode);
+                        var propertyAccessExpression = Expression.Property(BindAccessor(openNode.Source), prop.Name);
+                        var readDictionaryIndexerExpression = Expression.Property(propertyAccessExpression,
+                                       _dictionaryStringObjectIndexerName, Expression.Constant(openNode.Name));
+                        var containsKeyExpression = Expression.Call(propertyAccessExpression,
+                            propertyAccessExpression.Type.GetMethod("ContainsKey"), Expression.Constant(openNode.Name));
+                        var nullExpression = Expression.Constant(null);
+
+                        if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+                        {
+                            var dynamicDictIsNotNull = Expression.NotEqual(propertyAccessExpression, Expression.Constant(null));
+                            var dynamicDictIsNotNullAndContainsKey = Expression.AndAlso(dynamicDictIsNotNull, containsKeyExpression);
+                            return Expression.Condition(
+                                dynamicDictIsNotNullAndContainsKey,
+                                readDictionaryIndexerExpression,
+                                nullExpression);
+                        }
+                        else
+                        {
+                            return Expression.Condition(
+                                containsKeyExpression,
+                                readDictionaryIndexerExpression,
+                                nullExpression);
+                        }
                     }
                     else
                     {
@@ -321,6 +345,26 @@ namespace System.Web.OData.Query.Expressions
                     throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, node.Kind,
                         typeof(AggregationBinder).Name);
             }
+        }
+
+        private PropertyInfo GetDynamicPropertyContainer(SingleValueOpenPropertyAccessNode openNode)
+        {
+            IEdmStructuredType edmStructuredType;
+            var edmTypeReference = openNode.Source.TypeReference;
+            if (edmTypeReference.IsEntity())
+            {
+                edmStructuredType = edmTypeReference.AsEntity().EntityDefinition();
+            }
+            else if (edmTypeReference.IsComplex())
+            {
+                edmStructuredType = edmTypeReference.AsComplex().ComplexDefinition();
+            }
+            else
+            {
+                throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, openNode.Kind, typeof(FilterBinder).Name);
+            }
+            var prop = EdmLibHelpers.GetDynamicPropertyDictionary(edmStructuredType, Model);
+            return prop;
         }
 
         private Expression CreatePropertyAccessExpression(Expression source, IEdmProperty property, string propertyPath = null)
