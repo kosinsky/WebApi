@@ -266,30 +266,30 @@ namespace System.Web.OData.Query.Expressions
                     return CreatePropertyAccessExpression(BindAccessor(propAccessNode.Source), propAccessNode.Property);
                 case QueryNodeKind.SingleValueOpenPropertyAccess:
                     var openNode = node as SingleValueOpenPropertyAccessNode;
-                        PropertyInfo prop = GetDynamicPropertyContainer(openNode);
-                        var propertyAccessExpression = Expression.Property(BindAccessor(openNode.Source), prop.Name);
-                        var readDictionaryIndexerExpression = Expression.Property(propertyAccessExpression,
-                                       _dictionaryStringObjectIndexerName, Expression.Constant(openNode.Name));
-                        var containsKeyExpression = Expression.Call(propertyAccessExpression,
-                            propertyAccessExpression.Type.GetMethod("ContainsKey"), Expression.Constant(openNode.Name));
-                        var nullExpression = Expression.Constant(null);
+                    PropertyInfo prop = GetDynamicPropertyContainer(openNode);
+                    var propertyAccessExpression = Expression.Property(BindAccessor(openNode.Source), prop.Name);
+                    var readDictionaryIndexerExpression = Expression.Property(propertyAccessExpression,
+                                   _dictionaryStringObjectIndexerName, Expression.Constant(openNode.Name));
+                    var containsKeyExpression = Expression.Call(propertyAccessExpression,
+                        propertyAccessExpression.Type.GetMethod("ContainsKey"), Expression.Constant(openNode.Name));
+                    var nullExpression = Expression.Constant(null);
 
-                        if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
-                        {
-                            var dynamicDictIsNotNull = Expression.NotEqual(propertyAccessExpression, Expression.Constant(null));
-                            var dynamicDictIsNotNullAndContainsKey = Expression.AndAlso(dynamicDictIsNotNull, containsKeyExpression);
-                            return Expression.Condition(
-                                dynamicDictIsNotNullAndContainsKey,
-                                readDictionaryIndexerExpression,
-                                nullExpression);
-                        }
-                        else
-                        {
-                            return Expression.Condition(
-                                containsKeyExpression,
-                                readDictionaryIndexerExpression,
-                                nullExpression);
-                        }
+                    if (_querySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+                    {
+                        var dynamicDictIsNotNull = Expression.NotEqual(propertyAccessExpression, Expression.Constant(null));
+                        var dynamicDictIsNotNullAndContainsKey = Expression.AndAlso(dynamicDictIsNotNull, containsKeyExpression);
+                        return Expression.Condition(
+                            dynamicDictIsNotNullAndContainsKey,
+                            readDictionaryIndexerExpression,
+                            nullExpression);
+                    }
+                    else
+                    {
+                        return Expression.Condition(
+                            containsKeyExpression,
+                            readDictionaryIndexerExpression,
+                            nullExpression);
+                    }
                 case QueryNodeKind.SingleNavigationNode:
                     var navNode = node as SingleNavigationNode;
                     return CreatePropertyAccessExpression(BindAccessor(navNode.Source), navNode.NavigationProperty);
@@ -324,7 +324,7 @@ namespace System.Web.OData.Query.Expressions
             {
                 throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, openNode.Kind, typeof(FilterBinder).Name);
             }
-            var prop = EdmLibHelpers.GetDynamicPropertyDictionary(edmStructuredType, Model);
+            var prop = EdmLibHelpers.GetDynamicPropertyDictionary(edmStructuredType, _model);
             return prop;
         }
 
