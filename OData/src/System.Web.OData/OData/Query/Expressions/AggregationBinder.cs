@@ -379,7 +379,6 @@ namespace System.Web.OData.Query.Expressions
                 //                                      }) 
                 List<NamedPropertyExpression> properties = CreateGroupByMemberAssignments(_groupingProperties);
 
-                
                 var wrapperProperty = typeof(GroupByWrapper).GetProperty("GroupByContainer");
                 List<MemberAssignment> wta = new List<MemberAssignment>();
                 wta.Add(Expression.Bind(wrapperProperty, AggregationPropertyContainer.CreateNextNamedPropertyContainer(properties)));
@@ -398,18 +397,18 @@ namespace System.Web.OData.Query.Expressions
         private List<NamedPropertyExpression> CreateGroupByMemberAssignments(IEnumerable<GroupByPropertyNode> nodes)
         {
             var properties = new List<NamedPropertyExpression>();
-            foreach (var gProp in nodes)
+            foreach (var grpProp in nodes)
             {
-                var propertyName = gProp.Name;
-                if (gProp.Expression != null)
+                var propertyName = grpProp.Name;
+                if (grpProp.Expression != null)
                 {
-                    properties.Add(new NamedPropertyExpression(Expression.Constant(propertyName), WrapConvert(BindAccessor(gProp.Expression))));
+                    properties.Add(new NamedPropertyExpression(Expression.Constant(propertyName), WrapConvert(BindAccessor(grpProp.Expression))));
                 }
                 else
                 {
                     var wrapperProperty = typeof(GroupByWrapper).GetProperty("GroupByContainer");
                     List<MemberAssignment> wta = new List<MemberAssignment>();
-                    wta.Add(Expression.Bind(wrapperProperty, AggregationPropertyContainer.CreateNextNamedPropertyContainer(CreateGroupByMemberAssignments(gProp.ChildTransformations))));
+                    wta.Add(Expression.Bind(wrapperProperty, AggregationPropertyContainer.CreateNextNamedPropertyContainer(CreateGroupByMemberAssignments(grpProp.ChildTransformations))));
                     properties.Add(new NamedPropertyExpression(Expression.Constant(propertyName), Expression.MemberInit(Expression.New(typeof(GroupByWrapper)), wta)));
                 }
             }
@@ -504,7 +503,6 @@ namespace System.Web.OData.Query.Expressions
                     }
                 }
             }
-
 
             if (prefix != null)
             {

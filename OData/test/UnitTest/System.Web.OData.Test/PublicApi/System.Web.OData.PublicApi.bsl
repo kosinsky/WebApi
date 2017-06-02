@@ -3163,18 +3163,16 @@ public class System.Web.OData.Formatter.Serialization.SelectExpandNode {
 	public static void GetStructuralProperties (Microsoft.OData.Edm.IEdmStructuredType structuredType, System.Collections.Generic.HashSet`1[[Microsoft.OData.Edm.IEdmStructuralProperty]] structuralProperties, System.Collections.Generic.HashSet`1[[Microsoft.OData.Edm.IEdmStructuralProperty]] nestedStructuralProperties)
 }
 
-public abstract class System.Web.OData.Query.Expressions.ExpressionBinderBase {
-	protected ExpressionBinderBase (System.IServiceProvider requestContainer)
+public abstract class System.Web.OData.Query.Expressions.DynamicTypeWrapper {
+	protected DynamicTypeWrapper ()
+
+	System.Collections.Generic.Dictionary`2[[System.String],[System.Object]] Values  { public abstract get; }
+
+	public bool TryGetPropertyValue (string propertyName, out System.Object& value)
 }
 
-public class System.Web.OData.Query.Expressions.DynamicTypeWrapper {
-	public DynamicTypeWrapper ()
-
-	public virtual bool Equals (object obj)
-	public virtual int GetHashCode ()
-	public object GetPropertyValue (string propertyName)
-	public void SetPropertyValue (string propertyName, object value)
-	public bool TryGetPropertyValue (string propertyName, out System.Object& value)
+public abstract class System.Web.OData.Query.Expressions.ExpressionBinderBase {
+	protected ExpressionBinderBase (System.IServiceProvider requestContainer)
 }
 
 public class System.Web.OData.Query.Expressions.FilterBinder : ExpressionBinderBase {

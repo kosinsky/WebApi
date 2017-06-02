@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -7,7 +10,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.OData.Query;
 using System.Web.OData.Query.Expressions;
-using static System.Web.OData.Query.Expressions.PropertyContainer;
 
 namespace System.Web.OData.Query.Expressions
 {
@@ -43,7 +45,7 @@ namespace System.Web.OData.Query.Expressions
     /// However, EF doesn't allow to set different properties for the same type in two places in an lamba-expression => using new type with just new name to workaround that issue
     /// 
     /// </remakrs>
-    internal class AggregationPropertyContainer : NamedProperty<object>
+    internal class AggregationPropertyContainer : PropertyContainer.NamedProperty<object>
     {
         public GroupByWrapper NestedValue
         {
