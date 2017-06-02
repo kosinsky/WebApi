@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Linq;
@@ -11,7 +12,6 @@ using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
 using System.Web.OData.Query;
 using Microsoft.OData.Edm;
-using Microsoft.OData.Edm.Vocabularies;
 
 namespace System.Web.OData.Builder
 {
@@ -162,6 +162,48 @@ namespace System.Web.OData.Builder
             }
         }
 
+        private static IEdmTypeReference AddPrecisionConfigInPrimitiveTypeReference(
+            PrecisionPropertyConfiguration precisionProperty,
+            IEdmTypeReference primitiveTypeReference)
+        {
+            if (primitiveTypeReference is EdmTemporalTypeReference && precisionProperty.Precision.HasValue)
+            {
+                return new EdmTemporalTypeReference(
+                    (IEdmPrimitiveType)primitiveTypeReference.Definition,
+                    primitiveTypeReference.IsNullable,
+                    precisionProperty.Precision);
+            }
+            return primitiveTypeReference;
+        }
+
+        private static IEdmTypeReference AddLengthConfigInPrimitiveTypeReference(
+            LengthPropertyConfiguration lengthProperty,
+            IEdmTypeReference primitiveTypeReference)
+        {
+            if (lengthProperty.MaxLength.HasValue)
+            {
+                if (primitiveTypeReference is EdmStringTypeReference)
+                {
+                    return new EdmStringTypeReference(
+                        (IEdmPrimitiveType)primitiveTypeReference.Definition,
+                        primitiveTypeReference.IsNullable,
+                        false,
+                        lengthProperty.MaxLength,
+                        true);
+                }
+                if (primitiveTypeReference is EdmBinaryTypeReference)
+                {
+                    return new EdmBinaryTypeReference(
+                        (IEdmPrimitiveType)primitiveTypeReference.Definition,
+                        primitiveTypeReference.IsNullable,
+                        false,
+                        lengthProperty.MaxLength);
+                }
+            }
+            return primitiveTypeReference;
+        }
+
+        [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Class coupling acceptable")]
         private void CreateStructuralTypeBody(EdmStructuredType type, StructuralTypeConfiguration config)
         {
             foreach (PropertyConfiguration property in config.Properties)
@@ -178,6 +220,35 @@ namespace System.Web.OData.Builder
                             typeKind,
                             primitiveProperty.OptionalProperty);
 
+                        if (typeKind == EdmPrimitiveTypeKind.Decimal)
+                        {
+                            DecimalPropertyConfiguration decimalProperty =
+                                primitiveProperty as DecimalPropertyConfiguration;
+                            if (decimalProperty.Precision.HasValue || decimalProperty.Scale.HasValue)
+                            {
+                                primitiveTypeReference = new EdmDecimalTypeReference(
+                                    (IEdmPrimitiveType)primitiveTypeReference.Definition,
+                                    primitiveTypeReference.IsNullable,
+                                    decimalProperty.Precision,
+                                    decimalProperty.Scale.HasValue ? decimalProperty.Scale : 0);
+                            }
+                        }
+                        else if (EdmLibHelpers.HasPrecision(typeKind))
+                        {
+                            PrecisionPropertyConfiguration precisionProperty =
+                                primitiveProperty as PrecisionPropertyConfiguration;
+                            primitiveTypeReference = AddPrecisionConfigInPrimitiveTypeReference(
+                                precisionProperty,
+                                primitiveTypeReference);
+                        }
+                        else if (EdmLibHelpers.HasLength(typeKind))
+                        {
+                            LengthPropertyConfiguration lengthProperty =
+                                primitiveProperty as LengthPropertyConfiguration;
+                            primitiveTypeReference = AddLengthConfigInPrimitiveTypeReference(
+                                lengthProperty,
+                                primitiveTypeReference);
+                        }
                         edmProperty = type.AddStructuralProperty(
                             primitiveProperty.Name,
                             primitiveTypeReference,

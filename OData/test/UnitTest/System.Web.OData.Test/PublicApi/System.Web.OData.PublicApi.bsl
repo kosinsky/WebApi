@@ -162,6 +162,11 @@ public sealed class System.Web.OData.EdmTypeExtensions {
 	ExtensionAttribute(),
 	]
 	public static bool IsDeltaFeed (Microsoft.OData.Edm.IEdmType type)
+
+	[
+	ExtensionAttribute(),
+	]
+	public static bool IsDeltaResource (IEdmObject resource)
 }
 
 public sealed class System.Web.OData.ODataUriFunctions {
@@ -179,6 +184,13 @@ public class System.Web.OData.ClrTypeAnnotation {
 	public ClrTypeAnnotation (System.Type clrType)
 
 	System.Type ClrType  { public get; }
+}
+
+public class System.Web.OData.CustomAggregateMethodAnnotation {
+	public CustomAggregateMethodAnnotation ()
+
+	public CustomAggregateMethodAnnotation AddMethod (string methodToken, System.Collections.Generic.IDictionary`2[[System.Type],[System.Reflection.MethodInfo]] methods)
+	public bool GetMethodInfo (string methodToken, System.Type returnType, out System.Reflection.MethodInfo& methodInfo)
 }
 
 public class System.Web.OData.DefaultContainerBuilder : IContainerBuilder {
@@ -246,6 +258,15 @@ public class System.Web.OData.EdmComplexObjectCollection : System.Collections.Ob
 [
 NonValidatingParameterBindingAttribute(),
 ]
+public class System.Web.OData.EdmDeltaComplexObject : EdmComplexObject, IDynamicMetaObjectProvider, IDelta, IEdmComplexObject, IEdmObject, IEdmStructuredObject {
+	public EdmDeltaComplexObject (Microsoft.OData.Edm.IEdmComplexType edmType)
+	public EdmDeltaComplexObject (Microsoft.OData.Edm.IEdmComplexTypeReference edmType)
+	public EdmDeltaComplexObject (Microsoft.OData.Edm.IEdmComplexType edmType, bool isNullable)
+}
+
+[
+NonValidatingParameterBindingAttribute(),
+]
 public class System.Web.OData.EdmDeltaDeletedEntityObject : EdmEntityObject, IDynamicMetaObjectProvider, IDelta, IEdmChangedObject, IEdmDeltaDeletedEntityObject, IEdmEntityObject, IEdmObject, IEdmStructuredObject {
 	public EdmDeltaDeletedEntityObject (Microsoft.OData.Edm.IEdmEntityType entityType)
 	public EdmDeltaDeletedEntityObject (Microsoft.OData.Edm.IEdmEntityTypeReference entityTypeReference)
@@ -253,6 +274,7 @@ public class System.Web.OData.EdmDeltaDeletedEntityObject : EdmEntityObject, IDy
 
 	EdmDeltaEntityKind DeltaKind  { public virtual get; }
 	string Id  { public virtual get; public virtual set; }
+	Microsoft.OData.Edm.IEdmNavigationSource NavigationSource  { public get; public set; }
 	Microsoft.OData.DeltaDeletedEntryReason Reason  { public virtual get; public virtual set; }
 }
 
@@ -279,6 +301,7 @@ public class System.Web.OData.EdmDeltaEntityObject : EdmEntityObject, IDynamicMe
 	public EdmDeltaEntityObject (Microsoft.OData.Edm.IEdmEntityType entityType, bool isNullable)
 
 	EdmDeltaEntityKind DeltaKind  { public virtual get; }
+	Microsoft.OData.Edm.IEdmNavigationSource NavigationSource  { public get; public set; }
 }
 
 [
@@ -1096,8 +1119,16 @@ public abstract class System.Web.OData.Builder.StructuralTypeConfiguration`1 {
 	public StructuralTypeConfiguration`1 OrderBy (QueryOptionSetting setting, string[] properties)
 	public StructuralTypeConfiguration`1 Page ()
 	public StructuralTypeConfiguration`1 Page (System.Nullable`1[[System.Int32]] maxTopValue, System.Nullable`1[[System.Int32]] pageSizeValue)
-	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
-	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public LengthPropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public DecimalPropertyConfiguration Property (Expression`1 propertyExpression)
+	public DecimalPropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public LengthPropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
@@ -1278,6 +1309,12 @@ public class System.Web.OData.Builder.ComplexTypeConfiguration`1 : StructuralTyp
 	public ComplexTypeConfiguration`1 DerivesFromNothing ()
 }
 
+public class System.Web.OData.Builder.DecimalPropertyConfiguration : PrecisionPropertyConfiguration {
+	public DecimalPropertyConfiguration (System.Reflection.PropertyInfo property, StructuralTypeConfiguration declaringType)
+
+	System.Nullable`1[[System.Int32]] Scale  { public get; public set; }
+}
+
 public class System.Web.OData.Builder.DynamicPropertyDictionaryAnnotation {
 	public DynamicPropertyDictionaryAnnotation (System.Reflection.PropertyInfo propertyInfo)
 
@@ -1412,6 +1449,12 @@ public class System.Web.OData.Builder.FunctionConfiguration : OperationConfigura
 	public FunctionConfiguration SetBindingParameter (string name, IEdmTypeConfiguration bindingParameterType)
 }
 
+public class System.Web.OData.Builder.LengthPropertyConfiguration : PrimitivePropertyConfiguration {
+	public LengthPropertyConfiguration (System.Reflection.PropertyInfo property, StructuralTypeConfiguration declaringType)
+
+	System.Nullable`1[[System.Int32]] MaxLength  { public get; public set; }
+}
+
 public class System.Web.OData.Builder.LowerCamelCaser {
 	public LowerCamelCaser ()
 	public LowerCamelCaser (NameResolverOptions options)
@@ -1543,6 +1586,12 @@ public class System.Web.OData.Builder.OperationLinkBuilder {
 
 	public virtual System.Uri BuildLink (ResourceContext context)
 	public virtual System.Uri BuildLink (ResourceSetContext context)
+}
+
+public class System.Web.OData.Builder.PrecisionPropertyConfiguration : PrimitivePropertyConfiguration {
+	public PrecisionPropertyConfiguration (System.Reflection.PropertyInfo property, StructuralTypeConfiguration declaringType)
+
+	System.Nullable`1[[System.Int32]] Precision  { public get; public set; }
 }
 
 public class System.Web.OData.Builder.PrimitivePropertyConfiguration : StructuralPropertyConfiguration {
@@ -1919,6 +1968,7 @@ public sealed class System.Web.OData.Extensions.UrlHelperExtensions {
 
 public class System.Web.OData.Extensions.HttpRequestMessageProperties {
 	Microsoft.OData.UriParser.Aggregation.ApplyClause ApplyClause  { public get; public set; }
+	System.Uri DeltaLink  { public get; public set; }
 	System.Uri NextLink  { public get; public set; }
 	ODataPath Path  { public get; public set; }
 	string RouteName  { public get; public set; }
@@ -3148,6 +3198,7 @@ public class System.Web.OData.Formatter.Serialization.ODataServiceDocumentSerial
 
 public class System.Web.OData.Formatter.Serialization.SelectExpandNode {
 	public SelectExpandNode ()
+	public SelectExpandNode (SelectExpandNode selectExpandNodeToCopy)
 	public SelectExpandNode (Microsoft.OData.Edm.IEdmStructuredType structuredType, ODataSerializerContext writeContext)
 	public SelectExpandNode (Microsoft.OData.UriParser.SelectExpandClause selectExpandClause, Microsoft.OData.Edm.IEdmStructuredType structuredType, Microsoft.OData.Edm.IEdmModel model)
 

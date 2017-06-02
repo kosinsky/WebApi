@@ -579,7 +579,7 @@ namespace System.Web.OData.Query
             // Strategy: create a hash of all properties already used in the given OrderBy
             // and remove them from the list of properties we need to add to make the sort stable.
             Func<OrderByPropertyNode, string> propertyFunc = null;
-            if(applySortOptions != null)
+            if (applySortOptions != null)
             {
                 propertyFunc = node => node.PropertyPath;
             }
@@ -596,7 +596,7 @@ namespace System.Web.OData.Query
                 var propertyPathsToAdd = applySortOptions.Where(p => !usedPropertyNames.Contains(p)).OrderBy(p => p);
                 if (propertyPathsToAdd.Any())
                 {
-                    var orderByRaw = orderBy.RawValue + "," + string.Join(",", propertyPathsToAdd);
+                    var orderByRaw = orderBy.RawValue + "," + String.Join(",", propertyPathsToAdd);
                     orderBy = new OrderByQueryOption(orderByRaw, context, Apply.RawValue);
                 }
             }

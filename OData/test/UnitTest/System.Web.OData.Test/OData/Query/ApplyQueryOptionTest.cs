@@ -28,6 +28,13 @@ namespace System.Web.OData.Test.OData.Query
                 return new TheoryDataSet<string, List<Dictionary<string, object>>>
                 {
                     {
+                        "aggregate($count as Count)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Count", 5L} }
+                        }
+                    },
+                    {
                         "aggregate(CustomerId with sum as CustomerId)",
                         new List<Dictionary<string, object>>
                         {
@@ -85,6 +92,15 @@ namespace System.Web.OData.Test.OData.Query
                             new Dictionary<string, object> { { "Name", "Lowest"}, { "Total", 10} },
                             new Dictionary<string, object> { { "Name", "Highest"}, { "Total", 2} },
                             new Dictionary<string, object> { { "Name", "Middle"}, { "Total", 3 } }
+                        }
+                    },
+                    {
+                        "groupby((Name), aggregate($count as Count))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Name", "Lowest"}, { "Count", 3L} },
+                            new Dictionary<string, object> { { "Name", "Highest"}, { "Count", 1L} },
+                            new Dictionary<string, object> { { "Name", "Middle"}, { "Count", 1L} }
                         }
                     },
                     {
