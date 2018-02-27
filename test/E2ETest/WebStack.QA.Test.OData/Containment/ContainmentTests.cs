@@ -166,7 +166,7 @@ namespace WebStack.QA.Test.OData.Containment
             Assert.Equal(serviceRootUri + "/Accounts(300)", response.Headers.Location.OriginalString);
         }
 
-        [Theory]
+        [Theory(Skip = "VSTS: Don't use type casts")]
         [PropertyData("MediaTypes")]
         // To test it is able to expand the containment navigation properties(mutiplicity is optional and many) from the containing entity
         // GET ~/Accounts?$expand=PayinPIs,PayoutPI
