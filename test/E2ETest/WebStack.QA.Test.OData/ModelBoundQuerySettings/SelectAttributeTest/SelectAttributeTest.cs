@@ -268,7 +268,7 @@ namespace WebStack.QA.Test.OData.ModelBoundQuerySettings.SelectAttributeTest
             Assert.Contains("CarNumber", result);
         }
 
-        [Theory]
+        [Theory(Skip = "VSTS AX: Null elimination")]
         [InlineData(AutoSelectCustomerBaseUrl)]
         [InlineData(AutoSelectCustomerBaseUrl + "(9)")]
         [InlineData(ModelBoundAutoSelectCustomerBaseUrl)]

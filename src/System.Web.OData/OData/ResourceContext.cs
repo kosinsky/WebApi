@@ -11,6 +11,8 @@ using System.Web.OData.Formatter;
 using System.Web.OData.Formatter.Deserialization;
 using System.Web.OData.Formatter.Serialization;
 using System.Web.OData.Properties;
+using System.Web.OData.Query;
+using System.Web.OData.Query.Expressions;
 using Microsoft.OData.Edm;
 
 namespace System.Web.OData
@@ -116,8 +118,8 @@ namespace System.Web.OData
         /// </summary>
         public IEdmStructuredType StructuredType { get; set; }
 
-
         private IEdmStructuredObject edmObject;
+
         /// <summary>
         /// Gets or sets the <see cref="IEdmStructuredObject"/> backing this instance.
         /// </summary>
@@ -250,6 +252,12 @@ namespace System.Web.OData
             if (edmStructruredObject != null)
             {
                 return edmStructruredObject.Instance;
+            }
+
+            SelectExpandWrapper selectExpandWrapper = EdmObject as SelectExpandWrapper;
+            if (selectExpandWrapper != null && selectExpandWrapper.UntypedInstance != null)
+            {
+                return selectExpandWrapper.UntypedInstance;
             }
 
             Type clrType = EdmLibHelpers.GetClrType(StructuredType, EdmModel);

@@ -111,19 +111,16 @@ namespace System.Web.OData.Query
         }
 
         /// <summary>
-        /// Enables or disables postponing paging to allow a caller do it on his own
-        /// </summary>
-        public bool PostponePaging
-        {
-            get; set;
-        }
-
-        /// <summary>
         /// Honor $filter inside $expand of non-collection navigation property.
         /// The expanded property is only populated when the filter evaluates to true.
         /// This setting is false by default.
         /// </summary>
-        public bool HandleReferenceNavigationPropertyExpandFilter
+        public bool HandleReferenceNavigationPropertyExpandFilter { get; set; }
+
+        /// <summary>
+        /// Enables or disables postponing paging to allow a caller do it on his own
+        /// </summary>
+        public bool PostponePaging
         {
             get; set;
         }

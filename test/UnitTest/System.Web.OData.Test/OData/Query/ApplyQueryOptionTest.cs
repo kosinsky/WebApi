@@ -11,11 +11,12 @@ using System.Web.OData.Extensions;
 using System.Web.OData.Query;
 using System.Web.OData.Query.Expressions;
 using Microsoft.OData;
+using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.TestCommon;
 using Newtonsoft.Json.Linq;
+
 using Address = System.Web.OData.Builder.TestModels.Address;
-using Microsoft.OData.Edm;
 
 namespace System.Web.OData.Test.OData.Query
 {
@@ -295,6 +296,68 @@ namespace System.Web.OData.Test.OData.Query
                         new List<Dictionary<string, object>>
                         {
                             new Dictionary<string, object> { { "Website", null} },
+                        }
+                    },
+                    {
+                        "aggregate(IntProp with max as MaxIntProp)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "MaxIntProp", 2} }
+                        }
+                    },
+                    {
+                        "aggregate(IntProp with min as MinIntProp)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "MinIntProp", 1} }
+                        }
+                    },
+                    {
+                        "aggregate(IntProp with countdistinct as DistinctIntProp)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "DistinctIntProp", 3L} }
+                        }
+                    },
+                    {
+                        "aggregate(IntProp with sum as TotalIntProp)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "TotalIntProp", 3M} }
+                        }
+                    },
+                    {
+                        "aggregate(IntProp with average as TotalIntProp)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "TotalIntProp", 1.5M} }
+                        }
+                    },
+                    {
+                        "aggregate(MixedProp with sum as TotalMixedProp)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "TotalMixedProp", 1M} }
+                        }
+                    },
+                    {
+                        "groupby((StringProp), aggregate(IntProp with min as MinIntProp))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "StringProp", "Test1" }, { "MinIntProp", 1} },
+                            new Dictionary<string, object> { { "StringProp", "Test2" }, { "MinIntProp", 2} },
+                            new Dictionary<string, object> { { "StringProp", "Test3" }, { "MinIntProp", null} },
+                            new Dictionary<string, object> { { "StringProp", null }, { "MinIntProp", null} },
+                        }
+                    },
+                    {
+                        "groupby((StringProp), aggregate(IntProp with min as MinIntProp))/groupby((StringProp))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "StringProp", "Test1" } },
+                            new Dictionary<string, object> { { "StringProp", "Test2" } },
+                            new Dictionary<string, object> { { "StringProp", "Test3" } },
+                            new Dictionary<string, object> { { "StringProp", null } },
                         }
                     },
                 };
@@ -683,7 +746,8 @@ namespace System.Web.OData.Test.OData.Query
                     Name = "Lowest",
                     SharePrice = 10,
                     Address = new Address { City = "redmond", State = "WA" },
-                    StartDate =  new DateTimeOffset(new DateTime(2018,02,07, 1, 2, 3))
+                    DynamicProperties = new Dictionary<string, object> { { "StringProp", "Test1" }, { "IntProp", 1 }, { "MixedProp", 1 } },
+                    StartDate = new DateTimeOffset(new DateTime(2018,02,07, 1, 2, 3))
                 };
                 c.Orders = new List<Order>
                 {
@@ -699,6 +763,7 @@ namespace System.Web.OData.Test.OData.Query
                     SharePrice = 2.5M,
                     Address = new Address { City = "seattle", State = "WA" },
                     Aliases = new List<string> { "alias2", "alias2" },
+                    DynamicProperties = new Dictionary<string, object> { { "StringProp", "Test2" }, { "IntProp", 2 }, { "MixedProp", "String" } },
                     StartDate = new DateTimeOffset(new DateTime(2017, 03, 07, 5,6,7))
                 };
                 customerList.Add(c);
@@ -709,6 +774,7 @@ namespace System.Web.OData.Test.OData.Query
                     Name = "Middle",
                     Address = new Address { City = "hobart" },
                     Aliases = new List<string> { "alias2", "alias34", "alias31" },
+                    DynamicProperties = new Dictionary<string, object> { { "StringProp", "Test3" } },
                     StartDate = new DateTimeOffset(new DateTime(2018, 01, 01, 2, 3, 4))
                 };
                 customerList.Add(c);

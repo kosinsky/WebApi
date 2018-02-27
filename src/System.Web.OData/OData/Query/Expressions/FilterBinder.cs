@@ -28,12 +28,9 @@ namespace System.Web.OData.Query.Expressions
     {
         private const string ODataItParameterName = "$it";
 
-        private static readonly string _dictionaryStringObjectIndexerName = typeof(Dictionary<string, object>).GetDefaultMembers()[0].Name;
-
         private Stack<Dictionary<string, ParameterExpression>> _parametersStack = new Stack<Dictionary<string, ParameterExpression>>();
         private Dictionary<string, ParameterExpression> _lambdaParameters;
         private Type _filterType;
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FilterBinder"/> class.
@@ -148,6 +145,7 @@ namespace System.Web.OData.Query.Expressions
         /// <returns>The LINQ <see cref="Expression"/> created.</returns>
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
             Justification = "These are simple conversion function and cannot be split up.")]
+        [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Relies on many ODataLib classes.")]
         public override Expression Bind(QueryNode node)
         {
             // Recursion guard to avoid stack overflows
@@ -263,7 +261,7 @@ namespace System.Web.OData.Query.Expressions
 
             var propertyAccessExpression = BindPropertyAccessExpression(openNode, prop);
             var readDictionaryIndexerExpression = Expression.Property(propertyAccessExpression,
-                _dictionaryStringObjectIndexerName, Expression.Constant(openNode.Name));
+                DictionaryStringObjectIndexerName, Expression.Constant(openNode.Name));
             var containsKeyExpression = Expression.Call(propertyAccessExpression,
                 propertyAccessExpression.Type.GetMethod("ContainsKey"), Expression.Constant(openNode.Name));
             var nullExpression = Expression.Constant(null);
@@ -300,26 +298,6 @@ namespace System.Web.OData.Query.Expressions
                 propertyAccessExpression = Expression.Property(source, prop.Name);
             }
             return propertyAccessExpression;
-        }
-
-        private PropertyInfo GetDynamicPropertyContainer(SingleValueOpenPropertyAccessNode openNode)
-        {
-            IEdmStructuredType edmStructuredType;
-            var edmTypeReference = openNode.Source.TypeReference;
-            if (edmTypeReference.IsEntity())
-            {
-                edmStructuredType = edmTypeReference.AsEntity().EntityDefinition();
-            }
-            else if (edmTypeReference.IsComplex())
-            {
-                edmStructuredType = edmTypeReference.AsComplex().ComplexDefinition();
-            }
-            else
-            {
-                throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, openNode.Kind, typeof(FilterBinder).Name);
-            }
-            var prop = EdmLibHelpers.GetDynamicPropertyDictionary(edmStructuredType, Model);
-            return prop;
         }
 
         /// <summary>
@@ -531,6 +509,7 @@ namespace System.Web.OData.Query.Expressions
         /// <param name="rangeVariable"></param>
         /// <param name="elementType"></param>
         /// <returns></returns>
+        [SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters", Justification = "More specific type is more clear")]
         public LambdaExpression BindExpression(SingleValueNode expression, RangeVariable rangeVariable, Type elementType)
         {
             ParameterExpression filterParameter = Expression.Parameter(elementType, rangeVariable.Name);

@@ -16,13 +16,11 @@ using System.Web.OData.Properties;
 using System.Web.OData.Query;
 using System.Web.OData.Query.Expressions;
 using System.Xml.Linq;
-using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Vocabularies;
 using Microsoft.OData.Edm.Vocabularies.V1;
 using Microsoft.OData.UriParser;
 using Microsoft.Spatial;
-using System.Linq.Expressions;
 
 namespace System.Web.OData.Formatter
 {
@@ -699,7 +697,7 @@ namespace System.Web.OData.Formatter
                     propertyName = propertyInfo.Name;
                     if (annotation.PropertiesPath != null && annotation.PropertiesPath.Any())
                     {
-                        propertyName = string.Join("", annotation.PropertiesPath.Select(p => p.Name + "\\") ) + propertyName;
+                        propertyName = String.Join(String.Empty, annotation.PropertiesPath.Select(p => p.Name + "\\")) + propertyName;
                     }
                 }
             }
@@ -791,15 +789,15 @@ namespace System.Web.OData.Formatter
             Contract.Assert(navigationSource != null);
 
             // Ensure that concurrency properties cache is attached to model as an annotation to avoid expensive calculations each time
-            ConcurrentDictionary<IEdmNavigationSource, IEnumerable<IEdmStructuralProperty>> concurrencyProperties = model.GetAnnotationValue<ConcurrencyPropertiesAnnotation>(model);
+            ConcurrencyPropertiesAnnotation concurrencyProperties = model.GetAnnotationValue<ConcurrencyPropertiesAnnotation>(model);
             if (concurrencyProperties == null)
             {
-                concurrencyProperties = new ConcurrentDictionary<IEdmNavigationSource, IEnumerable<IEdmStructuralProperty>>();
+                concurrencyProperties = new ConcurrencyPropertiesAnnotation();
                 model.SetAnnotationValue(model, concurrencyProperties);
             }
 
             IEnumerable<IEdmStructuralProperty> cachedProperties;
-            if (concurrencyProperties != null && concurrencyProperties.TryGetValue(navigationSource, out cachedProperties))
+            if (concurrencyProperties.TryGetValue(navigationSource, out cachedProperties))
             {
                 return cachedProperties;
             }
@@ -836,15 +834,7 @@ namespace System.Web.OData.Formatter
                 }
             }
 
-            if (concurrencyProperties == null)
-            {
-                concurrencyProperties = new ConcurrentDictionary<IEdmNavigationSource, IEnumerable<IEdmStructuralProperty>>();
-            }
-
-            if (results.Any())
-            {
-                concurrencyProperties[navigationSource] = results;
-            }
+            concurrencyProperties[navigationSource] = results;
             return results;
         }
 

@@ -143,6 +143,10 @@
     <Compile Include="DateAndTimeOfDay\DateAndTimeOfDayTest.cs" />
     <Compile Include="DateAndTimeOfDay\DateAndTimeOfDayWithEfTest.cs" />
     <Compile Include="DateAndTimeOfDay\DateWithEfTest.cs" />
+    <Compile Include="DateTimeOffsetSupport\DateTimeOffsetController.cs" />
+    <Compile Include="DateTimeOffsetSupport\DateTimeOffsetDataModel.cs" />
+    <Compile Include="DateTimeOffsetSupport\DateTimeOffsetEdmModel.cs" />
+    <Compile Include="DateTimeOffsetSupport\DateTimeOffsetTest.cs" />
     <Compile Include="DeltaQueryTests\DeltaQueryTests.cs" />
     <Compile Include="DependencyInjection\CustomizeCountQueryValidatorTest.cs" />
     <Compile Include="DependencyInjection\CustomizeSerializerTest.cs" />
@@ -184,6 +188,10 @@
     <Compile Include="ODataCountTest\CountDataModel.cs" />
     <Compile Include="ODataCountTest\CountEdmModel.cs" />
     <Compile Include="ODataCountTest\CountTest.cs" />
+    <Compile Include="ODataOrderByTest\OrderByController.cs" />
+    <Compile Include="ODataOrderByTest\OrderByDataModel.cs" />
+    <Compile Include="ODataOrderByTest\OrderByEdmModel.cs" />
+    <Compile Include="ODataOrderByTest\OrderByTest.cs" />
     <Compile Include="ODataPathHandlerExtensions.cs" />
     <Compile Include="QueryComposition\EFWideCustomer.cs">
       <AutoGen>True</AutoGen>
@@ -461,7 +469,7 @@
     <Compile Include="Common\Models\NopCommerce\Domain\Customers\UserRegistrationType.cs">
       <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
     </Compile>
-    <Compile Include="Common\Models\NopCommerce\Domain\Directory\Country.cs">
+    <Compile Include="Common\Models\NopCommerce\Domain\Directory\CountryOrRegion.cs">
       <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
     </Compile>
     <Compile Include="Common\Models\NopCommerce\Domain\Directory\Currency.cs">
