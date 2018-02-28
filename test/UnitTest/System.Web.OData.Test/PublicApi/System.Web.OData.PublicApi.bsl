@@ -3214,7 +3214,7 @@ public abstract class System.Web.OData.Query.Expressions.DynamicTypeWrapper {
 
 	System.Collections.Generic.Dictionary`2[[System.String],[System.Object]] Values  { public abstract get; }
 
-	public bool TryGetPropertyValue (string propertyName, out System.Object& value)
+	public virtual bool TryGetPropertyValue (string propertyName, out System.Object& value)
 }
 
 public abstract class System.Web.OData.Query.Expressions.ExpressionBinderBase {

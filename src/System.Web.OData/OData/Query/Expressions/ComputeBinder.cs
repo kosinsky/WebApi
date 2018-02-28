@@ -1,20 +1,19 @@
-﻿using Microsoft.OData.Edm;
-using Microsoft.OData.UriParser.Aggregation;
+﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
+// Licensed under the MIT License.  See License.txt in the project root for license information.
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web.Http.Dispatcher;
-using System.Web.OData.Query;
-using System.Web.OData.Query.Expressions;
-using Microsoft.OData.UriParser;
-using System.Linq.Expressions;
 using System.Diagnostics.Contracts;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Web.OData.Formatter;
 using System.Web.Http;
+using System.Web.Http.Dispatcher;
+using System.Web.OData.Formatter;
 using System.Web.OData.Properties;
+using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
+using Microsoft.OData.UriParser.Aggregation;
 
 namespace System.Web.OData.Query.Expressions
 {
@@ -59,7 +58,7 @@ namespace System.Web.OData.Query.Expressions
             var properties = new List<NamedPropertyExpression>();
             foreach (var computeExpression in this._transformation.ComputeClause.ComputedItems)
             {
-                properties.Add(new NamedPropertyExpression(Expression.Constant(computeExpression.Alias), CreateComputeExpression(_lambdaParameter, computeExpression)));
+                properties.Add(new NamedPropertyExpression(Expression.Constant(computeExpression.Alias), CreateComputeExpression(computeExpression)));
             }
 
             wrapperProperty = ResultClrType.GetProperty("Container");
@@ -73,7 +72,7 @@ namespace System.Web.OData.Query.Expressions
             return result;
         }
 
-        private Expression CreateComputeExpression(ParameterExpression _lambdaParameter, ComputeExpression expression)
+        private Expression CreateComputeExpression(ComputeExpression expression)
         {
             Expression body = BindAccessor(expression.Expression);
             return WrapConvert(body);

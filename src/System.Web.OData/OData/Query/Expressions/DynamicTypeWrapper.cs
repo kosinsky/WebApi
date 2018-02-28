@@ -125,7 +125,6 @@ namespace System.Web.OData.Query.Expressions
     {
         public T Instance { get; set; }
 
-
         private bool _merged;
         protected override void EnsureValues()
         {
@@ -143,14 +142,14 @@ namespace System.Web.OData.Query.Expressions
 
         public override bool TryGetPropertyValue(string propertyName, out object value)
         {
-            if(base.TryGetPropertyValue(propertyName, out value))
+            if (base.TryGetPropertyValue(propertyName, out value))
             {
                 return true;
             }
 
-            if (this.Instance != null )
+            if (this.Instance != null)
             {
-
+                // TODO: Support that case
             }
 
             return false;
