@@ -106,6 +106,7 @@
     <Compile Include="OData\ODataQueryContextExtensions.cs" />
     <Compile Include="OData\Query\CountAttribute.cs" />
     <Compile Include="OData\Query\Expressions\AggregationPropertyContainer.cs" />
+    <Compile Include="OData\Query\Expressions\ComputeBinder.cs" />
     <Compile Include="OData\Query\Expressions\DynamicTypeWrapperConverter.cs" />
     <Compile Include="OData\Query\Expressions\SelectExpandWrapperOfT.cs" />
     <Compile Include="OData\Query\Expressions\PropertyContainer.generated.cs">

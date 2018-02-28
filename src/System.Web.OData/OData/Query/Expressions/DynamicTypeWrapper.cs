@@ -26,7 +26,7 @@ namespace System.Web.OData.Query.Expressions
         /// <param name="value">The new value of the Property</param>
         /// <returns>True if successful</returns>
         [SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate", Justification = "Generics not appropriate here")]
-        public bool TryGetPropertyValue(string propertyName, out object value)
+        public virtual bool TryGetPropertyValue(string propertyName, out object value)
         {
             return this.Values.TryGetValue(propertyName, out value);
         }
@@ -35,7 +35,7 @@ namespace System.Web.OData.Query.Expressions
     [JsonConverter(typeof(DynamicTypeWrapperConverter))]
     internal class GroupByWrapper : DynamicTypeWrapper
     {
-        private Dictionary<string, object> _values;
+        protected Dictionary<string, object> _values;
         protected static readonly IPropertyMapper DefaultPropertyMapper = new IdentityPropertyMapper();
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace System.Web.OData.Query.Expressions
             return (int)hash;
         }
 
-        private void EnsureValues()
+        protected virtual void EnsureValues()
         {
             if (_values == null)
             {
@@ -119,5 +119,41 @@ namespace System.Web.OData.Query.Expressions
 
     internal class NoGroupByAggregationWrapper : GroupByWrapper
     {
+    }
+
+    internal class ComputeWrapper<T> : GroupByWrapper
+    {
+        public T Instance { get; set; }
+
+
+        private bool _merged;
+        protected override void EnsureValues()
+        {
+            base.EnsureValues();
+            if (!this._merged)
+            {
+                var instanceContainer = this.Instance as DynamicTypeWrapper;
+                if (instanceContainer != null)
+                {
+                    _values = _values.Concat(instanceContainer.Values).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                }
+                this._merged = true;
+            }
+        }
+
+        public override bool TryGetPropertyValue(string propertyName, out object value)
+        {
+            if(base.TryGetPropertyValue(propertyName, out value))
+            {
+                return true;
+            }
+
+            if (this.Instance != null )
+            {
+
+            }
+
+            return false;
+        }
     }
 }

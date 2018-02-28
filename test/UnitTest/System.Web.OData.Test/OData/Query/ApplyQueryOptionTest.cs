@@ -360,6 +360,22 @@ namespace System.Web.OData.Test.OData.Query
                             new Dictionary<string, object> { { "StringProp", null } },
                         }
                     },
+                    {
+                        "aggregate($count as Count)/compute(Count add Count as DoubleCount)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Count", 5L}, { "DoubleCount", 10L } }
+                        }
+                    },
+                    {
+                        "groupby((Name), aggregate(CustomerId with sum as Total))/compute(Total add Total as DoubleTotal, length(Name) as NameLen)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Name", "Lowest"},  { "Total", 10}, { "DoubleTotal", 20}, { "NameLen", 6},},
+                            new Dictionary<string, object> { { "Name", "Highest"}, { "Total", 2} , { "DoubleTotal", 4} , { "NameLen", 7} ,},
+                            new Dictionary<string, object> { { "Name", "Middle"},  { "Total", 3 }, { "DoubleTotal", 6 }, { "NameLen", 6 }, }
+                        }
+                    },
                 };
             }
         }
@@ -732,6 +748,7 @@ namespace System.Web.OData.Test.OData.Query
                 };
             }
         }
+
 
         // Test data used by CustomerTestApplies TheoryDataSet
         public static List<Customer> CustomerApplyTestData

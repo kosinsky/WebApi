@@ -136,11 +136,6 @@ namespace System.Web.OData.Query.Expressions
             get; private set;
         }
 
-        public IEdmTypeReference ResultType
-        {
-            get; private set;
-        }
-
         public IQueryable Bind(IQueryable query)
         {
             Contract.Assert(query != null);
