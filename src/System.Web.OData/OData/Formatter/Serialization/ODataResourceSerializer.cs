@@ -231,7 +231,7 @@ namespace System.Web.OData.Formatter.Serialization
         }
 
         private static IEnumerable<ODataProperty> CreateODataPropertiesFromDynamicType(EdmEntityType entityType, object graph,
-            Dictionary<IEdmProperty, object> dynamicTypeProperties)
+            Dictionary<IEdmProperty, object> dynamicTypeProperties, ODataSerializerContext writeContext)
         {
             Contract.Assert(dynamicTypeProperties != null);
 
@@ -239,6 +239,11 @@ namespace System.Web.OData.Formatter.Serialization
             var dynamicObject = graph as DynamicTypeWrapper;
             if (dynamicObject != null)
             {
+                var computeObject = dynamicObject as IEdmStructuredObject;
+                if (computeObject != null)
+                {
+                    computeObject.SetModel(writeContext.Model);
+                }
                 foreach (var prop in dynamicObject.Values)
                 {
                     if (prop.Value != null && EdmLibHelpers.IsDynamicTypeWrapper(prop.Value.GetType()))
@@ -274,7 +279,7 @@ namespace System.Web.OData.Formatter.Serialization
             var resource = new ODataResource()
             {
                 TypeName = expectedType.FullName(),
-                Properties = CreateODataPropertiesFromDynamicType(entityType, graph, dynamicTypeProperties)
+                Properties = CreateODataPropertiesFromDynamicType(entityType, graph, dynamicTypeProperties, writeContext)
             };
 
             resource.IsTransient = true;

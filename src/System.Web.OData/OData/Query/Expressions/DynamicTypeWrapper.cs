@@ -4,7 +4,11 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Web.OData.Formatter;
+using System.Web.OData.Formatter.Serialization;
+using Microsoft.OData.Edm;
 using Newtonsoft.Json;
+
 [module: SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:FileMayOnlyContainASingleClass", Justification = "Extra needed to workaorund EF issue with expression shape.")]
 
 namespace System.Web.OData.Query.Expressions
@@ -121,9 +125,11 @@ namespace System.Web.OData.Query.Expressions
     {
     }
 
-    internal class ComputeWrapper<T> : GroupByWrapper
+    internal class ComputeWrapper<T> : GroupByWrapper, IEdmEntityObject
     {
         public T Instance { get; set; }
+
+        public IEdmModel Model { get; set; }
 
         private bool _merged;
         protected override void EnsureValues()
@@ -136,23 +142,60 @@ namespace System.Web.OData.Query.Expressions
                 {
                     _values = _values.Concat(instanceContainer.Values).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                 }
+                else
+                {
+                    var edmType = GetEdmType() as IEdmEntityTypeReference;
+                    _typedEdmEntityObject = _typedEdmEntityObject ??
+                        new TypedEdmEntityObject(Instance, edmType, GetModel());
+
+                    var props = edmType.DeclaredStructuralProperties().Where(p => p.Type.IsPrimitive()).Select(p => p.Name);
+                    foreach (var propertyName in props)
+                    {
+                        object value;
+                        if (_typedEdmEntityObject.TryGetPropertyValue(propertyName, out value))
+                        {
+                            _values.Add(propertyName, value);
+                        }
+                    }
+                }
                 this._merged = true;
             }
         }
+        private TypedEdmEntityObject _typedEdmEntityObject;
 
-        public override bool TryGetPropertyValue(string propertyName, out object value)
+        private IEdmModel GetModel()
         {
-            if (base.TryGetPropertyValue(propertyName, out value))
-            {
-                return true;
-            }
-
-            if (this.Instance != null)
-            {
-                // TODO: Support that case
-            }
-
-            return false;
+            return this.Model;
         }
+
+        /// <inheritdoc/>
+        public void SetModel(IEdmModel model)
+        {
+            this.Model = model;
+        }
+
+        public IEdmTypeReference GetEdmType()
+        {
+            IEdmModel model = GetModel();
+            return model.GetEdmTypeReference(typeof(T));
+        }
+
+        //public override bool TryGetPropertyValue(string propertyName, out object value)
+        //{
+        //    if (base.TryGetPropertyValue(propertyName, out value))
+        //    {
+        //        return true;
+        //    }
+
+        //    if (this.Instance != null)
+        //    {
+        //        _typedEdmEntityObject = _typedEdmEntityObject ??
+        //            new TypedEdmEntityObject(Instance, GetEdmType() as IEdmEntityTypeReference, GetModel());
+
+        //        return _typedEdmEntityObject.TryGetPropertyValue(propertyName, out value);
+        //    }
+
+        //    return false;
+        //}
     }
 }

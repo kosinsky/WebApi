@@ -376,6 +376,17 @@ namespace System.Web.OData.Test.OData.Query
                             new Dictionary<string, object> { { "Name", "Middle"},  { "Total", 3 }, { "DoubleTotal", 6 }, { "NameLen", 6 }, }
                         }
                     },
+                    {
+                        "compute(length(Name) as NameLen)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 1},},
+                            new Dictionary<string, object> { { "Name", "Highest"},  { "NameLen", 7}, { "CustomerId", 2},},
+                            new Dictionary<string, object> { { "Name", "Middle" },  { "NameLen", 6}, { "CustomerId", 3},},
+                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 4},},
+                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 5},},
+                        }
+                    },
                 };
             }
         }
@@ -861,6 +872,10 @@ namespace System.Web.OData.Test.OData.Query
             var actualCustomers = Assert.IsAssignableFrom<IEnumerable<DynamicTypeWrapper>>(queryable).ToList();
 
             Assert.Equal(aggregation.Count(), actualCustomers.Count());
+            foreach (var customer in actualCustomers.OfType<ComputeWrapper<Customer>>())
+            {
+                customer.Model = context.Model;
+            }
 
             var aggEnum = actualCustomers.GetEnumerator();
 

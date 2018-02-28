@@ -550,5 +550,41 @@ namespace WebStack.QA.Test.OData.Aggregation
             Assert.Equal("Customer1", results[2]["Name"].ToString());
         }
 
+        [Fact]
+        public void ComputeWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=compute(length(Name) as NameLen)",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var results = result["value"] as JArray;
+            Assert.Equal(10, results.Count);
+            foreach(var customer in results)
+            {
+                Assert.NotNull(customer["Id"]);
+                var name = customer["Name"]?.ToString();
+                if (name == null)
+                {
+                    Assert.Null(customer["NameLen"]);
+                }
+                else
+                {
+                    Assert.Equal(name.Length.ToString(), customer["NameLen"].ToString());
+                }
+            }
+        }
     }
 }
