@@ -377,6 +377,17 @@ namespace System.Web.OData.Test.OData.Query
                         }
                     },
                     {
+                        "compute(length(Name) as NameLen)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 1},},
+                            new Dictionary<string, object> { { "Name", "Highest"},  { "NameLen", 7}, { "CustomerId", 2},},
+                            new Dictionary<string, object> { { "Name", "Middle" },  { "NameLen", 6}, { "CustomerId", 3},},
+                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 4},},
+                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 5},},
+                        }
+                    },
+                    {
                         "compute(length(Name) as NameLen)/aggregate(NameLen with sum as TotalLen)",
                         new List<Dictionary<string, object>>
                         {
