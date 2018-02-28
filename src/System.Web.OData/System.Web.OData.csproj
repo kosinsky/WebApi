@@ -114,6 +114,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>PropertyContainer.generated.tt</DependentUpon>
     </Compile>
+    <Compile Include="OData\Query\Expressions\TransformationBinderBase.cs" />
     <Compile Include="OData\Query\SelectAttribute.cs" />
     <Compile Include="OData\Query\ExpandConfiguration.cs" />
     <Compile Include="OData\Query\QueryOptionSetting.cs" />
