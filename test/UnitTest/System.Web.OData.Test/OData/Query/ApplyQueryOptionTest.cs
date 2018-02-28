@@ -377,16 +377,37 @@ namespace System.Web.OData.Test.OData.Query
                         }
                     },
                     {
-                        "compute(length(Name) as NameLen)",
+                        "compute(length(Name) as NameLen)/aggregate(NameLen with sum as TotalLen)",
                         new List<Dictionary<string, object>>
                         {
-                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 1},},
-                            new Dictionary<string, object> { { "Name", "Highest"},  { "NameLen", 7}, { "CustomerId", 2},},
-                            new Dictionary<string, object> { { "Name", "Middle" },  { "NameLen", 6}, { "CustomerId", 3},},
-                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 4},},
-                            new Dictionary<string, object> { { "Name", "Lowest" },  { "NameLen", 6}, { "CustomerId", 5},},
+                            new Dictionary<string, object> { { "TotalLen", 31} }
                         }
                     },
+                    {
+                        "compute(length(Name) as NameLen)/aggregate(NameLen add CustomerId with sum as TotalLen)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "TotalLen", 46} }
+                        }
+                    },
+                    {
+                        "compute(length(Name) as NameLen)/groupby((Name),aggregate( CustomerId with sum as Total, NameLen with max as MaxNameLen))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Name", "Lowest"},  { "Total", 10},  { "MaxNameLen", 6},},
+                            new Dictionary<string, object> { { "Name", "Highest"}, { "Total", 2} ,  { "MaxNameLen", 7} ,},
+                            new Dictionary<string, object> { { "Name", "Middle"},  { "Total", 3 },  { "MaxNameLen", 6 }, }
+                        }
+                    },
+                    {
+                        "compute(length(Name) as NameLen)/groupby((NameLen),aggregate( CustomerId with sum as Total))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Total", 13},  { "NameLen", 6},},
+                            new Dictionary<string, object> { { "Total", 2} ,  { "NameLen", 7} ,},
+                        }
+                    },
+
                 };
             }
         }

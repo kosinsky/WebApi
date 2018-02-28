@@ -72,6 +72,8 @@ namespace System.Web.OData.Query.Expressions
         /// </summary>
         internal IDictionary<string, Expression> FlattenedPropertyContainer;
 
+        internal bool InstancePropertyContainer;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ExpressionBinderBase"/> class.
         /// </summary>
@@ -590,6 +592,11 @@ namespace System.Web.OData.Query.Expressions
             if (this.BaseQuery != null)
             {
                 this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? this.GetFlattenedProperties(source);
+                if (this.FlattenedPropertyContainer != null)
+                {
+                    this.InstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType 
+                        && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
+                }
             }
         }
 
@@ -632,6 +639,10 @@ namespace System.Web.OData.Query.Expressions
 
         private static MemberInitExpression ExtractContainerExpression(MethodCallExpression expression, string containerName)
         {
+            if (expression == null || expression.Arguments.Count < 2)
+            {
+                return null;
+            }
             var memberInitExpression = ((expression.Arguments[1] as UnaryExpression).Operand as LambdaExpression).Body as MemberInitExpression;
             if (memberInitExpression != null)
             {
@@ -726,6 +737,10 @@ namespace System.Web.OData.Query.Expressions
                 return expression;
             }
 
+            if (this.InstancePropertyContainer)
+            {
+                return null;
+            }
             throw new ODataException(Error.Format(SRResources.PropertyOrPathWasRemovedFromContext, propertyPath));
         }
 

@@ -132,7 +132,8 @@ namespace System.Web.OData.Query.Expressions
             }
             else
             {
-                return GetFlattenedPropertyExpression(propertyPath) ?? ConvertNonStandardPrimitives(ExpressionBinderBase.GetPropertyExpression(source, propertyName));
+                return GetFlattenedPropertyExpression(propertyPath) 
+                    ?? ConvertNonStandardPrimitives(ExpressionBinderBase.GetPropertyExpression(source, (this.InstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName));
             }
         }
 
