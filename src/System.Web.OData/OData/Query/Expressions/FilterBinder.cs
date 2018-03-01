@@ -712,9 +712,12 @@ namespace System.Web.OData.Query.Expressions
         /// Get $it parameter
         /// </summary>
         /// <returns></returns>
-        protected override ParameterExpression GetParameter()
+        protected override ParameterExpression ItParameter
         {
-            return this._lambdaParameters[ODataItParameterName];
+            get
+            {
+                return this._lambdaParameters[ODataItParameterName];
+            }
         }
 
         private ParameterExpression HandleLambdaParameters(IEnumerable<RangeVariable> rangeVariables)

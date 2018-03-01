@@ -64,9 +64,12 @@ namespace System.Web.OData.Query.Expressions
             throw new ArgumentException("Only SigleValueNode supported", "node");
         }
 
-        protected override ParameterExpression GetParameter()
+        protected override ParameterExpression ItParameter
         {
-            return this._lambdaParameter;
+            get
+            {
+                return this._lambdaParameter;
+            }
         }
 
         protected Expression BindAccessor(SingleValueNode node)

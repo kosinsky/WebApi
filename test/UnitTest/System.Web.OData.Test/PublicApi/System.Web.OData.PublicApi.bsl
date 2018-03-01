@@ -3220,6 +3220,8 @@ public abstract class System.Web.OData.Query.Expressions.DynamicTypeWrapper {
 public abstract class System.Web.OData.Query.Expressions.ExpressionBinderBase {
 	protected ExpressionBinderBase (System.IServiceProvider requestContainer)
 
+	System.Linq.Expressions.ParameterExpression ItParameter  { protected abstract get; }
+
 	public abstract System.Linq.Expressions.Expression Bind (Microsoft.OData.UriParser.QueryNode node)
 	protected System.Linq.Expressions.Expression[] BindArguments (System.Collections.Generic.IEnumerable`1[[Microsoft.OData.UriParser.QueryNode]] nodes)
 	public virtual System.Linq.Expressions.Expression BindConstantNode (Microsoft.OData.UriParser.ConstantNode constantNode)
@@ -3227,11 +3229,12 @@ public abstract class System.Web.OData.Query.Expressions.ExpressionBinderBase {
 	protected void EnsureFlattenedPropertyContainer (System.Linq.Expressions.ParameterExpression source)
 	protected System.Reflection.PropertyInfo GetDynamicPropertyContainer (Microsoft.OData.UriParser.SingleValueOpenPropertyAccessNode openNode)
 	protected System.Linq.Expressions.Expression GetFlattenedPropertyExpression (string propertyPath)
-	protected abstract System.Linq.Expressions.ParameterExpression GetParameter ()
 }
 
 public class System.Web.OData.Query.Expressions.FilterBinder : ExpressionBinderBase {
 	public FilterBinder (System.IServiceProvider requestContainer)
+
+	System.Linq.Expressions.ParameterExpression ItParameter  { protected virtual get; }
 
 	public virtual System.Linq.Expressions.Expression Bind (Microsoft.OData.UriParser.QueryNode node)
 	public virtual System.Linq.Expressions.Expression BindAllNode (Microsoft.OData.UriParser.AllNode allNode)
@@ -3250,7 +3253,6 @@ public class System.Web.OData.Query.Expressions.FilterBinder : ExpressionBinderB
 	public virtual System.Linq.Expressions.Expression BindSingleResourceCastNode (Microsoft.OData.UriParser.SingleResourceCastNode node)
 	public virtual System.Linq.Expressions.Expression BindSingleResourceFunctionCallNode (Microsoft.OData.UriParser.SingleResourceFunctionCallNode node)
 	public virtual System.Linq.Expressions.Expression BindUnaryOperatorNode (Microsoft.OData.UriParser.UnaryOperatorNode unaryOperatorNode)
-	protected virtual System.Linq.Expressions.ParameterExpression GetParameter ()
 }
 
 public class System.Web.OData.Query.Validators.CountQueryValidator {

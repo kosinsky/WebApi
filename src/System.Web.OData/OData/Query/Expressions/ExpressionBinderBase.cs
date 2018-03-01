@@ -1060,7 +1060,7 @@ namespace System.Web.OData.Query.Expressions
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, Model);
             propertyPath = propertyPath ?? propertyName;
             if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) &&
-                source != this.GetParameter())
+                source != this.ItParameter)
             {
                 Expression cleanSource = RemoveInnerNullPropagation(source);
                 Expression propertyAccessExpression = null;
@@ -1108,8 +1108,7 @@ namespace System.Web.OData.Query.Expressions
         /// Gets $it parameter
         /// </summary>
         /// <returns></returns>
-        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Meant to be abstract.")]
-        protected abstract ParameterExpression GetParameter();
+        protected abstract ParameterExpression ItParameter { get; }
 
         /// <summary>
         /// Binds a <see cref="ConstantNode"/> to create a LINQ <see cref="Expression"/> that
@@ -1255,7 +1254,7 @@ namespace System.Web.OData.Query.Expressions
             Expression[] arguments = BindArguments(node.Parameters);
             Contract.Assert(arguments.Length == 1 || arguments.Length == 2);
 
-            Expression source = arguments.Length == 1 ? this.GetParameter() : arguments[0];
+            Expression source = arguments.Length == 1 ? this.ItParameter : arguments[0];
             string targetTypeName = (string)((ConstantNode)node.Parameters.Last()).Value;
             IEdmType targetEdmType = Model.FindType(targetTypeName);
             Type targetClrType = null;
@@ -1397,7 +1396,7 @@ namespace System.Web.OData.Query.Expressions
             // Edm.Boolean isof(expression,type)
             Contract.Assert(arguments.Length == 1 || arguments.Length == 2);
 
-            Expression source = arguments.Length == 1 ? this.GetParameter() : arguments[0];
+            Expression source = arguments.Length == 1 ? this.ItParameter : arguments[0];
             if (source == NullConstant)
             {
                 return FalseConstant;
