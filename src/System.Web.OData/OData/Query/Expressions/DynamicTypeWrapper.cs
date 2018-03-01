@@ -30,7 +30,7 @@ namespace System.Web.OData.Query.Expressions
         /// <param name="value">The new value of the Property</param>
         /// <returns>True if successful</returns>
         [SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate", Justification = "Generics not appropriate here")]
-        public virtual bool TryGetPropertyValue(string propertyName, out object value)
+        public bool TryGetPropertyValue(string propertyName, out object value)
         {
             return this.Values.TryGetValue(propertyName, out value);
         }
@@ -179,23 +179,5 @@ namespace System.Web.OData.Query.Expressions
             IEdmModel model = GetModel();
             return model.GetEdmTypeReference(typeof(T));
         }
-
-        //public override bool TryGetPropertyValue(string propertyName, out object value)
-        //{
-        //    if (base.TryGetPropertyValue(propertyName, out value))
-        //    {
-        //        return true;
-        //    }
-
-        //    if (this.Instance != null)
-        //    {
-        //        _typedEdmEntityObject = _typedEdmEntityObject ??
-        //            new TypedEdmEntityObject(Instance, GetEdmType() as IEdmEntityTypeReference, GetModel());
-
-        //        return _typedEdmEntityObject.TryGetPropertyValue(propertyName, out value);
-        //    }
-
-        //    return false;
-        //}
     }
 }
