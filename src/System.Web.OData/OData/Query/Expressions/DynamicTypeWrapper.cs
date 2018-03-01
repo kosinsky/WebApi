@@ -137,13 +137,18 @@ namespace System.Web.OData.Query.Expressions
             base.EnsureValues();
             if (!this._merged)
             {
+                // Base properties availbale via Instance can be real OData properties or generated in previous transformations
+
                 var instanceContainer = this.Instance as DynamicTypeWrapper;
                 if (instanceContainer != null)
                 {
+                    // Add proeprties generated in previous transformations to the collection
                     _values = _values.Concat(instanceContainer.Values).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                 }
                 else
                 {
+                    // Add real OData properties to the collection
+                    // We need to use injected Model to real proeprty names
                     var edmType = GetEdmType() as IEdmEntityTypeReference;
                     _typedEdmEntityObject = _typedEdmEntityObject ??
                         new TypedEdmEntityObject(Instance, edmType, GetModel());
@@ -163,6 +168,7 @@ namespace System.Web.OData.Query.Expressions
         }
         private TypedEdmEntityObject _typedEdmEntityObject;
 
+        #region "Model injection as defined in IEdmEntityObject"
         private IEdmModel GetModel()
         {
             return this.Model;
@@ -179,5 +185,6 @@ namespace System.Web.OData.Query.Expressions
             IEdmModel model = GetModel();
             return model.GetEdmTypeReference(typeof(T));
         }
+        #endregion
     }
 }

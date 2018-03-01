@@ -37,19 +37,31 @@ namespace System.Web.OData.Query.Expressions
         public IQueryable Bind(IQueryable query)
         {
             PreprocessQuery(query);
+            // compute(X add Y as Z, A mul B as C) adds new properties to the output
+            // Should return following expression
+            // .Select($it => new ComputeWrapper<T> {
+            //      Instance = $it,
+            //      Container => new AggregationPropertyContainer() {
+            //          Name = "X", 
+            //          Value = $it.X + $it.Y, 
+            //          Next = new LastInChain() {
+            //              Name = "C",
+            //              Value = $it.A * $it.B
+            //      }
+            // })
 
             List<MemberAssignment> wrapperTypeMemberAssignments = new List<MemberAssignment>();
 
+            // Set Instance property
             var wrapperProperty = this.ResultClrType.GetProperty("Instance");
-
             wrapperTypeMemberAssignments.Add(Expression.Bind(wrapperProperty, this._lambdaParameter));
-
             var properties = new List<NamedPropertyExpression>();
             foreach (var computeExpression in this._transformation.ComputeClause.ComputedItems)
             {
                 properties.Add(new NamedPropertyExpression(Expression.Constant(computeExpression.Alias), CreateComputeExpression(computeExpression)));
             }
 
+            // Set new compute properties
             wrapperProperty = ResultClrType.GetProperty("Container");
             wrapperTypeMemberAssignments.Add(Expression.Bind(wrapperProperty, AggregationPropertyContainer.CreateNextNamedPropertyContainer(properties)));
 
