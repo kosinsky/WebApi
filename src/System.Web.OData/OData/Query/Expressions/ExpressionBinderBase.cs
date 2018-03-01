@@ -72,7 +72,7 @@ namespace System.Web.OData.Query.Expressions
         /// </summary>
         internal IDictionary<string, Expression> FlattenedPropertyContainer;
 
-        internal bool InstancePropertyContainer;
+        internal bool HasInstancePropertyContainer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExpressionBinderBase"/> class.
@@ -591,12 +591,10 @@ namespace System.Web.OData.Query.Expressions
         {
             if (this.BaseQuery != null)
             {
+                this.HasInstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType
+                    && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
+
                 this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? this.GetFlattenedProperties(source);
-                if (this.FlattenedPropertyContainer != null)
-                {
-                    this.InstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType 
-                        && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
-                }
             }
         }
 
@@ -631,10 +629,24 @@ namespace System.Web.OData.Query.Expressions
             }
 
             var result = new Dictionary<string, Expression>();
-            CollectAssigments(result, Expression.Property(source, "GroupByContainer"), ExtractContainerExpression(expression.Arguments.FirstOrDefault() as MethodCallExpression, "GroupByContainer"));
-            CollectAssigments(result, Expression.Property(source, "Container"), ExtractContainerExpression(expression, "Container"));
+            CollectContainerAssugments(source, expression, result);
+            if (this.HasInstancePropertyContainer)
+            {
+                var instanceProperty = Expression.Property(source, "Instance");
+                if (typeof(DynamicTypeWrapper).IsAssignableFrom(instanceProperty.Type))
+                {
+                    var computeExpression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
+                    CollectContainerAssugments(instanceProperty, computeExpression, result);
+                }
+            }
 
             return result;
+        }
+
+        private static void CollectContainerAssugments(Expression source, MethodCallExpression expression, Dictionary<string, Expression> result)
+        {
+            CollectAssigments(result, Expression.Property(source, "GroupByContainer"), ExtractContainerExpression(expression.Arguments.FirstOrDefault() as MethodCallExpression, "GroupByContainer"));
+            CollectAssigments(result, Expression.Property(source, "Container"), ExtractContainerExpression(expression, "Container"));
         }
 
         private static MemberInitExpression ExtractContainerExpression(MethodCallExpression expression, string containerName)
@@ -737,7 +749,7 @@ namespace System.Web.OData.Query.Expressions
                 return expression;
             }
 
-            if (this.InstancePropertyContainer)
+            if (this.HasInstancePropertyContainer)
             {
                 return null;
             }
@@ -1029,6 +1041,34 @@ namespace System.Web.OData.Query.Expressions
             else
             {
                 return expression;
+            }
+        }
+
+        internal Expression CreatePropertyAccessExpression(Expression source, IEdmProperty property, string propertyPath = null)
+        {
+            string propertyName = EdmLibHelpers.GetClrPropertyName(property, Model);
+            propertyPath = propertyPath ?? propertyName;
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) &&
+                source != this.GetParameter())
+            {
+                Expression cleanSource = RemoveInnerNullPropagation(source);
+                Expression propertyAccessExpression = null;
+                propertyAccessExpression = GetFlattenedPropertyExpression(propertyPath) ?? Expression.Property(cleanSource, propertyName);
+
+                // source.property => source == null ? null : [CastToNullable]RemoveInnerNullPropagation(source).property
+                // Notice that we are checking if source is null already. so we can safely remove any null checks when doing source.Property
+
+                Expression ifFalse = ToNullable(ConvertNonStandardPrimitives(propertyAccessExpression));
+                return
+                    Expression.Condition(
+                        test: Expression.Equal(source, NullConstant),
+                        ifTrue: Expression.Constant(null, ifFalse.Type),
+                        ifFalse: ifFalse);
+            }
+            else
+            {
+                return GetFlattenedPropertyExpression(propertyPath)
+                    ?? ConvertNonStandardPrimitives(ExpressionBinderBase.GetPropertyExpression(source, (this.HasInstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName));
             }
         }
 
