@@ -618,10 +618,7 @@ namespace System.Web.OData.Query.Expressions
 
             // After $apply we could have other clauses, like $filter, $orderby etc.
             // Skip of filter expressions
-            while (expression.Method.Name == "Where")
-            {
-                expression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
-            }
+            expression = SkipFilters(expression);
 
             if (expression == null)
             {
@@ -636,11 +633,25 @@ namespace System.Web.OData.Query.Expressions
                 if (typeof(DynamicTypeWrapper).IsAssignableFrom(instanceProperty.Type))
                 {
                     var computeExpression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
-                    CollectContainerAssugments(instanceProperty, computeExpression, result);
+                    computeExpression = SkipFilters(computeExpression);
+                    if (computeExpression != null)
+                    {
+                        CollectContainerAssugments(instanceProperty, computeExpression, result);
+                    }
                 }
             }
 
             return result;
+        }
+
+        private static MethodCallExpression SkipFilters(MethodCallExpression expression)
+        {
+            while (expression.Method.Name == "Where")
+            {
+                expression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
+            }
+
+            return expression;
         }
 
         private static void CollectContainerAssugments(Expression source, MethodCallExpression expression, Dictionary<string, Expression> result)
