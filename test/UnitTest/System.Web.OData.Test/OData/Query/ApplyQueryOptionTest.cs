@@ -561,9 +561,16 @@ namespace System.Web.OData.Test.OData.Query
                         "$apply=groupby((Name), aggregate(CustomerId with sum as Total))/compute(Total mul 2 as NewTotal)&$orderby=Name, NewTotal",
                         new List<Dictionary<string, object>>
                         {
-                            new Dictionary<string, object> {{"Name", "Highest"}},
-                            new Dictionary<string, object> {{"Name", "Lowest"}},
-                            new Dictionary<string, object> {{"Name", "Middle"}},
+                            new Dictionary<string, object> {{"Name", "Highest"}, {"Total", 2},  {"NewTotal", 4}, },
+                            new Dictionary<string, object> {{"Name", "Lowest"},  {"Total", 10}, {"NewTotal", 20},},
+                            new Dictionary<string, object> {{"Name", "Middle"},  {"Total", 3},  {"NewTotal", 6}, },
+                        }
+                    },
+                    {
+                        "$apply=groupby((Name), aggregate(CustomerId with sum as Total))/compute(Total mul 2 as NewTotal)/filter(NewTotal gt 6)&$orderby=Name, NewTotal",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> {{"Name", "Lowest"},  {"Total", 10}, {"NewTotal", 20},},
                         }
                     },
                     //{
