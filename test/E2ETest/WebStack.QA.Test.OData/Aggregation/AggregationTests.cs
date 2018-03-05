@@ -69,8 +69,6 @@ namespace WebStack.QA.Test.OData.Aggregation
             Assert.Equal("Customer1", results[2]["Name"].ToString());
         }
 
-
-
         [Fact]
         public void GroupByNavigationPropertyWorks()
         {
@@ -98,6 +96,39 @@ namespace WebStack.QA.Test.OData.Aggregation
             Assert.Equal("Order0", order0["Name"].ToString());
             Assert.Equal("Order1", order1["Name"].ToString());
         }
+
+        [Fact]
+        public void GroupByNavigationPropertyWithComputeWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=groupby((Order/Name), aggregate(Id with sum as TotalId))/compute(TotalId add TotalId as DoubleId)&$orderby=Order/Name",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var results = result["value"] as JArray;
+            Assert.Equal(2, results.Count);
+            Assert.Equal("30", results[0]["TotalId"].ToString());
+            Assert.Equal("25", results[1]["TotalId"].ToString());
+            Assert.Equal("60", results[0]["DoubleId"].ToString());
+            Assert.Equal("50", results[1]["DoubleId"].ToString());
+            var order0 = results[0]["Order"] as JObject;
+            var order1 = results[1]["Order"] as JObject;
+            Assert.Equal("Order0", order0["Name"].ToString());
+            Assert.Equal("Order1", order1["Name"].ToString());
+        }
+
 
         [Fact]
         public void GroupByComplexPropertyWorks()
@@ -483,6 +514,141 @@ namespace WebStack.QA.Test.OData.Aggregation
             var results = result["value"] as JArray;
             Assert.Equal(1, results.Count);
             Assert.Equal(expectedResult, results[0]["Result"].ToString());
+        }
+
+        [Fact]
+        public void ComputeAfterAggregateWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl +
+                    "?$apply=aggregate(cast(Order/Price, Edm.Decimal) with sum as TotalAmount)"
+                    +"/compute(TotalAmount mul 2 as DoubleAmount)",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var results = result["value"] as JArray;
+            Assert.Equal(1, results.Count);
+            Assert.Equal("4500", results[0]["TotalAmount"].ToString());
+            Assert.Equal("9000", results[0]["DoubleAmount"].ToString());
+        }
+
+        [Fact]
+        public void ComputeAfterGroupByWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=groupby((Name), aggregate(Order/Price with sum as TotalAmount))"
+                    + "/compute(TotalAmount mul 2 as DoubleAmount, length(Name) as NameLen)",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var results = result["value"] as JArray;
+            Assert.Equal(3, results.Count);
+            Assert.Equal("0", results[0]["TotalAmount"].ToString());
+            Assert.Equal("0", results[0]["DoubleAmount"].ToString());
+            Assert.Equal(null, results[0]["NameLen"]);
+            Assert.Equal(null, results[0]["Name"]);
+            Assert.Equal("2000", results[1]["TotalAmount"].ToString());
+            Assert.Equal("4000", results[1]["DoubleAmount"].ToString());
+            Assert.Equal("9", results[1]["NameLen"].ToString());
+            Assert.Equal("Customer0", results[1]["Name"].ToString());
+            Assert.Equal("2500", results[2]["TotalAmount"].ToString());
+            Assert.Equal("5000", results[2]["DoubleAmount"].ToString());
+            Assert.Equal("9", results[2]["NameLen"].ToString());
+            Assert.Equal("Customer1", results[2]["Name"].ToString());
+        }
+
+        [Fact]
+        public void ComputeBeforeGroupByWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=compute(length(Name) as NameLen)/groupby((Name), aggregate(Order/Price with sum as TotalAmount, NameLen with max as NameLen))",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var results = result["value"] as JArray;
+            Assert.Equal(3, results.Count);
+            Assert.Equal("0", results[0]["TotalAmount"].ToString());
+            Assert.Equal(null, results[0]["NameLen"]);
+            Assert.Equal(null, results[0]["Name"]);
+            Assert.Equal("2000", results[1]["TotalAmount"].ToString());
+            Assert.Equal("9", results[1]["NameLen"].ToString());
+            Assert.Equal("Customer0", results[1]["Name"].ToString());
+            Assert.Equal("2500", results[2]["TotalAmount"].ToString());
+            Assert.Equal("9", results[2]["NameLen"].ToString());
+            Assert.Equal("Customer1", results[2]["Name"].ToString());
+        }
+
+        [Fact]
+        public void ComputeWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=compute(length(Name) as NameLen)",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var results = result["value"] as JArray;
+            Assert.Equal(10, results.Count);
+            foreach(var customer in results)
+            {
+                Assert.NotNull(customer["Id"]);
+                var name = customer["Name"]?.ToString();
+                if (name == null)
+                {
+                    Assert.Null(customer["NameLen"]);
+                }
+                else
+                {
+                    Assert.Equal(name.Length.ToString(), customer["NameLen"].ToString());
+                }
+            }
         }
     }
 }

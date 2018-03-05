@@ -18,32 +18,23 @@ using Microsoft.OData.UriParser.Aggregation;
 
 namespace System.Web.OData.Query.Expressions
 {
-    internal class AggregationBinder : ExpressionBinderBase
+    internal class AggregationBinder : TransformationBinderBase
     {
         private const string GroupByContainerProperty = "GroupByContainer";
-        private Type _elementType;
         private TransformationNode _transformation;
-
-        private ParameterExpression _lambdaParameter;
 
         private IEnumerable<AggregateExpression> _aggregateExpressions;
         private IEnumerable<GroupByPropertyNode> _groupingProperties;
 
         private Type _groupByClrType;
 
-        private bool _linqToObjectMode = false;
-
         internal AggregationBinder(ODataQuerySettings settings, IAssembliesResolver assembliesResolver, Type elementType,
             IEdmModel model, TransformationNode transformation)
-            : base(model, assembliesResolver, settings)
+            : base(settings, assembliesResolver, elementType, model)
         {
-            Contract.Assert(elementType != null);
             Contract.Assert(transformation != null);
 
-            _elementType = elementType;
             _transformation = transformation;
-
-            this._lambdaParameter = Expression.Parameter(this._elementType, "$it");
 
             switch (transformation.Kind)
             {
@@ -128,26 +119,9 @@ namespace System.Web.OData.Query.Expressions
             return customMethod;
         }
 
-        /// <summary>
-        /// Gets CLR type returned from the query.
-        /// </summary>
-        public Type ResultClrType
-        {
-            get; private set;
-        }
-
-        public IEdmTypeReference ResultType
-        {
-            get; private set;
-        }
-
         public IQueryable Bind(IQueryable query)
         {
-            Contract.Assert(query != null);
-
-            this._linqToObjectMode = query.Provider.GetType().Namespace == HandleNullPropagationOptionHelper.Linq2ObjectsQueryProviderNamespace;
-            this.BaseQuery = query;
-            EnsureFlattenedPropertyContainer(this._lambdaParameter);
+            PreprocessQuery(query);
 
             query = FlattenReferencedProperties(query);
 
@@ -446,134 +420,6 @@ namespace System.Web.OData.Query.Expressions
             }
 
             return WrapConvert(aggregationExpression);
-        }
-
-        private Expression WrapConvert(Expression expression)
-        {
-            return this._linqToObjectMode
-                ? Expression.Convert(expression, typeof(object))
-                : expression;
-        }
-
-        public override Expression Bind(QueryNode node)
-        {
-            SingleValueNode singleValueNode = node as SingleValueNode;
-            if (node != null)
-            {
-                return BindAccessor(singleValueNode);
-            }
-
-            throw new ArgumentException("Only SigleValueNode supported", "node");
-        }
-
-        protected override ParameterExpression GetParameter()
-        {
-            return this._lambdaParameter;
-        }
-
-        private Expression BindAccessor(SingleValueNode node)
-        {
-            switch (node.Kind)
-            {
-                case QueryNodeKind.ResourceRangeVariableReference:
-                    return this._lambdaParameter.Type.IsGenericType && this._lambdaParameter.Type.GetGenericTypeDefinition() == typeof(FlatteningWrapper<>)
-                        ? (Expression)Expression.Property(this._lambdaParameter, "Source")
-                        : this._lambdaParameter;
-                case QueryNodeKind.SingleValuePropertyAccess:
-                    var propAccessNode = node as SingleValuePropertyAccessNode;
-                    return CreatePropertyAccessExpression(BindAccessor(propAccessNode.Source), propAccessNode.Property, GetFullPropertyPath(propAccessNode));
-                case QueryNodeKind.SingleComplexNode:
-                    var singleComplexNode = node as SingleComplexNode;
-                    return CreatePropertyAccessExpression(BindAccessor(singleComplexNode.Source), singleComplexNode.Property, GetFullPropertyPath(singleComplexNode));
-                case QueryNodeKind.SingleValueOpenPropertyAccess:
-                    var openNode = node as SingleValueOpenPropertyAccessNode;
-                    return GetFlattenedPropertyExpression(openNode.Name) ?? CreateOpenPropertyAccessExpression(openNode);
-                case QueryNodeKind.None:
-                case QueryNodeKind.SingleNavigationNode:
-                    var navNode = (SingleNavigationNode)node;
-                    return CreatePropertyAccessExpression(BindAccessor(navNode.Source), navNode.NavigationProperty);
-                case QueryNodeKind.BinaryOperator:
-                    var binaryNode = (BinaryOperatorNode)node;
-                    var leftExpression = BindAccessor(binaryNode.Left);
-                    var rightExpression = BindAccessor(binaryNode.Right);
-                    return CreateBinaryExpression(binaryNode.OperatorKind, leftExpression, rightExpression,
-                        liftToNull: true);
-                case QueryNodeKind.Convert:
-                    var convertNode = (ConvertNode)node;
-                    return CreateConvertExpression(convertNode, BindAccessor(convertNode.Source));
-                case QueryNodeKind.SingleValueFunctionCall:
-                    return BindSingleValueFunctionCallNode(node as SingleValueFunctionCallNode);
-                case QueryNodeKind.Constant:
-                    return BindConstantNode(node as ConstantNode);
-                default:
-                    throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, node.Kind,
-                        typeof(AggregationBinder).Name);
-            }
-        }
-
-        private Expression CreatePropertyAccessExpression(Expression source, IEdmProperty property, string propertyPath = null)
-        {
-            string propertyName = EdmLibHelpers.GetClrPropertyName(property, Model);
-            propertyPath = propertyPath ?? propertyName;
-            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) &&
-                source != this._lambdaParameter)
-            {
-                Expression cleanSource = RemoveInnerNullPropagation(source);
-                Expression propertyAccessExpression = null;
-                propertyAccessExpression = GetFlattenedPropertyExpression(propertyPath) ?? Expression.Property(cleanSource, propertyName);
-
-                // source.property => source == null ? null : [CastToNullable]RemoveInnerNullPropagation(source).property
-                // Notice that we are checking if source is null already. so we can safely remove any null checks when doing source.Property
-
-                Expression ifFalse = ToNullable(ConvertNonStandardPrimitives(propertyAccessExpression));
-                return
-                    Expression.Condition(
-                        test: Expression.Equal(source, NullConstant),
-                        ifTrue: Expression.Constant(null, ifFalse.Type),
-                        ifFalse: ifFalse);
-            }
-            else
-            {
-                return GetFlattenedPropertyExpression(propertyPath) ?? ConvertNonStandardPrimitives(ExpressionBinderBase.GetPropertyExpression(source, propertyName));
-            }
-        }
-
-        private Expression CreateOpenPropertyAccessExpression(SingleValueOpenPropertyAccessNode openNode)
-        {
-            Expression sourceAccessor = BindAccessor(openNode.Source);
-
-            // First check that property exists in source
-            // It's the case when we are apply transformation based on earlier transformation
-            if (sourceAccessor.Type.GetProperty(openNode.Name) != null)
-            {
-                return Expression.Property(sourceAccessor, openNode.Name);
-            }
-
-            // Property doesn't exists go for dynamic properties dictionary
-            PropertyInfo prop = GetDynamicPropertyContainer(openNode);
-            MemberExpression propertyAccessExpression = Expression.Property(sourceAccessor, prop.Name);
-            IndexExpression readDictionaryIndexerExpression = Expression.Property(propertyAccessExpression,
-                            DictionaryStringObjectIndexerName, Expression.Constant(openNode.Name));
-            MethodCallExpression containsKeyExpression = Expression.Call(propertyAccessExpression,
-                propertyAccessExpression.Type.GetMethod("ContainsKey"), Expression.Constant(openNode.Name));
-            ConstantExpression nullExpression = Expression.Constant(null);
-
-            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
-            {
-                var dynamicDictIsNotNull = Expression.NotEqual(propertyAccessExpression, Expression.Constant(null));
-                var dynamicDictIsNotNullAndContainsKey = Expression.AndAlso(dynamicDictIsNotNull, containsKeyExpression);
-                return Expression.Condition(
-                    dynamicDictIsNotNullAndContainsKey,
-                    readDictionaryIndexerExpression,
-                    nullExpression);
-            }
-            else
-            {
-                return Expression.Condition(
-                    containsKeyExpression,
-                    readDictionaryIndexerExpression,
-                    nullExpression);
-            }
         }
 
         private IQueryable BindGroupBy(IQueryable query)
