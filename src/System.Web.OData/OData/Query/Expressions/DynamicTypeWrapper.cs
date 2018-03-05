@@ -102,7 +102,7 @@ namespace System.Web.OData.Query.Expressions
 
                 if (this.Container != null)
                 {
-                    _values = _values.Concat(this.Container.ToDictionary(DefaultPropertyMapper)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    _values.MergeWithReplace(this.Container.ToDictionary(DefaultPropertyMapper));
                 }
             }
         }
@@ -143,7 +143,7 @@ namespace System.Web.OData.Query.Expressions
                 if (instanceContainer != null)
                 {
                     // Add proeprties generated in previous transformations to the collection
-                    _values = _values.Concat(instanceContainer.Values).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    _values.MergeWithReplace(instanceContainer.Values);
                 }
                 else
                 {
@@ -159,7 +159,7 @@ namespace System.Web.OData.Query.Expressions
                         object value;
                         if (_typedEdmEntityObject.TryGetPropertyValue(propertyName, out value))
                         {
-                            _values.Add(propertyName, value);
+                            _values[propertyName] = value;
                         }
                     }
                 }
