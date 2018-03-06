@@ -1254,14 +1254,16 @@ namespace System.Web.OData.Query.Expressions
 
             Expression[] arguments = BindArguments(node.Parameters);
 
-            IEnumerable<Expression> functionCallArguments = arguments;
             if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
             {
                 // we don't have to check if the argument is null inside the function call as we do it already
                 // before calling the function. So remove the redundant null checks.
-                functionCallArguments = arguments.Select(a => RemoveInnerNullPropagation(a));
+                for (int i = 0; i < arguments.Length; i++)
+                {
+                    arguments[i] = RemoveInnerNullPropagation(arguments[i]);
+                }
             }
-            arguments = functionCallArguments.ToArray();
+
             if (arguments[0].Type != typeof(bool))
             {
                 throw new ODataException(Error.Format(SRResources.FunctionNotSupportedOnEnum, node.Name));
