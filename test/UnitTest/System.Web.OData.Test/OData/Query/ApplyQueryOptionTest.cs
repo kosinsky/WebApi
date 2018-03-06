@@ -426,6 +426,15 @@ namespace System.Web.OData.Test.OData.Query
                             new Dictionary<string, object> { { "MaxCity", "hobart"}, { "MinCity", "hobart" }, { "Address/State", null}, {"MaxCityLen", 6 } },
                         }
                     },
+                    {
+                        "groupby((Address/State), aggregate(Address/City with max as MaxCity, Address/City with min as MinCity))/compute(iif(length(MaxCity) gt 6, 'Long', 'Short') as MaxCityLen)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "MaxCity", "seattle"}, { "MinCity", "redmond"}, { "Address/State", "WA"}, {"MaxCityLen", "Long" } },
+                            new Dictionary<string, object> { { "MaxCity", "hobart"}, { "MinCity", "hobart" }, { "Address/State", null}, {"MaxCityLen", "Short" } },
+                        }
+                    },
+
                 };
             }
         }

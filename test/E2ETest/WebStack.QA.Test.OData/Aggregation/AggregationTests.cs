@@ -545,6 +545,34 @@ namespace WebStack.QA.Test.OData.Aggregation
         }
 
         [Fact]
+        public void ComputeWithIifWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl +
+                    "?$apply=aggregate(cast(Order/Price, Edm.Decimal) with sum as TotalAmount)"
+                    + "/compute(iif(TotalAmount gt 4500, 'Big', 'Small') as AmountName)",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var results = result["value"] as JArray;
+            Assert.Equal(1, results.Count);
+            Assert.Equal("4500", results[0]["TotalAmount"].ToString());
+            Assert.Equal("Small", results[0]["AmountName"].ToString());
+        }
+
+        [Fact]
         public void ComputeAfterGroupByWorks()
         {
             // Arrange

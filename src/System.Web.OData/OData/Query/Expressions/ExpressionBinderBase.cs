@@ -1234,7 +1234,8 @@ namespace System.Web.OData.Query.Expressions
 
                 case ClrCanonicalFunctions.NowFunctionName:
                     return BindNow(node);
-
+                case "iif":
+                    return BindIif(node);
                 default:
                     // Get Expression of custom binded method.
                     Expression expression = BindCustomMethodExpressionOrNull(node);
@@ -1245,6 +1246,31 @@ namespace System.Web.OData.Query.Expressions
 
                     throw new NotImplementedException(Error.Format(SRResources.ODataFunctionNotSupported, node.Name));
             }
+        }
+
+        private Expression BindIif(SingleValueFunctionCallNode node)
+        {
+            Contract.Assert("iif" == node.Name);
+
+            Expression[] arguments = BindArguments(node.Parameters);
+
+            IEnumerable<Expression> functionCallArguments = arguments;
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+            {
+                // we don't have to check if the argument is null inside the function call as we do it already
+                // before calling the function. So remove the redundant null checks.
+                functionCallArguments = arguments.Select(a => RemoveInnerNullPropagation(a));
+            }
+            arguments = functionCallArguments.ToArray();
+            if (arguments[0].Type != typeof(bool))
+            {
+                throw new ODataException(Error.Format(SRResources.FunctionNotSupportedOnEnum, node.Name));
+            }
+            
+            return Expression.Condition(
+                    test: arguments[0],
+                    ifTrue: arguments[1],
+                    ifFalse: arguments[2]);
         }
 
         private Expression BindCastSingleValue(SingleValueFunctionCallNode node)
