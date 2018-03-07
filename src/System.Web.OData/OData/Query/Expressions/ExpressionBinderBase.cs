@@ -1234,8 +1234,10 @@ namespace System.Web.OData.Query.Expressions
 
                 case ClrCanonicalFunctions.NowFunctionName:
                     return BindNow(node);
-                case "iif":
+
+                case ClrCanonicalFunctions.IifFunctionName:
                     return BindIif(node);
+
                 default:
                     // Get Expression of custom binded method.
                     Expression expression = BindCustomMethodExpressionOrNull(node);
@@ -1250,7 +1252,7 @@ namespace System.Web.OData.Query.Expressions
 
         private Expression BindIif(SingleValueFunctionCallNode node)
         {
-            Contract.Assert("iif" == node.Name);
+            Contract.Assert(ClrCanonicalFunctions.IifFunctionName == node.Name);
 
             Expression[] arguments = BindArguments(node.Parameters);
 
@@ -1264,15 +1266,39 @@ namespace System.Web.OData.Query.Expressions
                 }
             }
 
-            if (arguments[0].Type != typeof(bool))
+            Contract.Assert(arguments.Length == 3 && arguments[0].Type == typeof(bool));
+            if (arguments[1] == NullConstant && arguments[2] == NullConstant)
             {
-                throw new ODataException(Error.Format(SRResources.FunctionNotSupportedOnEnum, node.Name));
+                return NullConstant;
             }
-            
-            return Expression.Condition(
-                    test: arguments[0],
-                    ifTrue: arguments[1],
-                    ifFalse: arguments[2]);
+            Expression ifTrue = NormalizeNullConstant(arguments[1], arguments[2]);
+            Expression ifFalse = NormalizeNullConstant(arguments[2], arguments[1]);
+
+            // Second and Thirds argument types should match except nullability (enforced by ODL parser)
+            // if one type if nullable => promote second type to nullable two
+            Contract.Assert(TypeHelper.GetUnderlyingTypeOrSelf(ifTrue.Type) == TypeHelper.GetUnderlyingTypeOrSelf(ifFalse.Type));
+            if (ifTrue.Type != ifFalse.Type)
+            {
+                if (ifTrue.Type.IsNullable())
+                {
+                    ifFalse = ToNullable(ifFalse);
+                }
+                else
+                {
+                    ifTrue = ToNullable(ifTrue);
+                }
+            }
+            return Expression.Condition(arguments[0], ifTrue, ifFalse);
+        }
+
+        private static Expression NormalizeNullConstant(Expression first, Expression second)
+        {
+            if (first != NullConstant)
+            {
+                return first;
+            }
+
+            return Expression.Constant(null, second.Type.ToNullable());
         }
 
         private Expression BindCastSingleValue(SingleValueFunctionCallNode node)
