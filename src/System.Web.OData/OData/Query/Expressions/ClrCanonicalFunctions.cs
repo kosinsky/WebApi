@@ -43,6 +43,7 @@ namespace System.Web.OData.Query.Expressions
         internal const string DateFunctionName = "date";
         internal const string TimeFunctionName = "time";
         internal const string NowFunctionName = "now";
+        internal const string IifFunctionName = "iif";
 
         // string functions
         public static readonly MethodInfo StartsWith = MethodOf(_ => _defaultString.StartsWith(default(string)));
