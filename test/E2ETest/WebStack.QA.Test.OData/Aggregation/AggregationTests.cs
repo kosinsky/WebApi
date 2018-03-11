@@ -129,6 +129,39 @@ namespace WebStack.QA.Test.OData.Aggregation
             Assert.Equal("Order1", order1["Name"].ToString());
         }
 
+        [Fact]
+        public void SortingByComputedPropertyWorks()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=groupby((Order/Name), aggregate(Id with sum as TotalId))/compute(TotalId add TotalId as DoubleId)"
+                    + "&$filter=DoubleId gt 0"
+                    + "&$orderby=DoubleId desc, TotalId",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+
+            var result = response.Content.ReadAsAsync<JObject>().Result;
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var results = result["value"] as JArray;
+            Assert.Equal(2, results.Count);
+            Assert.Equal("30", results[0]["TotalId"].ToString());
+            Assert.Equal("25", results[1]["TotalId"].ToString());
+            Assert.Equal("60", results[0]["DoubleId"].ToString());
+            Assert.Equal("50", results[1]["DoubleId"].ToString());
+            var order0 = results[0]["Order"] as JObject;
+            var order1 = results[1]["Order"] as JObject;
+            Assert.Equal("Order0", order0["Name"].ToString());
+            Assert.Equal("Order1", order1["Name"].ToString());
+        }
 
         [Fact]
         public void GroupByComplexPropertyWorks()
