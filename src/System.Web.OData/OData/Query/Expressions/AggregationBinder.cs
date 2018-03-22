@@ -18,7 +18,7 @@ using Microsoft.OData.UriParser.Aggregation;
 
 namespace System.Web.OData.Query.Expressions
 {
-    internal class AggregationBinder : TransformationBinderBase
+    internal partial class AggregationBinder : TransformationBinderBase
     {
         private const string GroupByContainerProperty = "GroupByContainer";
         private TransformationNode _transformation;
@@ -160,7 +160,12 @@ namespace System.Web.OData.Query.Expressions
                 && _aggregateExpressions.Any(e => e.Method != AggregationMethod.VirtualPropertyCount)
                 && _groupingProperties != null
                 && _groupingProperties.Any()
-                && (FlattenedPropertyContainer == null || !FlattenedPropertyContainer.Any()))
+                && (FlattenedPropertyContainer == null || !FlattenedPropertyContainer.Any())
+                && _aggregateExpressions.Any(a => {
+                    var visitor = new FlattenedVisitor();
+                    visitor.Visit(a.Expression);
+                    return visitor.HasNavigation;
+                }))
             {
                 var wrapperType = typeof(FlatteningWrapper<>).MakeGenericType(this._elementType);
                 var sourceProperty = wrapperType.GetProperty("Source");

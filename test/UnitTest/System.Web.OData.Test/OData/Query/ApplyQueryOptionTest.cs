@@ -179,6 +179,14 @@ namespace System.Web.OData.Test.OData.Query
                         }
                     },
                     {
+                        "groupby((Address/State), aggregate(cast(CustomerId, Edm.Int64) with sum as CustomerId))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "CustomerId", 8L}, { "Address/State", "WA"} },
+                            new Dictionary<string, object> { { "CustomerId", 7L}, { "Address/State", null} },
+                        }
+                    },
+                    {
                         "groupby((Address/State), aggregate(endswith(Address/City, 't') with max as MaxCity))",
                         new List<Dictionary<string, object>>
                         {
