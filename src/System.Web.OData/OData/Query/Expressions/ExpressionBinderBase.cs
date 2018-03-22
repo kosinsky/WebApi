@@ -1266,6 +1266,10 @@ namespace System.Web.OData.Query.Expressions
                 }
             }
 
+            if (arguments[0].Type == typeof(bool?))
+            {
+                arguments[0] = Expression.Convert(arguments[0], typeof(bool));
+            }
             Contract.Assert(arguments.Length == 3 && arguments[0].Type == typeof(bool));
             if (arguments[1] == NullConstant && arguments[2] == NullConstant)
             {
