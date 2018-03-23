@@ -458,6 +458,15 @@ namespace System.Web.OData.Test.OData.Query
                             new Dictionary<string, object> { { "MaxCity", "hobart"}, { "Address/State", null}, {"MaxCityLen", 1.0M } },
                         }
                     },
+                    {
+                        "groupby((Address/State), aggregate(SharePrice with sum as TotalPrice))/compute(iif(cast(TotalPrice gt TotalPrice, Edm.Boolean), 1.0M, TotalPrice) as FakePrice)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Address/State", "WA"}, { "FakePrice", 22.5M } },
+                            new Dictionary<string, object> { { "Address/State", null}, { "FakePrice", 0M } },
+                        }
+                    },
+
                 };
             }
         }
