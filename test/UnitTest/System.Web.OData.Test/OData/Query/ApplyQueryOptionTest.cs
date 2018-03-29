@@ -466,7 +466,14 @@ namespace System.Web.OData.Test.OData.Query
                             new Dictionary<string, object> { { "Address/State", null}, { "FakePrice", 0M } },
                         }
                     },
-
+                    {
+                        "groupby((Address/State), aggregate(SharePrice with sum as TotalPrice, cast(CustomerId, Edm.Int64) with sum as TotalId))/compute(iif(cast(TotalPrice gt TotalId, Edm.Boolean), 1.0M, TotalPrice) as FakePrice)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Address/State", "WA"}, { "FakePrice", 1.0M } },
+                            new Dictionary<string, object> { { "Address/State", null}, { "FakePrice", 0M } },
+                        }
+                    },
                 };
             }
         }
@@ -612,6 +619,13 @@ namespace System.Web.OData.Test.OData.Query
                         new List<Dictionary<string, object>>
                         {
                             new Dictionary<string, object> {{"Name", "Lowest"},  {"Total", 10}, {"NewTotal", 20},},
+                        }
+                    },
+                    {
+                        "$apply=groupby((Name), aggregate(CustomerId with sum as TotalId, SharePrice with average as AvgPrice))/filter(TotalId lt AvgPrice)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> {{"Name", "Highest" },  {"TotalId", 2}, { "AvgPrice", 2.5M},},
                         }
                     },
                     //{
