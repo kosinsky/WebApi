@@ -242,7 +242,8 @@ namespace System.Web.OData
                 return false;
             }
 
-            if (_typePromoMap.TryGetValue(from, out HashSet<Type> types))
+            HashSet<Type> types;
+            if (_typePromoMap.TryGetValue(from, out types))
             {
                 return types.Contains(to);
             }
