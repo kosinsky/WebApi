@@ -467,6 +467,14 @@ namespace System.Web.OData.Test.OData.Query
                         }
                     },
                     {
+                        "groupby((Address/State), aggregate(SharePrice with sum as TotalPrice))/compute(iif(TotalPrice gt TotalPrice, 1.0M, TotalPrice) as FakePrice)",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Address/State", "WA"}, { "FakePrice", 22.5M } },
+                            new Dictionary<string, object> { { "Address/State", null}, { "FakePrice", 0M } },
+                        }
+                    },
+                    {
                         "groupby((Address/State), aggregate(SharePrice with sum as TotalPrice, cast(CustomerId, Edm.Int64) with sum as TotalId))/compute(iif(cast(TotalPrice gt TotalId, Edm.Boolean), 1.0M, TotalPrice) as FakePrice)",
                         new List<Dictionary<string, object>>
                         {
