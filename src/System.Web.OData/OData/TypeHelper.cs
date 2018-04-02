@@ -84,7 +84,7 @@ namespace System.Web.OData
             Type underlyingTypeOrSelf = GetUnderlyingTypeOrSelf(type);
             return underlyingTypeOrSelf.IsEnum;
         }
-        
+
         public static bool IsDateTime(Type type)
         {
             Type underlyingTypeOrSelf = GetUnderlyingTypeOrSelf(type);
@@ -234,5 +234,31 @@ namespace System.Web.OData
 
             return null;
         }
+
+        public static bool CanPromoteValueTypeTo(this Type from, Type to)
+        {
+            if (!from.IsValueType || !to.IsValueType || from.IsEnum || to.IsEnum)
+            {
+                return false;
+            }
+
+            HashSet<Type> types;
+            if (_typePromoMap.TryGetValue(from, out types))
+            {
+                return types.Contains(to);
+            }
+
+            return false;
+        }
+
+        private static readonly Dictionary<Type, HashSet<Type>> _typePromoMap = new Dictionary<Type, HashSet<Type>>
+        {
+            // Based on https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#binary-numeric-promotions
+            // Ignoring unsigned cases
+            { typeof(Byte), new HashSet<Type> { typeof(Int32), typeof(Int32), typeof(Int64), typeof(Decimal), typeof(Double), typeof(float) } },
+            { typeof(Int16), new HashSet<Type> { typeof(Int32), typeof(Int64), typeof(Decimal), typeof(Double), typeof(float) } },
+            { typeof(Int32), new HashSet<Type> { typeof(Int64), typeof(Decimal), typeof(Double), typeof(float) } },
+            { typeof(Int64), new HashSet<Type> { typeof(Decimal), typeof(Double), typeof(float) } }
+        };
     }
 }

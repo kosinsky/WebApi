@@ -95,10 +95,7 @@ namespace System.Web.OData.Query.Expressions
                     return CreatePropertyAccessExpression(BindAccessor(navNode.Source), navNode.NavigationProperty);
                 case QueryNodeKind.BinaryOperator:
                     var binaryNode = (BinaryOperatorNode)node;
-                    var leftExpression = BindAccessor(binaryNode.Left);
-                    var rightExpression = BindAccessor(binaryNode.Right);
-                    return CreateBinaryExpression(binaryNode.OperatorKind, leftExpression, rightExpression,
-                        liftToNull: true);
+                    return BindBinaryOperatorNode(binaryNode);
                 case QueryNodeKind.Convert:
                     var convertNode = (ConvertNode)node;
                     return CreateConvertExpression(convertNode, BindAccessor(convertNode.Source));

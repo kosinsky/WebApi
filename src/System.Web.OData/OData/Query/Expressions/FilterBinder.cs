@@ -437,56 +437,6 @@ namespace System.Web.OData.Query.Expressions
         }
 
         /// <summary>
-        /// Binds a <see cref="BinaryOperatorNode"/> to create a LINQ <see cref="Expression"/> that
-        /// represents the semantics of the <see cref="BinaryOperatorNode"/>.
-        /// </summary>
-        /// <param name="binaryOperatorNode">The node to bind.</param>
-        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
-        public virtual Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode)
-        {
-            Expression left = Bind(binaryOperatorNode.Left);
-            Expression right = Bind(binaryOperatorNode.Right);
-
-            // handle null propagation only if either of the operands can be null
-            bool isNullPropagationRequired = QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && (IsNullable(left.Type) || IsNullable(right.Type));
-            if (isNullPropagationRequired)
-            {
-                // |----------------------------------------------------------------|
-                // |SQL 3VL truth table.                                            |
-                // |----------------------------------------------------------------|
-                // |p       |    q      |    p OR q     |    p AND q    |    p = q  |
-                // |----------------------------------------------------------------|
-                // |True    |   True    |   True        |   True        |   True    |
-                // |True    |   False   |   True        |   False       |   False   |
-                // |True    |   NULL    |   True        |   NULL        |   NULL    |
-                // |False   |   True    |   True        |   False       |   False   |
-                // |False   |   False   |   False       |   False       |   True    |
-                // |False   |   NULL    |   NULL        |   False       |   NULL    |
-                // |NULL    |   True    |   True        |   NULL        |   NULL    |
-                // |NULL    |   False   |   NULL        |   False       |   NULL    |
-                // |NULL    |   NULL    |   Null        |   NULL        |   NULL    |
-                // |--------|-----------|---------------|---------------|-----------|
-
-                // before we start with null propagation, convert the operators to nullable if already not.
-                left = ToNullable(left);
-                right = ToNullable(right);
-
-                bool liftToNull = true;
-                if (left == NullConstant || right == NullConstant)
-                {
-                    liftToNull = false;
-                }
-
-                // Expression trees do a very good job of handling the 3VL truth table if we pass liftToNull true.
-                return CreateBinaryExpression(binaryOperatorNode.OperatorKind, left, right, liftToNull: liftToNull);
-            }
-            else
-            {
-                return CreateBinaryExpression(binaryOperatorNode.OperatorKind, left, right, liftToNull: false);
-            }
-        }
-
-        /// <summary>
         /// Binds a <see cref="ConvertNode"/> to create a LINQ <see cref="Expression"/> that
         /// represents the semantics of the <see cref="ConvertNode"/>.
         /// </summary>
