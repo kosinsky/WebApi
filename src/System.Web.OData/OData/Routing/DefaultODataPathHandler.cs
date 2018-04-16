@@ -23,6 +23,8 @@ namespace System.Web.OData.Routing
     /// </summary>
     public class DefaultODataPathHandler : IODataPathHandler, IODataPathTemplateHandler
     {
+        private const int MaxUriSchemeName = 1024;
+
         /// <summary>
         /// Gets or Sets the <see cref="ODataUrlKeyDelimiter"/> to use while parsing, specifically
         /// whether to recognize keys as segments or not.
@@ -117,14 +119,14 @@ namespace System.Web.OData.Routing
                         ? serviceRoot
                         : serviceRoot + "/");
 
-                // Special handling for the cases when odataPath is invalid.
-                if (!Uri.IsWellFormedUriString(odataPath, UriKind.RelativeOrAbsolute))
+                // Due to a bug in the System.Uri some relative paths are rejected if they contain
+                // a ':' symbol on a position greater than 1024. This careful check should mitigate 
+                // this problem by encoding these characters before the path is combined with 
+                // service roor Uri.
+                // https://github.com/dotnet/corefx/issues/29011
+                if (!Uri.IsWellFormedUriString(odataPath, UriKind.RelativeOrAbsolute)
+                    && odataPath.IndexOf(':') > MaxUriSchemeName)
                 {
-                    // Due to a bug in the System.Uri some relative paths are rejected if they contain
-                    // a ':' symbol on a position greater than 1024. This careful check should mitigate 
-                    // this problem by encoding these characters before the path is combined with 
-                    // service roor Uri.
-                    // https://github.com/dotnet/corefx/issues/29011
                     var odataPathColonEncoded = odataPath.Replace(":", "%3A");
                     if (Uri.IsWellFormedUriString(odataPathColonEncoded, UriKind.Relative))
                     {
