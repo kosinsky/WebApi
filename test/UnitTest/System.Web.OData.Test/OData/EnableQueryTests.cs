@@ -183,6 +183,18 @@ namespace System.Web.OData.Test
                     {"?$filter=Orders/System.Web.OData.Test.DiscountedEnableQueryOrder/any()", "any"},
                     {"?$filter=Orders/System.Web.OData.Test.DiscountedEnableQueryOrder/any(o: o/Discount eq 1)", "any"},
                     {"?$filter=Orders/System.Web.OData.Test.DiscountedEnableQueryOrder/all(o: o/Discount eq 1)", "all"},
+
+                    // Long queries test for issue: https://github.com/OData/WebApi/issues/1375 
+                    { "?$filter="
+                        + "                                                                                                                                " // 128
+                        + "                                                                                                                                " // 256
+                        + "                                                                                                                                " // 384
+                        + "                                                                                                                                " // 512
+                        + "                                                                                                                                " // 640
+                        + "                                                                                                                                " // 768
+                        + "                                                                                                                                " // 896
+                        + "                                                                                                                                " // 1024
+                        + "Points/any(p: p eq 1)", "any"},
                 };
 
             }
