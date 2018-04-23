@@ -125,7 +125,7 @@ namespace System.Web.OData.Query.Expressions
     {
     }
 
-    internal class ComputeWrapper<T> : GroupByWrapper, IEdmEntityObject
+    internal class ComputeWrapper<T> : GroupByWrapper, IEdmEntityObject, ISelectExpandWrapper
     {
         public T Instance { get; set; }
 
@@ -186,5 +186,16 @@ namespace System.Web.OData.Query.Expressions
             return model.GetEdmTypeReference(typeof(T));
         }
         #endregion
+
+
+        public IDictionary<string, object> ToDictionary()
+        {
+            return this.Values;
+        }
+
+        public IDictionary<string, object> ToDictionary(Func<IEdmModel, IEdmStructuredType, IPropertyMapper> propertyMapperProvider)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
