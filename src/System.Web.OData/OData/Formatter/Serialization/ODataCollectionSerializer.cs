@@ -75,7 +75,7 @@ namespace System.Web.OData.Formatter.Serialization
         /// <param name="graph">The collection to write.</param>
         /// <param name="collectionType">The EDM type of the collection.</param>
         /// <param name="writeContext">The serializer context.</param>
-        public void WriteCollection(ODataCollectionWriter writer, object graph, IEdmTypeReference collectionType,
+        public virtual void WriteCollection(ODataCollectionWriter writer, object graph, IEdmTypeReference collectionType,
             ODataSerializerContext writeContext)
         {
             if (writer == null)
