@@ -64,6 +64,15 @@
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\..\..\sln\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.4.0.20606, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\sln\packages\Mseng.OData.Core.7.4.0-Nightly201806062008\lib\portable-net45+win8+wpa81\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.4.0.20606, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\sln\packages\Mseng.OData.Edm.7.4.0-Nightly201806062008\lib\portable-net45+win8+wpa81\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.4.0.20606, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\..\sln\packages\Mseng.Spatial.7.4.0-Nightly201806062008\lib\portable-net45+win8+wpa81\Microsoft.TeamFoundation.Spatial.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
       <HintPath>..\..\..\sln\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
@@ -996,18 +1005,6 @@
     <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Client\Microsoft.OData.Client.csproj">
       <Project>{d1567c63-4a0d-4e18-a14e-79699b9bffff}</Project>
       <Name>Microsoft.OData.Client</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Core\Microsoft.OData.Core.csproj">
-      <Project>{989a83cc-b864-4a75-8bf3-5eda99203a86}</Project>
-      <Name>Microsoft.OData.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Edm\Microsoft.OData.Edm.csproj">
-      <Project>{7d921888-fe03-4c3f-80fe-2f624505461c}</Project>
-      <Name>Microsoft.OData.Edm</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.Spatial\Microsoft.Spatial.csproj">
-      <Project>{5d921888-fe03-4c3f-40fe-2f624505461d}</Project>
-      <Name>Microsoft.Spatial</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Client\Microsoft.OData.Client.csproj">
       <Project>{d1567c63-4a0d-4e18-a14e-79699b9bffff}</Project>

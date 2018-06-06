@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\..\tools\WebStack.settings.targets" />
   <PropertyGroup>
     <ProjectGuid>{D23E28F1-CCD0-43E0-8C0D-36731EC91318}</ProjectGuid>
@@ -10,8 +10,19 @@
     <RunCodeAnalysis>$(CodeAnalysis)</RunCodeAnalysis>
     <CodeAnalysisRuleSet>..\Strict.ruleset</CodeAnalysisRuleSet>
     <DefineConstants>$(DefineConstants);ASPNETODATA;ASPNETWEBAPI</DefineConstants>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.4.0.20606, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Core.7.4.0-Nightly201806062008\lib\portable-net45+win8+wpa81\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.4.0.20606, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Edm.7.4.0-Nightly201806062008\lib\portable-net45+win8+wpa81\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.4.0.20606, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.Spatial.7.4.0-Nightly201806062008\lib\portable-net45+win8+wpa81\Microsoft.TeamFoundation.Spatial.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\sln\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -532,44 +543,6 @@
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.OData.Core\Microsoft.OData.Core.csproj">
-      <Project>{989a83cc-b864-4a75-8bf3-5eda99203a86}</Project>
-      <Name>Microsoft.OData.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.OData.Core\Microsoft.OData.Core.csproj">
-      <Project>{989a83cc-b864-4a75-8bf3-5eda99203a86}</Project>
-      <Name>Microsoft.OData.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.OData.Edm\Microsoft.OData.Edm.csproj">
-      <Project>{7d921888-fe03-4c3f-80fe-2f624505461c}</Project>
-      <Name>Microsoft.OData.Edm</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.OData.Edm\Microsoft.OData.Edm.csproj">
-      <Project>{7d921888-fe03-4c3f-80fe-2f624505461c}</Project>
-      <Name>Microsoft.OData.Edm</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.Spatial\Microsoft.Spatial.csproj">
-      <Project>{5d921888-fe03-4c3f-40fe-2f624505461d}</Project>
-      <Name>Microsoft.Spatial</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.OData.Core\Microsoft.OData.Core.csproj">
-      <Project>{989a83cc-b864-4a75-8bf3-5eda99203a86}</Project>
-      <Name>Microsoft.OData.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.OData.Edm\Microsoft.OData.Edm.csproj">
-      <Project>{7d921888-fe03-4c3f-80fe-2f624505461c}</Project>
-      <Name>Microsoft.OData.Edm</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.Spatial\Microsoft.Spatial.csproj">
-      <Project>{5d921888-fe03-4c3f-40fe-2f624505461d}</Project>
-      <Name>Microsoft.Spatial</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\odata.net\src\Microsoft.Spatial\Microsoft.Spatial.csproj">
-      <Project>{5d921888-fe03-4c3f-40fe-2f624505461d}</Project>
-      <Name>Microsoft.Spatial</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="OData\Query\Expressions\PropertyContainer.generated.tt">
