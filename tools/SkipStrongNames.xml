@@ -24,7 +24,7 @@
   <assembly name="Microsoft.TeamFoundation.Web.OData"/>
   <assembly name="Microsoft.TeamFoundation.OData.Core"/>
   <assembly name="Microsoft.TeamFoundation.OData.Edm"/>
-  <assembly name="Microsoft.TeamFoundation.OData.Spatial"/>
+  <assembly name="Microsoft.TeamFoundation.Spatial"/>
   <assembly name="System.Web.Razor"/>
   <assembly name="System.Web.WebPages"/>
   <assembly name="System.Web.WebPages.Administration"/>
