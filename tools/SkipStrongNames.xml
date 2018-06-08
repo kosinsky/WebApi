@@ -23,6 +23,7 @@
   <assembly name="System.Web.Mvc"/>
   <assembly name="Microsoft.TeamFoundation.Web.OData"/>
   <assembly name="Microsoft.TeamFoundation.OData.Core"/>
+  <assembly name="Microsoft.TeamFoundation.OData.Client"/>
   <assembly name="Microsoft.TeamFoundation.OData.Edm"/>
   <assembly name="Microsoft.TeamFoundation.Spatial"/>
   <assembly name="System.Web.Razor"/>
