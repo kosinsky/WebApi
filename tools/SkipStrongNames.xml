@@ -21,7 +21,10 @@
   <assembly name="System.Web.Http.Tracing"/>
   <assembly name="System.Web.Http.WebHost"/>
   <assembly name="System.Web.Mvc"/>
-  <assembly name="System.Web.OData"/>
+  <assembly name="Microsoft.TeamFoundation.Web.OData"/>
+  <assembly name="Microsoft.TeamFoundation.OData.Core"/>
+  <assembly name="Microsoft.TeamFoundation.OData.Edm"/>
+  <assembly name="Microsoft.TeamFoundation.OData.Spatial"/>
   <assembly name="System.Web.Razor"/>
   <assembly name="System.Web.WebPages"/>
   <assembly name="System.Web.WebPages.Administration"/>
