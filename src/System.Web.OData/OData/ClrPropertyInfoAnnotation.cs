@@ -31,7 +31,7 @@ namespace System.Web.OData
         /// <summary>
         /// Gets the backing CLR property info for the EDM property.
         /// </summary>
-        public PropertyInfo ClrPropertyInfo { get; }
+        public PropertyInfo ClrPropertyInfo { get; private set; }
 
         /// <summary>
         /// Gets or sets PropertiesPath
