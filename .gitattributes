@@ -1,8 +1,6 @@
 # Line endings of all files should never be converted.
 * -text
 
-* text
-
 *.bmp binary
 *.dll binary
 *.gif binary
@@ -40,7 +38,6 @@
 *.vbproj text merge=union 
 *.vbs text
 *.wsf text
-*.xml text
 *.xunit text
 
 *.sln text eol=crlf merge=union 
