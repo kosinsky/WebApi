@@ -1,0 +1,9 @@
+.\de-DE\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\es-ES\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\fr-FR\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\it-IT\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\ja-JP\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\ko-KR\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\ru-RU\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\zh-CN\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
+.\zh-TW\Microsoft.TeamFoundation.Web.OData.dll.lcl: The settings is changed to @vsLocTools@\default.lss
