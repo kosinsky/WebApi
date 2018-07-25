@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package>
     <metadata>
-        <id>Microsoft.AspNet.OData</id>
+        <id>Mseng.AspNet.OData</id>
         <title>Microsoft ASP.NET Web API 2.2 for OData v4.0</title>
         <version>$VersionNuGetSemantic$</version>
         <authors>Microsoft</authors>
