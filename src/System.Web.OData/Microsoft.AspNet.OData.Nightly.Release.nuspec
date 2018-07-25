@@ -18,7 +18,7 @@
           <dependency id="Microsoft.AspNet.WebApi.Core" version="$WebApiCorePackageDependency$" />
           <dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="$DependencyInjectionPackageDependency$" />
           <dependency id="Microsoft.Extensions.DependencyInjection" version="$DependencyInjectionPackageDependency$" />
-          <dependency id="Microsoft.OData.Core" version="$ODataLibPackageDependency$" />
+          <dependency id="Mseng.OData.Core" version="$ODataLibPackageDependency$" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System.Net.Http" targetFramework="net45"/>

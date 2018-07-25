@@ -18,16 +18,16 @@
             <dependency id="Microsoft.AspNet.WebApi.Core" version="$WebApiCorePackageDependency$" />
             <dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="$DependencyInjectionPackageDependency$" />
             <dependency id="Microsoft.Extensions.DependencyInjection" version="$DependencyInjectionPackageDependency$" />
-            <dependency id="Microsoft.OData.Core" version="$ODataLibPackageDependency$" />
+            <dependency id="Mseng.OData.Core" version="$ODataLibPackageDependency$" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System.Net.Http" targetFramework="net45"/>
         </frameworkAssemblies>
     </metadata>
   <files>
-    <file src="$ProductRoot$\System.Web.OData.dll" target="lib\net45" />
-    <file src="$ProductRoot$\System.Web.OData.pdb" target="lib\net45" />
-    <file src="$ProductRoot$\System.Web.OData.xml" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.Web.OData.dll" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.Web.OData.pdb" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.Web.OData.xml" target="lib\net45" />
     <file src="$SourcesRoot$\src\System.Web.OData\Extensions\**\*.cs" target="src\System.Web.OData\Extensions" />
     <file src="$SourcesRoot$\src\System.Web.OData\OData\**\*.cs" target="src\System.Web.OData\OData" />
     <file src="$SourcesRoot$\src\System.Web.OData\Properties\*.cs" target="src\System.Web.OData\Properties" />
