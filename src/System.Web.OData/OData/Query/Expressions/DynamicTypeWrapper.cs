@@ -187,7 +187,6 @@ namespace System.Web.OData.Query.Expressions
         }
         #endregion
 
-
         public IDictionary<string, object> ToDictionary()
         {
             return this.Values;

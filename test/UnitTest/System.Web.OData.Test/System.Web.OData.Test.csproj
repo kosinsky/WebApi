@@ -16,13 +16,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.4.0.20724, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\sln\packages\Mseng.OData.Core.7.4.0\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.4.0.20724, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\sln\packages\Mseng.OData.Edm.7.4.0\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.4.0.20724, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\sln\packages\Mseng.Spatial.7.4.0\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
+    </Reference>
     <Reference Include="Moq, Version=4.0.10827.0, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\sln\packages\Moq.4.0.10827\lib\NET40\Moq.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\sln\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.DependencyInjection, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\..\..\sln\packages\Microsoft.Extensions.DependencyInjection.1.0.0\lib\netstandard1.1\Microsoft.Extensions.DependencyInjection.dll</HintPath>
@@ -31,6 +36,9 @@
     <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\..\..\sln\packages\Microsoft.Extensions.DependencyInjection.Abstractions.1.0.0\lib\netstandard1.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
       <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\..\sln\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -435,6 +443,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="OData\Builder\Conventions\Attributes\KeyAttributeEdmPropertyConventionTests.cs" />
+    <None Include="app.config" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
@@ -492,42 +501,6 @@
     <EmbeddedResource Include="PublicApi\System.Web.OData.PublicApi.bsl" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Core\Microsoft.OData.Core.csproj">
-      <Project>{989a83cc-b864-4a75-8bf3-5eda99203a86}</Project>
-      <Name>Microsoft.OData.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Core\Microsoft.OData.Core.csproj">
-      <Project>{989a83cc-b864-4a75-8bf3-5eda99203a86}</Project>
-      <Name>Microsoft.OData.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Edm\Microsoft.OData.Edm.csproj">
-      <Project>{7d921888-fe03-4c3f-80fe-2f624505461c}</Project>
-      <Name>Microsoft.OData.Edm</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Edm\Microsoft.OData.Edm.csproj">
-      <Project>{7d921888-fe03-4c3f-80fe-2f624505461c}</Project>
-      <Name>Microsoft.OData.Edm</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.Spatial\Microsoft.Spatial.csproj">
-      <Project>{5d921888-fe03-4c3f-40fe-2f624505461d}</Project>
-      <Name>Microsoft.Spatial</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Core\Microsoft.OData.Core.csproj">
-      <Project>{989a83cc-b864-4a75-8bf3-5eda99203a86}</Project>
-      <Name>Microsoft.OData.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.OData.Edm\Microsoft.OData.Edm.csproj">
-      <Project>{7d921888-fe03-4c3f-80fe-2f624505461c}</Project>
-      <Name>Microsoft.OData.Edm</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.Spatial\Microsoft.Spatial.csproj">
-      <Project>{5d921888-fe03-4c3f-40fe-2f624505461d}</Project>
-      <Name>Microsoft.Spatial</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\odata.net\src\Microsoft.Spatial\Microsoft.Spatial.csproj">
-      <Project>{5d921888-fe03-4c3f-40fe-2f624505461d}</Project>
-      <Name>Microsoft.Spatial</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\src\System.Web.OData\System.Web.OData.csproj">
       <Project>{d23e28f1-ccd0-43e0-8c0d-36731ec91318}</Project>
       <Name>System.Web.OData</Name>
