@@ -1,9 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<LCX SchemaVersion="6.0" Name="D:\Src\ODataAgg\OData.WebAPI\bin\Debug\Microsoft.TeamFoundation.Web.OData.dll" PsrId="211" FileType="1" SrcCul="en-US" TgtCul="es-ES" xmlns="http://schemas.microsoft.com/locstudio/2006/6/lcx">
+<LCX SchemaVersion="6.0" Name="D:\Src\ODataAgg\OData.WebAPI\bin\Debug\Microsoft.TeamFoundation.Web.OData.dll" PsrId="211" FileType="1" SrcCul="en-US" TgtCul="es-ES" Desc="Commenting file created by LCXAdmin. For more information, please visit http://localizability/longhorn/LcxAdmin.asp" xmlns="http://schemas.microsoft.com/locstudio/2006/6/lcx">
   <OwnedComments>
     <Cmt Name="Dev" />
     <Cmt Name="LcxAdmin" />
-    <Cmt Name="Rccx" />
+    <Cmt Name="Loc" />
+    <Cmt Name="RCCX" />
   </OwnedComments>
   <Settings Name="@vsLocTools@\default.lss" Type="Lss" />
   <Item ItemId=";Managed Resources" ItemType="0" PsrId="211" Leaf="true">
@@ -88,12 +89,18 @@
       <Item ItemId=";ActionNotBoundToCollectionOfEntity" ItemType="0" PsrId="211" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The action '{0}' is not bound to the collection of entity. Only actions that are bound to entities can have action links.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[La acción "{0}" no está enlazada a la colección de entidades. Solo las acciones que están enlazadas a entidades pueden tener vínculos de acción.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
       <Item ItemId=";ActionNotBoundToEntity" ItemType="0" PsrId="211" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The action '{0}' is not bound to an entity. Only actions that are bound to entities can have action links.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[La acción "{0}" no está enlazada a una entidad. Solo las acciones que están enlazadas a entidades pueden tener vínculos de acción.]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -373,7 +380,7 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";EdmTypeCannotBeNull" ItemType="0" PsrId="211" Leaf="true">
+      <Item ItemId=";EdmTypeCannotBeNull" ItemType="0" PsrId="211" InstFlg="true" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The EDM type of the object of type '{0}' is null. The EDM type of an {1} cannot be null.]]></Val>
         </Str>
