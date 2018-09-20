@@ -805,7 +805,7 @@
   </data>
   <data name="ReferentialConstraintAlreadyConfigured" xml:space="preserve">
     <value>The '{0}' property '{1}' is already configured to have a relationship with '{2}' property '{3}' in the referential constraint.</value>
-    <comment>{0} is first entity name , {1} is first entity's property name,  {2} is second entity name, {3} is second entity's propery name</comment>
+    <comment>{0} is relation type for first entity point of view , {1} is first entity's property name,  {2} is relation type for second entity point of view, {3} is second entity's propery name</comment>
   </data>
   <data name="NavigationSourceTypeHasNoKeys" xml:space="preserve">
     <value>The entity set or singleton '{0}' is based on type '{1}' that has no keys defined.</value>
