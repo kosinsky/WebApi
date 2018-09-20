@@ -632,7 +632,7 @@ namespace System.Web.OData.Query.Expressions
 
             Expression body = null;
             // uri parser places an Constant node with value true for empty any() body
-            if (anyNode.Body != null && anyNode.Body.Kind != QueryNodeKind.Constant)
+            if (anyNode.Body != null && (anyNode.Body.Kind != QueryNodeKind.Constant || (bool)(anyNode.Body as ConstantNode).Value == false))
             {
                 body = Bind(anyNode.Body);
                 body = ApplyNullPropagationForFilterBody(body);
