@@ -650,7 +650,8 @@
     <value>Key template value '{0}' for key segment '{1}' is empty.</value>
   </data>
   <data name="KeyTemplateMustBeInCurlyBraces" xml:space="preserve">
-    <value>Key template value '{0}' for key segment '{1}' does not start with '{{' or ends with '}}'.</value>
+    <value>Key template value '{0}' for key segment '{1}' does not start with '{{' or end with '}}'.</value>
+    <comment>'{{' or end with '}}' - this part needs to be locked, because single brace has a special meaning and double brace '{{' is a way of escaping single brace which will ultimately result into single brace { in the end output.</comment>
   </data>
   <data name="UnresolvedPathSegmentInTemplate" xml:space="preserve">
     <value>Found an unresolved path segment '{0}' in the OData path template '{1}'.</value>
@@ -804,6 +805,7 @@
   </data>
   <data name="ReferentialConstraintAlreadyConfigured" xml:space="preserve">
     <value>The '{0}' property '{1}' is already configured to have a relationship with '{2}' property '{3}' in the referential constraint.</value>
+    <comment>{0} is first entity name , {1} is first entity's property name,  {2} is second entity name, {3} is second entity's propery name</comment>
   </data>
   <data name="NavigationSourceTypeHasNoKeys" xml:space="preserve">
     <value>The entity set or singleton '{0}' is based on type '{1}' that has no keys defined.</value>
