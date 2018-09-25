@@ -983,12 +983,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";KeyTemplateMustBeInCurlyBraces" ItemType="0" PsrId="211" Leaf="true">
+      <Item ItemId=";KeyTemplateMustBeInCurlyBraces" ItemType="0" PsrId="211" InstFlg="true" Leaf="true">
         <Str Cat="Text">
-          <Val><![CDATA[Key template value '{0}' for key segment '{1}' does not start with '{{' or ends with '}}'.]]></Val>
+          <Val><![CDATA[Key template value '{0}' for key segment '{1}' does not start with '{{' or end with '}}'.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[El valor de plantilla de clave "{0}" para el segmento de clave "{1}" no comienza con "{{' o termina con '}}".]]></Val>
+            <Val><![CDATA[El valor de la plantilla de clave "{0}" para el segmento de clave "{1}" no comienza con "{{' ni termina con '}}".]]></Val>
           </Tgt>
+          <Prev Cat="Text">
+            <Val><![CDATA[Key template value '{0}' for key segment '{1}' does not start with '{{' or ends with '}}'.]]></Val>
+          </Prev>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1892,7 +1895,7 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";ReferentialConstraintAlreadyConfigured" ItemType="0" PsrId="211" Leaf="true">
+      <Item ItemId=";ReferentialConstraintAlreadyConfigured" ItemType="0" PsrId="211" InstFlg="true" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The '{0}' property '{1}' is already configured to have a relationship with '{2}' property '{3}' in the referential constraint.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
