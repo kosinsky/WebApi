@@ -1,9 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<LCX SchemaVersion="6.0" Name="D:\Src\ODataAgg\OData.WebAPI\bin\Debug\Microsoft.TeamFoundation.Web.OData.dll" PsrId="211" FileType="1" SrcCul="en-US" TgtCul="ru-RU" xmlns="http://schemas.microsoft.com/locstudio/2006/6/lcx">
+<LCX SchemaVersion="6.0" Name="D:\Src\ODataAgg\OData.WebAPI\bin\Debug\Microsoft.TeamFoundation.Web.OData.dll" PsrId="211" FileType="1" SrcCul="en-US" TgtCul="ru-RU" Desc="Commenting file created by LCXAdmin. For more information, please visit http://localizability/longhorn/LcxAdmin.asp" xmlns="http://schemas.microsoft.com/locstudio/2006/6/lcx">
   <OwnedComments>
     <Cmt Name="Dev" />
     <Cmt Name="LcxAdmin" />
-    <Cmt Name="Rccx" />
+    <Cmt Name="Loc" />
+    <Cmt Name="RCCX" />
   </OwnedComments>
   <Settings Name="@vsLocTools@\default.lss" Type="Lss" />
   <Item ItemId=";Managed Resources" ItemType="0" PsrId="211" Leaf="true">
@@ -373,7 +374,7 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";EdmTypeCannotBeNull" ItemType="0" PsrId="211" Leaf="true">
+      <Item ItemId=";EdmTypeCannotBeNull" ItemType="0" PsrId="211" InstFlg="true" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The EDM type of the object of type '{0}' is null. The EDM type of an {1} cannot be null.]]></Val>
         </Str>
@@ -661,9 +662,12 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";KeyTemplateMustBeInCurlyBraces" ItemType="0" PsrId="211" Leaf="true">
+      <Item ItemId=";KeyTemplateMustBeInCurlyBraces" ItemType="0" PsrId="211" InstFlg="true" Leaf="true">
         <Str Cat="Text">
-          <Val><![CDATA[Key template value '{0}' for key segment '{1}' does not start with '{{' or ends with '}}'.]]></Val>
+          <Val><![CDATA[Key template value '{0}' for key segment '{1}' does not start with '{{' or end with '}}'.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Значение шаблона ключа "{0}" для сегмента ключа "{1}" не начинается с "{{' or end with '}}".]]></Val>
+          </Tgt>
         </Str>
         <Disp Icon="Str" />
       </Item>
@@ -1267,7 +1271,7 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";ReferentialConstraintAlreadyConfigured" ItemType="0" PsrId="211" Leaf="true">
+      <Item ItemId=";ReferentialConstraintAlreadyConfigured" ItemType="0" PsrId="211" InstFlg="true" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The '{0}' property '{1}' is already configured to have a relationship with '{2}' property '{3}' in the referential constraint.]]></Val>
         </Str>
