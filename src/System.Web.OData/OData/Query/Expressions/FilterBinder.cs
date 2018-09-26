@@ -632,11 +632,18 @@ namespace System.Web.OData.Query.Expressions
 
             Expression body = null;
             // uri parser places an Constant node with value true for empty any() body
-            if (anyNode.Body != null && (anyNode.Body.Kind != QueryNodeKind.Constant || (bool)(anyNode.Body as ConstantNode).Value == false))
+            if (anyNode.Body != null && anyNode.Body.Kind != QueryNodeKind.Constant)
             {
                 body = Bind(anyNode.Body);
                 body = ApplyNullPropagationForFilterBody(body);
                 body = Expression.Lambda(body, anyIt);
+            }
+            else if (anyNode.Body != null && anyNode.Body.Kind == QueryNodeKind.Constant
+                && (bool)(anyNode.Body as ConstantNode).Value == false)
+            {
+                // any(false) is the same as just false
+                ExitLamdbaScope();
+                return FalseConstant;
             }
 
             Expression any = Any(source, body);
