@@ -638,6 +638,13 @@ namespace System.Web.OData.Query.Expressions
                 body = ApplyNullPropagationForFilterBody(body);
                 body = Expression.Lambda(body, anyIt);
             }
+            else if (anyNode.Body != null && anyNode.Body.Kind == QueryNodeKind.Constant
+                && (bool)(anyNode.Body as ConstantNode).Value == false)
+            {
+                // any(false) is the same as just false
+                ExitLamdbaScope();
+                return FalseConstant;
+            }
 
             Expression any = Any(source, body);
 

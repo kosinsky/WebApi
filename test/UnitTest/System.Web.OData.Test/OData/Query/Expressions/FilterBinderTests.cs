@@ -590,6 +590,18 @@ namespace System.Web.OData.Query.Expressions
             new { WithNullPropagation = false, WithoutNullPropagation = false });
         }
 
+        [Theory]
+        [InlineData("Category/QueryableProducts/any(P: false)", "$it => False")]
+        [InlineData("Category/QueryableProducts/any(P: false and P/ProductName eq 'Snacks')", "$it => $it.Category.QueryableProducts.Any(P => (False AndAlso (P.ProductName == \"Snacks\")))")]
+        [InlineData("Category/QueryableProducts/any(P: true)", "$it => $it.Category.QueryableProducts.Any()")]
+        public void AnyOnNavigation_Contradiction(string filter, string expression)
+        {
+            var filters = VerifyQueryDeserialization(
+               filter,
+               expression,
+               NotTesting);
+        }
+
         [Fact]
         public void AnyOnNavigation_NullCollection()
         {
