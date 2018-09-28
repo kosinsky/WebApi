@@ -56,11 +56,29 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <FilesToLocalize Include="$(OutDir)\$(AssemblyName).dll">
+        <TranslationFile>$(MSBuildThisFileDirectory)..\..\tools\Localization\loc\lcl\{Lang}\$(AssemblyName).dll.lcl</TranslationFile>
+        <LciCommentFile>$(MSBuildThisFileDirectory)..\..\tools\Localization\loc\lci\$(AssemblyName).dll.lci</LciCommentFile>
+    </FilesToLocalize>
+  </ItemGroup>
+  <ItemGroup>
     <FilesToSign Include="$(OutDir)\Microsoft.TeamFoundation.Web.OData.dll">
       <Authenticode>Microsoft</Authenticode>
       <StrongName>StrongName</StrongName>
     </FilesToSign>
+    <SignFilesDependsOn Include="GatherLocalizedOutputsForSigning"> 
+      <!-- Do not have this show up in Solution Explorer in VS --> 
+      <InProject>false</InProject> 
+    </SignFilesDependsOn>    
   </ItemGroup>
+  <Target Name="GatherLocalizedOutputsForSigning" Condition="'$(LocalizationEnabled)' == 'true'"> 
+    <ItemGroup> 
+      <FilesToSign Include="$(OutDir)\localize\**\$(AssemblyName).resources.dll"> 
+        <Authenticode>Microsoft</Authenticode> 
+        <StrongName>StrongName</StrongName> 
+      </FilesToSign> 
+    </ItemGroup> 
+  </Target>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
