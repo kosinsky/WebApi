@@ -25,14 +25,14 @@
       <HintPath>..\..\sln\packages\Microsoft.Extensions.DependencyInjection.Abstractions.1.0.0\lib\netstandard1.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.4.0.20724, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.OData.Core.7.4.0\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.4.1.21001, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Core.7.4.1\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.4.0.20724, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.OData.Edm.7.4.0\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.4.1.21001, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Edm.7.4.1\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.4.0.20724, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.Spatial.7.4.0\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.4.1.21001, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.Spatial.7.4.1\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\sln\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -56,11 +56,29 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <FilesToLocalize Include="$(OutDir)\$(AssemblyName).dll">
+        <TranslationFile>$(MSBuildThisFileDirectory)..\..\tools\Localization\loc\lcl\{Lang}\$(AssemblyName).dll.lcl</TranslationFile>
+        <LciCommentFile>$(MSBuildThisFileDirectory)..\..\tools\Localization\loc\lci\$(AssemblyName).dll.lci</LciCommentFile>
+    </FilesToLocalize>
+  </ItemGroup>
+  <ItemGroup>
     <FilesToSign Include="$(OutDir)\Microsoft.TeamFoundation.Web.OData.dll">
       <Authenticode>Microsoft</Authenticode>
       <StrongName>StrongName</StrongName>
     </FilesToSign>
+    <SignFilesDependsOn Include="GatherLocalizedOutputsForSigning"> 
+      <!-- Do not have this show up in Solution Explorer in VS --> 
+      <InProject>false</InProject> 
+    </SignFilesDependsOn>    
   </ItemGroup>
+  <Target Name="GatherLocalizedOutputsForSigning" Condition="'$(LocalizationEnabled)' == 'true'"> 
+    <ItemGroup> 
+      <FilesToSign Include="$(OutDir)\localize\**\$(AssemblyName).resources.dll"> 
+        <Authenticode>Microsoft</Authenticode> 
+        <StrongName>StrongName</StrongName> 
+      </FilesToSign> 
+    </ItemGroup> 
+  </Target>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
