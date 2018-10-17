@@ -740,7 +740,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         {
             Contract.Assert(source != null);
             Type elementType;
-            source.Type.IsCollection(out elementType);
+            TypeHelper.IsCollection(source.Type, out elementType);
             Contract.Assert(elementType != null);
 
             if (filter == null)
@@ -773,7 +773,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Contract.Assert(filter != null);
 
             Type elementType;
-            source.Type.IsCollection(out elementType);
+            TypeHelper.IsCollection(source.Type, out elementType);
             Contract.Assert(elementType != null);
 
             if (IsIQueryable(source.Type))

@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+#if !NETCORE
 using System.Data.Linq;
+#endif
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Globalization;
@@ -156,11 +158,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             {
                 if (leftType.CanPromoteValueTypeTo(rightType))
                 {
-                    left = Expression.Convert(left, right.Type.IsNullable() ? rightType.ToNullable() : rightType);
+                    left = Expression.Convert(left, TypeHelper.IsNullable(right.Type) ? TypeHelper.ToNullable(rightType) : rightType);
                 }
                 else if (rightType.CanPromoteValueTypeTo(leftType))
                 {
-                    right = Expression.Convert(right, left.Type.IsNullable() ? leftType.ToNullable() : leftType);
+                    right = Expression.Convert(right, TypeHelper.IsNullable(left.Type) ? TypeHelper.ToNullable(leftType) : leftType);
                 }
             }
         }
@@ -176,9 +178,9 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Type rightUnderlyingType = Nullable.GetUnderlyingType(right.Type) ?? right.Type;
 
             // Convert to integers unless Enum type is required
-            if ((leftUnderlyingType.IsEnum || rightUnderlyingType.IsEnum) && binaryOperator != BinaryOperatorKind.Has)
+            if ((TypeHelper.IsEnum(leftUnderlyingType) || TypeHelper.IsEnum(rightUnderlyingType)) && binaryOperator != BinaryOperatorKind.Has)
             {
-                Type enumType = leftUnderlyingType.IsEnum ? leftUnderlyingType : rightUnderlyingType;
+                Type enumType = TypeHelper.IsEnum(leftUnderlyingType) ? leftUnderlyingType : rightUnderlyingType;
                 Type enumUnderlyingType = Enum.GetUnderlyingType(enumType);
                 left = ConvertToEnumUnderlyingType(left, enumType, enumUnderlyingType);
                 right = ConvertToEnumUnderlyingType(right, enumType, enumUnderlyingType);
@@ -348,7 +350,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
                 Expression convertedExpression = null;
 
-                if (sourceType.IsEnum)
+                if (TypeHelper.IsEnum(sourceType))
                 {
                     // we handle enum conversions ourselves
                     convertedExpression = source;
@@ -380,10 +382,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                             {
                                 convertedExpression = Expression.Call(source, "ToString", typeArguments: null, arguments: null);
                             }
+#if !NETCORE
                             else if (sourceType == typeof(Binary))
                             {
                                 convertedExpression = Expression.Call(source, "ToArray", typeArguments: null, arguments: null);
                             }
+#endif
                             break;
 
                         default:
@@ -899,7 +903,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         private static Expression ConvertToDateTimeRelatedConstExpression(Expression source)
         {
             var parameterizedConstantValue = ExtractParameterizedConstant(source);
-            if (parameterizedConstantValue != null && source.Type.IsNullable())
+            if (parameterizedConstantValue != null && TypeHelper.IsNullable(source.Type))
             {
                 var dateTimeOffset = parameterizedConstantValue as DateTimeOffset?;
                 if (dateTimeOffset != null)
@@ -1019,7 +1023,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         internal static bool IsNullable(Type t)
         {
-            if (!t.IsValueType || (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>)))
+            if (!TypeHelper.IsValueType(t) || (TypeHelper.IsGenericType(t) && t.GetGenericTypeDefinition() == typeof(Nullable<>)))
             {
                 return true;
             }
@@ -1345,7 +1349,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Contract.Assert(TypeHelper.GetUnderlyingTypeOrSelf(ifTrue.Type) == TypeHelper.GetUnderlyingTypeOrSelf(ifFalse.Type));
             if (ifTrue.Type != ifFalse.Type)
             {
-                if (ifTrue.Type.IsNullable())
+                if (TypeHelper.IsNullable(ifTrue.Type))
                 {
                     ifFalse = ToNullable(ifFalse);
                 }
@@ -1364,7 +1368,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 return first;
             }
 
-            return Expression.Constant(null, second.Type.ToNullable());
+            return Expression.Constant(null, TypeHelper.ToNullable(second.Type));
         }
 
         private Expression BindCastSingleValue(SingleValueFunctionCallNode node)
@@ -1415,7 +1419,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
             else
             {
-                if (source.Type.IsNullable() && !targetClrType.IsNullable())
+                if (TypeHelper.IsNullable(source.Type) && !TypeHelper.IsNullable(targetClrType))
                 {
                     // Make the target Clr type nullable to avoid failure while casting
                     // nullable source, whose value may be null, to a non-nullable type.
@@ -1546,9 +1550,9 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             if (isSourcePrimitiveOrEnum && isTargetPrimitiveOrEnum)
             {
-                if (source.Type.IsNullable())
+                if (TypeHelper.IsNullable(source.Type))
                 {
-                    clrType = clrType.ToNullable();
+                    clrType = TypeHelper.ToNullable(clrType);
                 }
             }
 

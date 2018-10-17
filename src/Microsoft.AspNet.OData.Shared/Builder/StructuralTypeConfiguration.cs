@@ -288,7 +288,7 @@ namespace Microsoft.AspNet.OData.Builder
                 throw Error.ArgumentNull("propertyInfo");
             }
 
-            if (!propertyInfo.ReflectedType.IsAssignableFrom(ClrType))
+            if (!TypeHelper.GetReflectedType(propertyInfo).IsAssignableFrom(ClrType))
             {
                 throw Error.Argument("propertyInfo", SRResources.PropertyDoesNotBelongToType, propertyInfo.Name, ClrType.FullName);
             }
@@ -355,7 +355,7 @@ namespace Microsoft.AspNet.OData.Builder
                 throw Error.ArgumentNull("propertyInfo");
             }
 
-            if (!propertyInfo.ReflectedType.IsAssignableFrom(ClrType))
+            if (!TypeHelper.GetReflectedType(propertyInfo).IsAssignableFrom(ClrType))
             {
                 throw Error.Argument("propertyInfo", SRResources.PropertyDoesNotBelongToType, propertyInfo.Name, ClrType.FullName);
             }
@@ -399,7 +399,7 @@ namespace Microsoft.AspNet.OData.Builder
                 throw Error.ArgumentNull("propertyInfo");
             }
 
-            if (!propertyInfo.ReflectedType.IsAssignableFrom(ClrType))
+            if (!TypeHelper.GetReflectedType(propertyInfo).IsAssignableFrom(ClrType))
             {
                 throw Error.Argument("propertyInfo", SRResources.PropertyDoesNotBelongToType, propertyInfo.Name, ClrType.FullName);
             }
@@ -538,7 +538,7 @@ namespace Microsoft.AspNet.OData.Builder
                 throw Error.ArgumentNull("propertyInfo");
             }
 
-            if (!propertyInfo.ReflectedType.IsAssignableFrom(ClrType))
+            if (!TypeHelper.GetReflectedType(propertyInfo).IsAssignableFrom(ClrType))
             {
                 throw Error.Argument("propertyInfo", SRResources.PropertyDoesNotBelongToType, propertyInfo.Name, ClrType.FullName);
             }
@@ -588,7 +588,7 @@ namespace Microsoft.AspNet.OData.Builder
                 throw Error.ArgumentNull("navigationProperty");
             }
 
-            if (!navigationProperty.ReflectedType.IsAssignableFrom(ClrType))
+            if (!TypeHelper.GetReflectedType(navigationProperty).IsAssignableFrom(ClrType))
             {
                 throw Error.Argument("navigationProperty", SRResources.PropertyDoesNotBelongToType, navigationProperty.Name, ClrType.FullName);
             }
@@ -654,7 +654,7 @@ namespace Microsoft.AspNet.OData.Builder
             if (baseProperty != null)
             {
                 throw Error.Argument("propertyInfo", SRResources.CannotRedefineBaseTypeProperty,
-                    propertyInfo.Name, baseProperty.PropertyInfo.ReflectedType.FullName);
+                    propertyInfo.Name, TypeHelper.GetReflectedType(baseProperty.PropertyInfo).FullName);
             }
         }
 

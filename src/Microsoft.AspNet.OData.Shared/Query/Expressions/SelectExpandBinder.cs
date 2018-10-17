@@ -102,7 +102,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             int? modelBoundPageSize = null)
         {
             Type elementType;
-            if (source.Type.IsCollection(out elementType))
+            if (TypeHelper.IsCollection(source.Type, out elementType))
             {
                 // new CollectionWrapper<ElementType> { Instance = source.Select(s => new Wrapper { ... }) };
                 return ProjectCollection(source, elementType, selectExpandClause, entityType, navigationSource, expandedItem,
@@ -186,7 +186,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             Expression propertyValue = ExpressionBinderBase.GetPropertyExpression(source, propertyName);
 
-            Type nullablePropertyType = propertyValue.Type.ToNullable();
+            Type nullablePropertyType = TypeHelper.ToNullable(propertyValue.Type);
             Expression nullablePropertyValue = ExpressionHelpers.ToNullable(propertyValue);
 
             if (filterClause != null)
@@ -382,7 +382,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
 
             Type elementType;
-            if (!source.Type.IsCollection(out elementType))
+            if (!TypeHelper.IsCollection(source.Type, out elementType))
             {
                 return countExpression;
             }
@@ -497,7 +497,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     // source == null ? null : propertyValue
                     propertyValue = Expression.Condition(
                         test: Expression.Equal(source, Expression.Constant(value: null)),
-                        ifTrue: Expression.Constant(value: null, type: propertyValue.Type.ToNullable()),
+                        ifTrue: Expression.Constant(value: null, type: TypeHelper.ToNullable(propertyValue.Type)),
                         ifFalse: nullablePropertyValue);
                 }
                 else
