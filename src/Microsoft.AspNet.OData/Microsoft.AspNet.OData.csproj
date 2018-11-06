@@ -5,7 +5,7 @@
     <ProjectGuid>{A6F9775D-F7E2-424E-8363-79644A73038F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>Microsoft.AspNet.OData</RootNamespace>
-    <AssemblyName>Microsoft.AspNet.OData</AssemblyName>
+    <AssemblyName>Microsoft.TeamFoundation.AspNet.OData</AssemblyName>
     <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
     <!-- Unable to run code analysis in Release configuration. Release assemblies do not include SuppressMessage
          attributes (so code analysis would always fail with the errors that are normally suppressed -->
