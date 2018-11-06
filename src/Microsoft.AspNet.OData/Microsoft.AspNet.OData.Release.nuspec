@@ -28,7 +28,7 @@
     <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.dll" target="lib\net45" />
     <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.pdb" target="lib\net45" />
     <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.xml" target="lib\net45" />
-    <file src="$ProductRoot$\localize\CHS\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hans" />
+    <file src="$ProductRoot$\localize\**\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hans" />
     <file src="$ProductRoot$\localize\CHT\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hant" />
     <file src="$ProductRoot$\localize\DEU\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\de" />
     <file src="$ProductRoot$\localize\ESN\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\es" />
