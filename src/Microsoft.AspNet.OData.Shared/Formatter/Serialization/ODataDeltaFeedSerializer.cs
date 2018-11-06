@@ -17,7 +17,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
     /// OData serializer for serializing a collection of <see cref="IEdmEntityType" />
     /// The Collection is of <see cref="IEdmChangedObject"/> which is the base interface implemented by all objects which are a part of the DeltaFeed payload.
     /// </summary>
-    public partial class ODataDeltaFeedSerializer : ODataEdmTypeSerializer
+    public class ODataDeltaFeedSerializer : ODataEdmTypeSerializer
     {
         private const string DeltaFeed = "deltafeed";
 
@@ -273,7 +273,6 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 {
                     NavigationSourceName = edmDeltaDeletedEntity.NavigationSource.Name
                 };
-
                 deletedResource.SetSerializationInfo(serializationInfo);
             }
 
@@ -362,7 +361,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
 
             if (navigationLink != null)
             {
-                return ODataDeltaFeedSerializer.GetNextPageLink(navigationLink, pageSize);
+                return GetNextPageHelper.GetNextPageLink(navigationLink, pageSize);
             }
 
             return null;

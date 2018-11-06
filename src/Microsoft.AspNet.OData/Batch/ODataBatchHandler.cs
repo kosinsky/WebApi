@@ -9,21 +9,18 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Batch;
 using Microsoft.AspNet.OData.Common;
-using Microsoft.OData;
 
 namespace Microsoft.AspNet.OData.Batch
 {
     /// <summary>
     /// Defines the abstraction for handling OData batch requests.
     /// </summary>
-    public abstract class ODataBatchHandler : HttpBatchHandler
+    /// <remarks>
+    /// This class implements a BatchHandler semantics for AspNet, which uses
+    /// an <see cref="HttpBatchHandler"/> for dispatching requests.
+    /// </remarks>
+    public abstract partial class ODataBatchHandler : HttpBatchHandler
     {
-        // Maxing out the received message size as we depend on the hosting layer to enforce this limit.
-        private ODataMessageQuotas _messageQuotas = new ODataMessageQuotas { MaxReceivedMessageSize = Int64.MaxValue };
-
-        // Preference odata.continue-on-error.
-        internal const string PreferenceContinueOnError = "odata.continue-on-error";
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ODataBatchHandler"/> class.
         /// </summary>
@@ -32,21 +29,6 @@ namespace Microsoft.AspNet.OData.Batch
             : base(httpServer)
         {
         }
-
-        /// <summary>
-        /// Gets the <see cref="ODataMessageQuotas"/> used for reading/writing the batch request/response.
-        /// </summary>
-        public ODataMessageQuotas MessageQuotas
-        {
-            get { return _messageQuotas; }
-        }
-
-        /// <summary>
-        /// Gets or sets the name of the OData route associated with this batch handler.
-        /// </summary>
-        public string ODataRouteName { get; set; }
-
-        internal bool ContinueOnError { get; set; }
 
         /// <summary>
         /// Creates the batch response message.

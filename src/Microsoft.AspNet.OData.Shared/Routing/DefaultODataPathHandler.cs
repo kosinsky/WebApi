@@ -96,6 +96,7 @@ namespace Microsoft.AspNet.OData.Routing
             return path.ToString();
         }
 
+        [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Function is difficult to split up.")]
         private ODataPath Parse(string serviceRoot, string odataPath, IServiceProvider requestContainer, bool template)
         {
             ODataUriParser uriParser;
@@ -115,6 +116,14 @@ namespace Microsoft.AspNet.OData.Routing
                     serviceRoot.EndsWith("/", StringComparison.Ordinal)
                         ? serviceRoot
                         : serviceRoot + "/");
+
+                // Concatenate the root and path and create a Uri. Using Uri to build a Uri from
+                // a root and relative path changes the casing on .NetCore. However, odataPath may
+                // be a full Uri.
+                if (!Uri.TryCreate(odataPath, UriKind.Absolute, out fullUri))
+                {
+                    fullUri = new Uri(serviceRootUri + odataPath);
+                }
 
                 // Due to a bug in the System.Uri some relative paths are rejected if they contain
                 // a ':' symbol on a position greater than 1024. This careful check should mitigate 
@@ -141,10 +150,7 @@ namespace Microsoft.AspNet.OData.Routing
             }
             else
             {
-                // ODL changes to use ODataUrlKeyDelimiter.Slash as default value.
-                // Web API still uses the ODataUrlKeyDelimiter.Parentheses as default value.
-                // Please remove it after fix: https://github.com/OData/odata.net/issues/642
-                uriParser.UrlKeyDelimiter = ODataUrlKeyDelimiter.Parentheses;
+                uriParser.UrlKeyDelimiter = ODataUrlKeyDelimiter.Slash;
             }
 
             ODL.ODataPath path;
@@ -215,7 +221,8 @@ namespace Microsoft.AspNet.OData.Routing
                                 !(id.EdmType.IsOrInheritsFrom(lastSegmentEdmType.ElementType.Definition) ||
                                   lastSegmentEdmType.ElementType.Definition.IsOrInheritsFrom(id.EdmType)))))
                     {
-                        // To avoid a dependency on System.Net.Http, extract id manually.
+                        // System.Net.Http on NetCore does not have the Uri extension method
+                        // ParseQueryString(), to avoid a platform-specific call, extract $id manually.
                         string idValue = fullUri.Query;
                         string idParam = "$id=";
                         int start = idValue.IndexOf(idParam, StringComparison.OrdinalIgnoreCase);
@@ -256,7 +263,7 @@ namespace Microsoft.AspNet.OData.Routing
 
             return new ODataPath(segments)
             {
-                ODLPath = path
+                Path = path
             };
         }
 

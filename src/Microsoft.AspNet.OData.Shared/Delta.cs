@@ -12,7 +12,7 @@ namespace Microsoft.AspNet.OData
     /// A class the tracks changes (i.e. the Delta) for an entity.
     /// </summary>
     [NonValidatingParameterBinding]
-    public abstract class Delta : DynamicObject, IDelta 
+    public abstract class Delta : DynamicObject, IDelta
     {
         /// <summary>
         /// Clears the Delta and resets the underlying Entity.
@@ -84,14 +84,14 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <summary>
-        /// Returns the Properties that have been modified through this Delta as an 
-        /// enumeration of Property Names 
+        /// Returns the Properties that have been modified through this Delta as an
+        /// enumeration of Property Names
         /// </summary>
         public abstract IEnumerable<string> GetChangedPropertyNames();
 
         /// <summary>
-        /// Returns the Properties that have not been modified through this Delta as an 
-        /// enumeration of Property Names 
+        /// Returns the Properties that have not been modified through this Delta as an
+        /// enumeration of Property Names
         /// </summary>
         public abstract IEnumerable<string> GetUnchangedPropertyNames();
     }

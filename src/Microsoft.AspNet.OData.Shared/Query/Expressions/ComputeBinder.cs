@@ -55,7 +55,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             var wrapperProperty = this.ResultClrType.GetProperty("Instance");
             wrapperTypeMemberAssignments.Add(Expression.Bind(wrapperProperty, this._lambdaParameter));
             var properties = new List<NamedPropertyExpression>();
-            foreach (var computeExpression in this._transformation.ComputeClause.ComputedItems)
+            foreach (var computeExpression in this._transformation.Expressions)
             {
                 properties.Add(new NamedPropertyExpression(Expression.Constant(computeExpression.Alias), CreateComputeExpression(computeExpression)));
             }

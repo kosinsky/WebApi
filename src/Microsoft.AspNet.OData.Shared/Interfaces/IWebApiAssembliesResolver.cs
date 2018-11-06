@@ -12,12 +12,12 @@ namespace Microsoft.AspNet.OData.Interfaces
     /// <remarks>
     /// This class is not intended to be exposed publicly; it used for the internal
     /// implementations of SelectControl(). Any design which makes this class public
-    /// should be find an alternative.
+    /// should find an alternative design.
     /// </remarks>
     internal interface IWebApiAssembliesResolver
     {
         /// <summary>
-        /// Gets a list of assemblies available for the application. 
+        /// Gets a list of assemblies available for the application.
         /// </summary>
         /// <returns>A list of assemblies available for the application. </returns>
         IEnumerable<Assembly> Assemblies { get; }

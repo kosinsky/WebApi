@@ -42,10 +42,11 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 throw Error.ArgumentNull("resource");
             }
 
+            // Clone the resource's context. Use a helper function so it can
+            // handle platform-specific differences in ODataSerializerContext.
             ODataSerializerContext context = resource.SerializerContext;
+            this.CopyPlatformSpecificProperties(context);
 
-            Request = context.Request;
-            Url = context.Url;
             Model = context.Model;
             Path = context.Path;
             RootElementName = context.RootElementName;
@@ -72,7 +73,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         /// <summary>
         /// Gets or sets the <see cref="IWebApiUrlHelper"/> to use for generating OData links.
         /// </summary>
-        internal IWebApiUrlHelper InternalUrl { get; private set; }
+        internal IWebApiUrlHelper InternalUrlHelper { get; private set; }
 
         /// <summary>
         /// Gets or sets the navigation source.

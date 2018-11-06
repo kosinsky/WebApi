@@ -195,8 +195,8 @@ namespace Microsoft.AspNet.OData.Builder
         {
             foreach (ParameterConfiguration parameter in operationConfiguration.Parameters)
             {
-                bool isParameterOptional = parameter.OptionalParameter;
-                IEdmTypeReference parameterTypeReference = GetEdmTypeReference(edmTypeMap, parameter.TypeConfiguration, nullable: isParameterOptional);
+                bool isParameterNullable = parameter.Nullable;
+                IEdmTypeReference parameterTypeReference = GetEdmTypeReference(edmTypeMap, parameter.TypeConfiguration, nullable: isParameterNullable);
                 IEdmOperationParameter operationParameter = new EdmOperationParameter(operation, parameter.Name, parameterTypeReference);
                 operation.AddParameter(operationParameter);
             }
@@ -270,7 +270,7 @@ namespace Microsoft.AspNet.OData.Builder
             {
                 IEdmTypeReference returnReference = GetEdmTypeReference(edmTypeMap,
                     operationConfiguration.ReturnType,
-                    operationConfiguration.ReturnType != null && operationConfiguration.OptionalReturn);
+                    operationConfiguration.ReturnType != null && operationConfiguration.ReturnNullable);
                 IEdmExpression expression = GetEdmEntitySetExpression(edmNavigationSourceMap, operationConfiguration);
                 IEdmPathExpression pathExpression = operationConfiguration.EntitySetPath != null
                     ? new EdmPathExpression(operationConfiguration.EntitySetPath)

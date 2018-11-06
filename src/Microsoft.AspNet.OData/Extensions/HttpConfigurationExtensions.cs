@@ -2,17 +2,19 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
+using System.Web.Http.Dispatcher;
 using System.Web.Http.Filters;
+using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
+using Microsoft.AspNet.OData.Interfaces;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Routing;
 using Microsoft.AspNet.OData.Routing.Conventions;
@@ -43,7 +45,7 @@ namespace Microsoft.AspNet.OData.Extensions
 
         private const string ContainerBuilderFactoryKey = "Microsoft.AspNet.OData.ContainerBuilderFactoryKey";
 
-        private const string RootContainerMappingsKey = "Microsoft.AspNet.OData.RootContainerMappingsKey";
+        private const string PerRouteContainerKey = "Microsoft.AspNet.OData.PerRouteContainerKey";
 
         private const string DefaultQuerySettingsKey = "Microsoft.AspNet.OData.DefaultQuerySettings";
 
@@ -362,7 +364,7 @@ namespace Microsoft.AspNet.OData.Extensions
         /// <summary>
         /// Check the continue-on-error header is enable or not.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True if continue-on-error header is enable; false otherwise</returns>
         internal static bool HasEnabledContinueOnErrorHeader(this HttpConfiguration configuration)
         {
             if (configuration == null)
@@ -490,12 +492,14 @@ namespace Microsoft.AspNet.OData.Extensions
                 throw Error.ArgumentNull("configuration");
             }
 
-            if (configuration.HasNonODataRootContainer())
+            if (configuration.Properties.ContainsKey(NonODataRootContainerKey))
             {
                 throw Error.InvalidOperation(SRResources.CannotReEnableDependencyInjection);
             }
 
-            configuration.CreateNonODataRootContainer(configureAction);
+            // Get the per-route container and create a new non-route container.
+            IPerRouteContainer perRouteContainer = GetPerRouteContainer(configuration);
+            perRouteContainer.CreateODataRootContainer(null, ConfigureDefaultServices(configuration, configureAction));
         }
 
         /// <summary>
@@ -716,52 +720,62 @@ namespace Microsoft.AspNet.OData.Extensions
             return routePrefix;
         }
 
-        #region ODataRootContainer
-
+        /// <summary>
+        /// Create the per-route container from the configuration for a given route.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="routeName">The route name.</param>
+        /// <param name="configureAction">The configuring action to add the services to the root container.</param>
+        /// <returns>The per-route container from the configuration</returns>
         internal static IServiceProvider CreateODataRootContainer(this HttpConfiguration configuration,
             string routeName, Action<IContainerBuilder> configureAction)
         {
-            IServiceProvider rootContainer = configuration.CreateRootContainerImplementation(configureAction);
-            configuration.SetODataRootContainer(routeName, rootContainer);
-
-            return rootContainer;
+            IPerRouteContainer perRouteContainer = configuration.GetPerRouteContainer();
+            return perRouteContainer.CreateODataRootContainer(routeName, ConfigureDefaultServices(configuration, configureAction));
         }
 
+        /// <summary>
+        /// Get the per-route container from the configuration.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <returns>The per-route container from the configuration</returns>
+        internal static IPerRouteContainer GetPerRouteContainer(this HttpConfiguration configuration)
+        {
+            return (IPerRouteContainer)configuration.Properties.GetOrAdd(
+                PerRouteContainerKey,
+                key =>
+                {
+                    IPerRouteContainer perRouteContainer = new PerRouteContainer(configuration);
+
+                    // Attach the build factory if there is one.
+                    object value;
+                    if (configuration.Properties.TryGetValue(ContainerBuilderFactoryKey, out value))
+                    {
+                        Func<IContainerBuilder> builderFactory = (Func<IContainerBuilder>)value;
+                        perRouteContainer.BuilderFactory = builderFactory;
+                    }
+
+                    return perRouteContainer;
+                });
+        }
+
+        /// <summary>
+        /// Get the OData root container for a given route.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="routeName">The route name.</param>
+        /// <returns>The OData root container for a given route.</returns>
         internal static IServiceProvider GetODataRootContainer(this HttpConfiguration configuration, string routeName)
         {
-            IServiceProvider rootContainer;
-            if (configuration.GetRootContainerMappings().TryGetValue(routeName, out rootContainer))
-            {
-                return rootContainer;
-            }
-
-            throw Error.InvalidOperation(SRResources.NullContainer);
+            IPerRouteContainer perRouteContainer = GetPerRouteContainer(configuration);
+            return perRouteContainer.GetODataRootContainer(routeName);
         }
 
-        internal static void SetODataRootContainer(this HttpConfiguration configuration, string routeName,
-            IServiceProvider rootContainer)
-        {
-            configuration.GetRootContainerMappings()[routeName] = rootContainer;
-        }
-
-        private static ConcurrentDictionary<string, IServiceProvider> GetRootContainerMappings(
-            this HttpConfiguration configuration)
-        {
-            return (ConcurrentDictionary<string, IServiceProvider>)configuration.Properties.GetOrAdd(
-                RootContainerMappingsKey, key => new ConcurrentDictionary<string, IServiceProvider>());
-        }
-
-        #endregion
-
-        #region NonODataRootContainer
-
-        internal static void CreateNonODataRootContainer(this HttpConfiguration configuration,
-            Action<IContainerBuilder> configureAction)
-        {
-            IServiceProvider rootContainer = configuration.CreateRootContainerImplementation(configureAction);
-            configuration.SetNonODataRootContainer(rootContainer);
-        }
-
+        /// <summary>
+        /// Get the OData root container for HTTP routes.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <returns>The OData root container for HTTP routes.</returns>
         internal static IServiceProvider GetNonODataRootContainer(this HttpConfiguration configuration)
         {
             object value;
@@ -773,68 +787,64 @@ namespace Microsoft.AspNet.OData.Extensions
             throw Error.InvalidOperation(SRResources.NoNonODataHttpRouteRegistered);
         }
 
+        /// <summary>
+        /// Enables dependency injection support for HTTP routes.
+        /// </summary>
+        /// <param name="configuration">The server configuration.</param>
+        /// <param name="rootContainer">The root container.</param>
         internal static void SetNonODataRootContainer(this HttpConfiguration configuration,
             IServiceProvider rootContainer)
         {
+            if (configuration == null)
+            {
+                throw Error.ArgumentNull("configuration");
+            }
+
+            if (rootContainer == null)
+            {
+                throw Error.ArgumentNull("rootContainer");
+            }
+
+            if (configuration.Properties.ContainsKey(NonODataRootContainerKey))
+            {
+                throw Error.InvalidOperation(SRResources.CannotReEnableDependencyInjection);
+            }
+
             configuration.Properties[NonODataRootContainerKey] = rootContainer;
         }
 
-        private static bool HasNonODataRootContainer(this HttpConfiguration configuration)
+        /// <summary>
+        /// Configure the default services.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="configureAction">The configuring action to add the services to the root container.</param>
+        /// <returns>A configuring action to add the services to the root container.</returns>
+        private static Action<IContainerBuilder> ConfigureDefaultServices(HttpConfiguration configuration, Action<IContainerBuilder> configureAction)
         {
-            return configuration.Properties.ContainsKey(NonODataRootContainerKey);
-        }
-
-        #endregion
-
-        #region CreateRootContainer
-
-        private static IServiceProvider CreateRootContainerImplementation(this HttpConfiguration configuration,
-            Action<IContainerBuilder> configureAction)
-        {
-            IContainerBuilder builder = configuration.CreateContainerBuilderWithDefaultServices();
-
-            if (configureAction != null)
+            return (builder =>
             {
-                configureAction(builder);
-            }
+                // Add platform-specific services here. Add Configuration first as other services may rely on it.
+                // For assembly resolution, add both the public (IAssembliesResolver) and internal (IWebApiAssembliesResolver)
+                // where IWebApiAssembliesResolver is transient and instantiated from IAssembliesResolver by DI.
+                IAssembliesResolver resolver = configuration.Services.GetAssembliesResolver() ?? new DefaultAssembliesResolver();
+                builder.AddService(ServiceLifetime.Singleton, sp => resolver);
+                builder.AddService<IWebApiAssembliesResolver, WebApiAssembliesResolver>(ServiceLifetime.Transient);
 
-            IServiceProvider rootContainer = builder.BuildContainer();
-            if (rootContainer == null)
-            {
-                throw Error.InvalidOperation(SRResources.NullContainer);
-            }
+                builder.AddService(ServiceLifetime.Singleton, sp => configuration);
+                builder.AddService(ServiceLifetime.Singleton, sp => configuration.GetDefaultQuerySettings());
 
-            return rootContainer;
-        }
+                // Currently, the ETagHandler is attached to the configuration.
+                //builder.AddService<IETagHandler, DefaultODataETagHandler>(ServiceLifetime.Singleton);
 
-        private static IContainerBuilder CreateContainerBuilderWithDefaultServices(this HttpConfiguration configuration)
-        {
-            IContainerBuilder builder;
+                // Add the default webApi services.
+                builder.AddDefaultWebApiServices();
 
-            object value;
-            if (configuration.Properties.TryGetValue(ContainerBuilderFactoryKey, out value))
-            {
-                Func<IContainerBuilder> builderFactory = (Func<IContainerBuilder>)value;
-
-                builder = builderFactory();
-                if (builder == null)
+                // Add custom actions.
+                if (configureAction != null)
                 {
-                    throw Error.InvalidOperation(SRResources.NullContainerBuilder);
+                    configureAction.Invoke(builder);
                 }
-            }
-            else
-            {
-                builder = new DefaultContainerBuilder();
-            }
-
-            builder.AddService(ServiceLifetime.Singleton, sp => configuration);
-            builder.AddService(ServiceLifetime.Singleton, sp => configuration.GetDefaultQuerySettings());
-            builder.AddDefaultODataServices();
-            builder.AddDefaultWebApiServices();
-
-            return builder;
+            });
         }
-
-        #endregion
     }
 }

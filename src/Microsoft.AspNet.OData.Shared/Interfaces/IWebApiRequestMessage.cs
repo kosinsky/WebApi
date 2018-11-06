@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net.Http.Headers;
+using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNet.OData.Formatter.Deserialization;
 using Microsoft.AspNet.OData.Routing;
 using Microsoft.OData;
@@ -15,12 +17,12 @@ namespace Microsoft.AspNet.OData.Interfaces
     /// <remarks>
     /// This class is not intended to be exposed publicly; it used for the internal
     /// implementations of SelectControl(). Any design which makes this class public
-    /// should be find an alternative.
+    /// should find an alternative design.
     /// </remarks>
     internal interface IWebApiRequestMessage
     {
         /// <summary>
-        /// Gets the contents of the HTTP message. 
+        /// Gets the contents of the HTTP message.
         /// </summary>
         IWebApiContext Context { get; }
 
@@ -51,11 +53,6 @@ namespace Microsoft.AspNet.OData.Interfaces
         Uri RequestUri { get; }
 
         /// <summary>
-        /// Gets or sets the <see cref="IWebApiUrlHelper"/> to use for generating OData links.
-        /// </summary>
-        IWebApiUrlHelper UrlHelper { get; set; }
-
-        /// <summary>
         /// Gets the deserializer provider associated with the request.
         /// </summary>
         /// <returns></returns>
@@ -67,6 +64,16 @@ namespace Microsoft.AspNet.OData.Interfaces
         /// <param name="properties">The input property names and values.</param>
         /// <returns>The generated ETag string.</returns>
         string CreateETag(IDictionary<string, object> properties);
+
+        /// <summary>
+        /// Gets the EntityTagHeaderValue ETag.
+        /// </summary>
+        ETag GetETag(EntityTagHeaderValue etagHeaderValue);
+
+        /// <summary>
+        /// Gets the EntityTagHeaderValue ETag.
+        /// </summary>
+        ETag GetETag<TEntity>(EntityTagHeaderValue etagHeaderValue);
 
         /// <summary>
         /// Get the next page link for a given page size.
@@ -91,7 +98,7 @@ namespace Microsoft.AspNet.OData.Interfaces
         /// Get the name value pairs from the query.
         /// </summary>
         /// <returns></returns>
-        IDictionary<string, string> ODataQueryParameters { get; }
+        IDictionary<string, string> QueryParameters { get; }
 
         /// <summary>
         /// Get the reader settings associated with the request.
@@ -100,9 +107,9 @@ namespace Microsoft.AspNet.OData.Interfaces
         ODataMessageReaderSettings ReaderSettings { get; }
 
         /// <summary>
-        /// Retrieves the route data for the given request or null if not available.
+        /// Gets the writer settings associated with the request.
         /// </summary>
         /// <returns></returns>
-        IDictionary<string, object> RouteData { get; }
+        ODataMessageWriterSettings WriterSettings { get; }
     }
 }

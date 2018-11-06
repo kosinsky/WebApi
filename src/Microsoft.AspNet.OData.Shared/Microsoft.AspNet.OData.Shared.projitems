@@ -9,6 +9,8 @@
     <Import_RootNamespace>Microsoft.AspNet.OData</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Batch\ODataBatchContent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Batch\ODataBatchHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\MaxLengthAttributeEdmPropertyConvention.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\DecimalPropertyConfiguration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\LengthPropertyConfiguration.cs" />
@@ -18,7 +20,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Common\ListWrapperCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\PropertyHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\TaskHelpers.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Common\TaskHelpersExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\Error.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\CountAttributeEdmPropertyConvention.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\CountAttributeEdmTypeConvention.cs" />
@@ -45,10 +46,31 @@
     <Compile Include="$(MSBuildThisFileDirectory)Builder\BindingPathHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CustomAggregateMethodAnnotation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EdmDeltaComplexObject.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)EnableQueryAttribute.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ETagMessageHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\ContainerBuilderExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\DefaultODataETagHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\ODataDeserializerContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\IETagHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataBinaryValueMediaTypeMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataCountMediaTypeMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataEnumValueMediaTypeMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataInputFormatterHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataModelBinderConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataOutputFormatterHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataPrimitiveValueMediaTypeMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataRawValueMediaTypeMapping.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\QueryStringMediaTypeMapping.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Serialization\ODataSerializerProvider.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Formatter\Serialization\ODataSerializerProviderProxy.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)GetNextPageHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IPerRouteContainer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ODataNullValueMessageHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PerRouteContainerBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>PropertyContainer.generated.tt</DependentUpon>
+    </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)RequestMethod.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Interfaces\IWebApiActionDescriptor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Interfaces\IWebApiActionMap.cs" />
@@ -68,11 +90,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\ComputeBinder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\DynamicTypeWrapperConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapperOfT.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>PropertyContainer.generated.tt</DependentUpon>
-    </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\TransformationBinderBase.cs" />    
     <Compile Include="$(MSBuildThisFileDirectory)Query\SelectAttribute.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\ExpandConfiguration.cs" />
@@ -218,6 +235,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\TruncatedCollectionOfT.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\SelectExpandQueryOption.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\SelectExpandQueryValidator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Results\ResultHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\Conventions\DynamicPropertyRoutingConvention.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\Conventions\NavigationSourceRoutingConvention.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\Conventions\SelectControllerResult.cs" />
@@ -226,8 +244,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Routing\ODataParameterValue.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\DefaultODataPathValidator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\ODataPathParameterBindingAttribute.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Routing\ODataPathRouteConstraint.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\ODataPathSegmentExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\ODataParameterHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Routing\ODataRoute.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Routing\ODataVersionConstraint.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\Template\NavigationPropertyLinkSegmentTemplate.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\Template\DynamicSegmentTemplate.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Routing\Template\OperationSegmentTemplate.cs" />
@@ -406,6 +427,13 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\ClrCanonicalFunctions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\FilterBinder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\PropertySelectorVisitor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)WebApiAssembliesResolver.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PropertyContainer.generated.cs</LastGenOutput>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.tt">

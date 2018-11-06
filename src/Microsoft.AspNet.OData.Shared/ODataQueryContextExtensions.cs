@@ -7,11 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNet.OData
 {
-    internal static partial class ODataQueryContextExtensions
+    internal static class ODataQueryContextExtensions
     {
         public static ODataQuerySettings UpdateQuerySettings(this ODataQueryContext context, ODataQuerySettings querySettings, IQueryable query)
         {
-            ODataQuerySettings updatedSettings = context.RequestContainer.GetRequiredService<ODataQuerySettings>();
+            ODataQuerySettings updatedSettings = (context == null || context.RequestContainer == null)
+                ? new ODataQuerySettings()
+                : context.RequestContainer.GetRequiredService<ODataQuerySettings>();
+
             updatedSettings.CopyFrom(querySettings);
 
             if (updatedSettings.HandleNullPropagation == HandleNullPropagationOption.Default)

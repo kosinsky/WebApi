@@ -25,6 +25,10 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         /// </summary>
         public PropertyContainer Container { get; set; }
 
+        /// <summary>
+        /// Gets or sets the instance type name
+        /// </summary>
+        public string InstanceType { get; set; }
         /// <inheritdoc />
         public object UntypedInstance { get; set; }
 
@@ -39,6 +43,13 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         public IEdmTypeReference GetEdmType()
         {
             IEdmModel model = GetModel();
+
+            if (InstanceType != null)
+            {
+                IEdmEntityType entityType = model.FindType(InstanceType) as IEdmEntityType;
+                return entityType.ToEdmTypeReference(true);
+            }
+
             Type elementType = GetElementType();
             return model.GetEdmTypeReference(elementType);
         }

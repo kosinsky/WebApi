@@ -9,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNet.OData.Interfaces;
@@ -41,7 +42,17 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         {
         }
 
-        internal static Expression Bind(IQueryable baseQuery, FilterClause filterClause, Type filterType, IServiceProvider requestContainer)
+        internal FilterBinder(ODataQuerySettings settings, IWebApiAssembliesResolver assembliesResolver, IEdmModel model)
+            : base(model, assembliesResolver, settings)
+        {
+        }
+
+        internal static Expression Bind(
+            IQueryable baseQuery,
+            FilterClause filterClause,
+            Type filterType,
+            ODataQueryContext context,
+            ODataQuerySettings querySettings)
         {
             if (filterClause == null)
             {
@@ -51,29 +62,51 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             {
                 throw Error.ArgumentNull("filterType");
             }
-            if (requestContainer == null)
+            if (context == null)
             {
-                throw Error.ArgumentNull("requestContainer");
+                throw Error.ArgumentNull("context");
             }
 
-            FilterBinder binder = requestContainer.GetRequiredService<FilterBinder>();
+            FilterBinder binder = GetOrCreateFilterBinder(context, querySettings);
+
             binder._filterType = filterType;
             binder.BaseQuery = baseQuery;
 
             return BindFilterClause(binder, filterClause, filterType);
         }
 
-        internal static LambdaExpression Bind(IQueryable baseQuery, OrderByClause orderBy, Type elementType, IServiceProvider requestContainer)
+        internal static LambdaExpression Bind(
+            IQueryable baseQuery,
+            OrderByClause orderBy,
+            Type elementType,
+            ODataQueryContext context,
+            ODataQuerySettings querySettings)
         {
             Contract.Assert(orderBy != null);
             Contract.Assert(elementType != null);
-            Contract.Assert(requestContainer != null);
+            Contract.Assert(context != null);
 
-            FilterBinder binder = requestContainer.GetRequiredService<FilterBinder>();
+            FilterBinder binder = GetOrCreateFilterBinder(context, querySettings);
+
             binder._filterType = elementType;
             binder.BaseQuery = baseQuery;
 
             return BindOrderByClause(binder, orderBy, elementType);
+        }
+
+        private static FilterBinder GetOrCreateFilterBinder(ODataQueryContext context, ODataQuerySettings querySettings)
+        {
+            FilterBinder binder = null;
+            if (context.RequestContainer != null)
+            {
+                binder = context.RequestContainer.GetRequiredService<FilterBinder>();
+                if (binder != null && binder.Model != context.Model && binder.Model == EdmCoreModel.Instance)
+                {
+                    binder.Model = context.Model;
+                }
+            }
+
+            return binder ?? new FilterBinder(querySettings, WebApiAssembliesResolver.Default, context.Model);
         }
 
         #region For testing purposes only.
@@ -707,7 +740,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                         }
                     }
 
-                    parameter = Expression.Parameter(EdmLibHelpers.GetClrType(edmTypeReference, Model, AssembliesResolver), rangeVariable.Name);
+                    parameter = Expression.Parameter(EdmLibHelpers.GetClrType(edmTypeReference, Model, InternalAssembliesResolver), rangeVariable.Name);
                     Contract.Assert(lambdaIt == null, "There can be only one parameter in an Any/All lambda");
                     lambdaIt = parameter;
                 }

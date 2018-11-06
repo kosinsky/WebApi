@@ -8,7 +8,8 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Microsoft.AspNet.OData.Common {
+namespace Microsoft.AspNet.OData.Common
+{
     using System;
     using System.Linq;
     using System.Reflection;
@@ -429,7 +430,18 @@ namespace Microsoft.AspNet.OData.Common {
                 return ResourceManager.GetString("DeltaTypeMismatch", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot find nested resource name &apos;{0}&apos; in parent resource type &apos;{1}&apos;..
+        /// </summary>
+        internal static string DeltaNestedResourceNameNotFound
+        {
+            get
+            {
+                return ResourceManager.GetString("DeltaNestedResourceNameNotFound", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to The dependent property type &apos;{0}&apos; is not same as the principal property type &apos;{1}. The dependent and principal properties must have must have same types in the same order..
         /// </summary>
@@ -1077,7 +1089,7 @@ namespace Microsoft.AspNet.OData.Common {
                 return ResourceManager.GetString("MemberExpressionsMustBeBoundToLambdaParameter", resourceCulture);
             }
         }
-        
+
         /// <summary>
         ///   Looks up a localized string similar to Member &apos;{0}.{1}&apos; is not a property..
         /// </summary>
@@ -1086,7 +1098,40 @@ namespace Microsoft.AspNet.OData.Common {
                 return ResourceManager.GetString("MemberExpressionsMustBeProperties", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot find '{0}'. OData services have not been configured. Are you missing a call to AddOData()?.
+        /// </summary>
+        internal static string MissingODataServices
+        {
+            get
+            {
+                return ResourceManager.GetString("MissingODataServices", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot find the services container for route '{0}'. This should not happen and represents a bug.
+        /// </summary>
+        internal static string MissingODataContainer
+        {
+            get
+            {
+                return ResourceManager.GetString("MissingODataContainer", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot find the services container for the non-OData route. This can occur when using OData components on the non-OData route and is usually a configuration issue. Call EnableDependencyInjection() to enable OData components on non-OData routes. This may also occur when a request was mistakenly handled by the ASP.NET Core routing layer instead of the OData routing layer, for instance the URL does not include the OData route prefix configured via a call to MapODataServiceRoute().
+        /// </summary>
+        internal static string MissingNonODataContainer
+        {
+            get
+            {
+                return ResourceManager.GetString("MissingNonODataContainer", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to The binding context cannot have a null ModelMetadata..
         /// </summary>
@@ -1858,15 +1903,6 @@ namespace Microsoft.AspNet.OData.Common {
         internal static string RebindingNotSupported {
             get {
                 return ResourceManager.GetString("RebindingNotSupported", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to The complex type &apos;{0}&apos; has a reference to itself through the property &apos;{1}&apos;. A recursive loop of complex types is not allowed..
-        /// </summary>
-        internal static string RecursiveComplexTypesNotAllowed {
-            get {
-                return ResourceManager.GetString("RecursiveComplexTypesNotAllowed", resourceCulture);
             }
         }
         

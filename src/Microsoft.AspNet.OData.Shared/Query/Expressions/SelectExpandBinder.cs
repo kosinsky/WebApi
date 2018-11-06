@@ -203,6 +203,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
                 Expression filterResult = nullablePropertyValue;
 
+                ODataQuerySettings querySettings = new ODataQuerySettings()
+                {
+                    HandleNullPropagation = HandleNullPropagationOption.True,
+                };
+
                 if (isCollection)
                 {
                     Expression filterSource =
@@ -213,7 +218,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                             : nullablePropertyValue;
 
                     // TODO: Implement proper support for $select/$expand after $apply
-                    Expression filterPredicate = FilterBinder.Bind(null, filterClause, clrElementType, _context.RequestContainer);
+                    Expression filterPredicate = FilterBinder.Bind(null, filterClause, clrElementType, _context, querySettings);
                     filterResult = Expression.Call(
                         ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(clrElementType),
                         filterSource,
@@ -223,7 +228,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 }
                 else if (_settings.HandleReferenceNavigationPropertyExpandFilter)
                 {
-                    LambdaExpression filterLambdaExpression = FilterBinder.Bind(null, filterClause, clrElementType, _context.RequestContainer) as LambdaExpression;
+                    LambdaExpression filterLambdaExpression = FilterBinder.Bind(null, filterClause, clrElementType, _context, querySettings) as LambdaExpression;
                     if (filterLambdaExpression == null)
                     {
                         throw new ODataException(Error.Format(SRResources.ExpandFilterExpressionNotLambdaExpression,
@@ -327,6 +332,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 if (typeName != null)
                 {
                     isTypeNamePropertySet = true;
+                    wrapperProperty = wrapperType.GetProperty("InstanceType");
+                    wrapperTypeMemberAssignments.Add(Expression.Bind(wrapperProperty, typeName));
                 }
             }
 
@@ -517,8 +524,13 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             if (orderbyClause != null)
             {
                 // TODO: Implement proper support for $select/$expand after $apply
+                ODataQuerySettings querySettings = new ODataQuerySettings()
+                {
+                    HandleNullPropagation = HandleNullPropagationOption.True,
+                };
+
                 LambdaExpression orderByExpression =
-                    FilterBinder.Bind(null, orderbyClause, elementType, _context.RequestContainer);
+                    FilterBinder.Bind(null, orderbyClause, elementType, _context, querySettings);
                 source = ExpressionHelpers.OrderBy(source, orderByExpression, elementType, orderbyClause.Direction);
             }
 
@@ -651,7 +663,6 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         internal static Expression CreateTypeNameExpression(Expression source, IEdmEntityType elementType, IEdmModel model)
         {
             IReadOnlyList<IEdmEntityType> derivedTypes = GetAllDerivedTypes(elementType, model);
-
             if (derivedTypes.Count == 0)
             {
                 // no inheritance.

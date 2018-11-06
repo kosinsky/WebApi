@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
-using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Microsoft.AspNet.OData.Common;
 
 namespace Microsoft.AspNet.OData.Builder
 {
@@ -36,17 +36,17 @@ namespace Microsoft.AspNet.OData.Builder
         {
             if (navigationProperty == null)
             {
-                throw new ArgumentNullException("navigationProperty");
+                throw Error.ArgumentNull("navigationProperty");
             }
 
             if (navigationSource == null)
             {
-                throw new ArgumentNullException("navigationSource");
+                throw Error.ArgumentNull("navigationSource");
             }
 
             if (path == null)
             {
-                throw new ArgumentNullException("path");
+                throw Error.ArgumentNull("path");
             }
 
             NavigationProperty = navigationProperty;

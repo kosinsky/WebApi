@@ -3,11 +3,7 @@
 
 using System;
 using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Reflection;
-using System.Web.Http;
 using Microsoft.AspNet.OData.Common;
-using Microsoft.OData.Edm;
 using Newtonsoft.Json;
 
 namespace Microsoft.AspNet.OData.Query.Expressions

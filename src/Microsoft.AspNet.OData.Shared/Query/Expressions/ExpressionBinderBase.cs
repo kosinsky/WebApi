@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-#if !NETCORE
+#if NETFX // System.Data.Linq.Binary is only supported in the AspNet version.
 using System.Data.Linq;
 #endif
 using System.Diagnostics.CodeAnalysis;
@@ -13,9 +13,11 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Xml.Linq;
+using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNet.OData.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -25,7 +27,6 @@ namespace Microsoft.AspNet.OData.Query.Expressions
     /// <summary>
     /// The base class for all expression binders.
     /// </summary>
-    [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Relies on many ODataLib classes.")]
     public abstract partial class ExpressionBinderBase
     {
         internal static readonly MethodInfo StringCompareMethodInfo = typeof(string).GetMethod("Compare", new[] { typeof(string), typeof(string), typeof(StringComparison) });
@@ -61,7 +62,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         internal ODataQuerySettings QuerySettings { get; set; }
 
-        internal IWebApiAssembliesResolver AssembliesResolver { get; set; }
+        internal IWebApiAssembliesResolver InternalAssembliesResolver { get; set; }
 
         /// <summary>
         /// Base query used for the binder.
@@ -73,12 +74,28 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         /// </summary>
         internal IDictionary<string, Expression> FlattenedPropertyContainer;
 
-        internal bool HasInstancePropertyContainer;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExpressionBinderBase"/> class.
+        /// </summary>
+        /// <param name="requestContainer">The request container.</param>
+        protected ExpressionBinderBase(IServiceProvider requestContainer)
+        {
+            Contract.Assert(requestContainer != null);
+
+            QuerySettings = requestContainer.GetRequiredService<ODataQuerySettings>();
+            Model = requestContainer.GetRequiredService<IEdmModel>();
+
+            // The IWebApiAssembliesResolver service is internal and can only be injected by WebApi.
+            // This code path may be used in the cases when the service container available
+            // but may not contain an instance of IWebApiAssembliesResolver.
+            IWebApiAssembliesResolver injectedResolver = requestContainer.GetService<IWebApiAssembliesResolver>();
+            InternalAssembliesResolver = (injectedResolver != null) ? injectedResolver : WebApiAssembliesResolver.Default;
+        }
 
         internal ExpressionBinderBase(IEdmModel model, IWebApiAssembliesResolver assembliesResolver, ODataQuerySettings querySettings)
             : this(model, querySettings)
         {
-            AssembliesResolver = assembliesResolver;
+            InternalAssembliesResolver = assembliesResolver;
         }
 
         internal ExpressionBinderBase(IEdmModel model, ODataQuerySettings querySettings)
@@ -90,6 +107,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             QuerySettings = querySettings;
             Model = model;
         }
+
+        internal bool HasInstancePropertyContainer;
 
         /// <summary>
         /// Binds a <see cref="BinaryOperatorNode"/> to create a LINQ <see cref="Expression"/> that
@@ -280,7 +299,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         internal Expression CreateConvertExpression(ConvertNode convertNode, Expression source)
         {
-            Type conversionType = EdmLibHelpers.GetClrType(convertNode.TypeReference, Model, AssembliesResolver);
+            Type conversionType = EdmLibHelpers.GetClrType(convertNode.TypeReference, Model, InternalAssembliesResolver);
 
             if (conversionType == typeof(bool?) && source.Type == typeof(bool))
             {
@@ -382,7 +401,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                             {
                                 convertedExpression = Expression.Call(source, "ToString", typeArguments: null, arguments: null);
                             }
-#if !NETCORE
+#if NETFX // System.Data.Linq.Binary is only supported in the AspNet version.
                             else if (sourceType == typeof(Binary))
                             {
                                 convertedExpression = Expression.Call(source, "ToArray", typeArguments: null, arguments: null);
@@ -1192,7 +1211,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 return NullConstant;
             }
 
-            Type constantType = EdmLibHelpers.GetClrType(constantNode.TypeReference, Model, AssembliesResolver);
+            Type constantType = EdmLibHelpers.GetClrType(constantNode.TypeReference, Model, InternalAssembliesResolver);
             object value = constantNode.Value;
 
             if (constantNode.TypeReference != null && constantNode.TypeReference.IsEnum())

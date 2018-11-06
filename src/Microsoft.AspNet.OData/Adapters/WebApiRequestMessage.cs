@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
-using System.Web.Http.Routing;
 using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Extensions;
@@ -48,12 +47,6 @@ namespace Microsoft.AspNet.OData.Adapters
                 this.Context = new WebApiContext(context);
             }
 
-            UrlHelper uriHelper = request.GetUrlHelper();
-            if (uriHelper != null)
-            {
-                this.UrlHelper = new WebApiUrlHelper(uriHelper);
-            }
-
             HttpConfiguration configuration = request.GetConfiguration();
             if (configuration != null)
             {
@@ -62,7 +55,7 @@ namespace Microsoft.AspNet.OData.Adapters
         }
 
         /// <summary>
-        /// Gets the contents of the HTTP message. 
+        /// Gets the contents of the HTTP message.
         /// </summary>
         public IWebApiContext Context { get; private set; }
 
@@ -72,7 +65,7 @@ namespace Microsoft.AspNet.OData.Adapters
         /// <returns></returns>
         public bool IsCountRequest()
         {
-            return ODataCountMediaTypeMapping.IsCountRequest(this.innerRequest);
+            return ODataCountMediaTypeMapping.IsCountRequest(this.innerRequest.ODataProperties().Path);
         }
 
         /// <summary>
@@ -115,11 +108,6 @@ namespace Microsoft.AspNet.OData.Adapters
         }
 
         /// <summary>
-        /// Gets or sets the <see cref="IWebApiUrlHelper"/> to use for generating OData links.
-        /// </summary>
-        public IWebApiUrlHelper UrlHelper { get; set; }
-
-        /// <summary>
         /// Gets the deserializer provider associated with the request.
         /// </summary>
         /// <returns></returns>
@@ -156,6 +144,24 @@ namespace Microsoft.AspNet.OData.Adapters
         }
 
         /// <summary>
+        /// Gets the EntityTagHeaderValue ETag>.
+        /// </summary>
+        /// <remarks>This function uses types that are AspNet-specific.</remarks>
+        public ETag GetETag(EntityTagHeaderValue etagHeaderValue)
+        {
+            return this.innerRequest.GetETag(etagHeaderValue);
+        }
+
+        /// <summary>
+        /// Gets the EntityTagHeaderValue ETag>.
+        /// </summary>
+        /// <remarks>This function uses types that are AspNet-specific.</remarks>
+        public ETag GetETag<TEntity>(EntityTagHeaderValue etagHeaderValue)
+        {
+            return this.innerRequest.GetETag<TEntity>(etagHeaderValue);
+        }
+
+        /// <summary>
         /// Gets a list of content Id mappings associated with the request.
         /// </summary>
         /// <returns></returns>
@@ -174,17 +180,22 @@ namespace Microsoft.AspNet.OData.Adapters
         }
 
         /// <summary>
-        /// Gets the OData query parameters from the query.
+        /// Gets the query parameters from the query with duplicated key ignored.
         /// </summary>
         /// <returns></returns>
-        public IDictionary<string, string> ODataQueryParameters
+        public IDictionary<string, string> QueryParameters
         {
             get
             {
-                return this.innerRequest.GetQueryNameValuePairs()
-                    .Where(p => p.Key.StartsWith("$", StringComparison.Ordinal) ||
-                    p.Key.StartsWith("@", StringComparison.Ordinal))
-                    .ToDictionary(p => p.Key, p => p.Value);
+                IDictionary<string, string> result = new Dictionary<string, string>();
+                foreach (var pair in this.innerRequest.GetQueryNameValuePairs())
+                {
+                    if (!result.ContainsKey(pair.Key))
+                    {
+                        result.Add(pair.Key, pair.Value);
+                    }
+                }
+                return result;
             }
         }
 
@@ -198,12 +209,12 @@ namespace Microsoft.AspNet.OData.Adapters
         }
 
         /// <summary>
-        /// Gets the route data for the given request or null if not available.
+        /// Gets the writer settings associated with the request.
         /// </summary>
         /// <returns></returns>
-        public IDictionary<string, object> RouteData
+        public ODataMessageWriterSettings WriterSettings
         {
-            get { return this.innerRequest.GetRouteData().Values; }
+            get { return this.innerRequest.GetWriterSettings(); }
         }
     }
 }

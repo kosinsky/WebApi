@@ -7,12 +7,15 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Reflection;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Common;
+using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNet.OData.Interfaces;
 using Microsoft.AspNet.OData.Query.Validators;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -33,7 +36,53 @@ namespace Microsoft.AspNet.OData.Query
 
         private AllowedQueryOptions _ignoreQueryOptions = AllowedQueryOptions.None;
 
+        private ETag _etagIfMatch;
+
+        private bool _etagIfMatchChecked;
+
+        private ETag _etagIfNoneMatch;
+
+        private bool _etagIfNoneMatchChecked;
+
+        private bool _enableNoDollarSignQueryOptions = false;
+
         private static readonly Func<TransformationNode, bool> _aggregateTransformPredicate = t => t.Kind == TransformationNodeKind.Aggregate || t.Kind == TransformationNodeKind.GroupBy;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ODataQueryOptions"/> class based on the incoming request and some metadata information from
+        /// the <see cref="ODataQueryContext"/>.
+        /// </summary>
+        /// <param name="context">The <see cref="ODataQueryContext"/> which contains the <see cref="IEdmModel"/> and some type information.</param>
+        private void Initialize(ODataQueryContext context)
+        {
+            Contract.Assert(context != null);
+
+            ODataUriResolver uriResolver = context.RequestContainer.GetRequiredService<ODataUriResolver>();
+            if (uriResolver != null)
+            {
+                _enableNoDollarSignQueryOptions = uriResolver.EnableNoDollarQueryOptions;
+            }
+
+            // Parse the query from request Uri, including only keys which are OData query parameters or parameter alias
+            // OData query parameters are normalized with the $-sign prefixes when the
+            // <code>EnableNoDollarSignPrefixSystemQueryOption</code> option is used.
+            RawValues = new ODataRawQueryOptions();
+            IDictionary<string, string> normalizedQueryParameters = GetODataQueryParameters();
+
+            _queryOptionParser = new ODataQueryOptionParser(
+                context.Model,
+                context.ElementType,
+                context.NavigationSource,
+                normalizedQueryParameters);
+
+            // Note: the context.RequestContainer must be set by the ODataQueryOptions constructor.
+            Contract.Assert(context.RequestContainer != null);
+            _queryOptionParser.Resolver = context.RequestContainer.GetRequiredService<ODataUriResolver>();
+
+            BuildQueryOptions(normalizedQueryParameters);
+
+            Validator = ODataQueryValidator.GetODataQueryValidator(context);
+        }
 
         /// <summary>
         /// Gets the request message associated with this instance.
@@ -91,23 +140,103 @@ namespace Microsoft.AspNet.OData.Query
         public ODataQueryValidator Validator { get; set; }
 
         /// <summary>
-        /// Check if the given query option is an OData system query option.
+        /// Gets or sets the request headers.
+        /// </summary>
+        private IWebApiHeaders InternalHeaders { get; set; }
+
+        /// <summary>
+        /// Check if the given query option is an OData system query option using $-prefix-required theme.
         /// </summary>
         /// <param name="queryOptionName">The name of the query option.</param>
         /// <returns>Returns <c>true</c> if the query option is an OData system query option.</returns>
         public static bool IsSystemQueryOption(string queryOptionName)
         {
-            return queryOptionName == "$orderby" ||
-                 queryOptionName == "$filter" ||
-                 queryOptionName == "$top" ||
-                 queryOptionName == "$skip" ||
-                 queryOptionName == "$count" ||
-                 queryOptionName == "$expand" ||
-                 queryOptionName == "$select" ||
-                 queryOptionName == "$format" ||
-                 queryOptionName == "$skiptoken" ||
-                 queryOptionName == "$deltatoken" ||
-                 queryOptionName == "$apply";
+            return IsSystemQueryOption(queryOptionName, false);
+        }
+
+        /// <summary>
+        /// Check if the given query option is an OData system query option.
+        /// </summary>
+        /// <param name="queryOptionName">The name of the query option.</param>
+        /// <param name="isDollarSignOptional">Whether the optional-$-prefix scheme is used for OData system query.</param>
+        /// <returns>Returns <c>true</c> if the query option is an OData system query option.</returns>
+        public static bool IsSystemQueryOption(string queryOptionName, bool isDollarSignOptional)
+        {
+            string fixedQueryOptionName = queryOptionName;
+            if (isDollarSignOptional && !queryOptionName.StartsWith("$", StringComparison.Ordinal))
+            {
+                fixedQueryOptionName = "$" + queryOptionName;
+            }
+
+            return fixedQueryOptionName.Equals("$orderby", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$filter", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$top", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$skip", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$count", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$expand", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$select", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$format", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$skiptoken", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$deltatoken", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$apply", StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Gets the <see cref="ETag"/> from IfMatch header.
+        /// </summary>
+        public virtual ETag IfMatch
+        {
+            get
+            {
+                if (!_etagIfMatchChecked && _etagIfMatch == null)
+                {
+                    IEnumerable<string> ifMatchValues;
+                    if (InternalHeaders.TryGetValues("If-Match", out ifMatchValues))
+                    {
+                        EntityTagHeaderValue etagHeaderValue = EntityTagHeaderValue.Parse(ifMatchValues.SingleOrDefault());
+                        _etagIfMatch = GetETag(etagHeaderValue);
+                        _etagIfMatchChecked = true;
+                    }
+                }
+
+                return _etagIfMatch;
+            }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="ETag"/> from IfNoneMatch header.
+        /// </summary>
+        public virtual ETag IfNoneMatch
+        {
+            get
+            {
+                if (!_etagIfNoneMatchChecked && _etagIfNoneMatch == null)
+                {
+                    IEnumerable<string> ifNoneMatchValues;
+                    if (InternalHeaders.TryGetValues("If-None-Match", out ifNoneMatchValues))
+                    {
+                        EntityTagHeaderValue etagHeaderValue = EntityTagHeaderValue.Parse(ifNoneMatchValues.SingleOrDefault());
+                        _etagIfNoneMatch = GetETag(etagHeaderValue);
+                        if (_etagIfNoneMatch != null)
+                        {
+                            _etagIfNoneMatch.IsIfNoneMatch = true;
+                        }
+                        _etagIfNoneMatchChecked = true;
+                    }
+
+                    _etagIfNoneMatchChecked = true;
+                }
+
+                return _etagIfNoneMatch;
+            }
+        }
+
+        /// <summary>
+        /// Gets the EntityTagHeaderValue ETag.
+        /// </summary>
+        internal virtual ETag GetETag(EntityTagHeaderValue etagHeaderValue)
+        {
+            return InternalRequest.GetETag(etagHeaderValue);
         }
 
         /// <summary>
@@ -119,13 +248,17 @@ namespace Microsoft.AspNet.OData.Query
             Justification = "Need lower case string here.")]
         public bool IsSupportedQueryOption(string queryOptionName)
         {
-            if (!_queryOptionParser.Resolver.EnableCaseInsensitive)
+            ODataUriResolver resolver = _queryOptionParser != null
+                ? _queryOptionParser.Resolver
+                : Request.GetRequestContainer().GetRequiredService<ODataUriResolver>();
+
+            if (!resolver.EnableCaseInsensitive)
             {
-                return IsSystemQueryOption(queryOptionName);
+                return IsSystemQueryOption(queryOptionName, this._enableNoDollarSignQueryOptions);
             }
 
             string lowcaseQueryOptionName = queryOptionName.ToLowerInvariant();
-            return IsSystemQueryOption(lowcaseQueryOptionName);
+            return IsSystemQueryOption(lowcaseQueryOptionName, this._enableNoDollarSignQueryOptions);
         }
 
         /// <summary>
@@ -320,7 +453,7 @@ namespace Microsoft.AspNet.OData.Query
             if (lastTransform.Kind == TransformationNodeKind.Aggregate)
             {
                 var aggregateClause = lastTransform as AggregateTransformationNode;
-                foreach (var expr in aggregateClause.Expressions)
+                foreach (var expr in aggregateClause.AggregateExpressions)
                 {
                     result.Add(expr.Alias);
                 }
@@ -620,7 +753,38 @@ namespace Microsoft.AspNet.OData.Query
 
         private IDictionary<string, string> GetODataQueryParameters()
         {
-            return InternalRequest.ODataQueryParameters;
+            Dictionary<string, string> result = new Dictionary<string, string>();
+
+            foreach (KeyValuePair<string, string> kvp in InternalRequest.QueryParameters)
+            {
+                // Check supported system query options per $-sign-prefix option.
+                if (!_enableNoDollarSignQueryOptions)
+                {
+                    // This is the original case for required $-sign prefix.
+                    if (kvp.Key.StartsWith("$", StringComparison.Ordinal))
+                    {
+                        result.Add(kvp.Key, kvp.Value);
+                    }
+                }
+                else
+                {
+                    if (IsSupportedQueryOption(kvp.Key))
+                    {
+                        // Normalized the supported system query key by adding the $-prefix if needed.
+                        result.Add(
+                            !kvp.Key.StartsWith("$", StringComparison.Ordinal) ? "$" + kvp.Key : kvp.Key,
+                            kvp.Value);
+                    }
+                }
+
+                // check parameter alias
+                if (kvp.Key.StartsWith("@", StringComparison.Ordinal))
+                {
+                    result.Add(kvp.Key, kvp.Value);
+                }
+            }
+
+            return result;
         }
 
         private string GetAutoSelectRawValue()
@@ -710,7 +874,7 @@ namespace Microsoft.AspNet.OData.Query
         [SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase",
             Justification = "Need lower case string here.")]
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
-            Justification = "These are simple conversion function and cannot be split up.")]
+            Justification = "These are simple and flat processing functions based on parameter key value and cannot be split up.")]
         private void BuildQueryOptions(IDictionary<string, string> queryParameters)
         {
             foreach (KeyValuePair<string, string> kvp in queryParameters)

@@ -498,7 +498,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             {
                 nullDynamicPropertyEnabled = true;
             }
-            else if (resourceContext.Request != null)
+            else if (resourceContext.InternalRequest != null)
             {
                 nullDynamicPropertyEnabled = resourceContext.InternalRequest.Options.NullDynamicPropertyIsEnabled;
             }
@@ -605,7 +605,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         /// <returns>The created ETag.</returns>
         public virtual string CreateETag(ResourceContext resourceContext)
         {
-            if (resourceContext.Request != null)
+            if (resourceContext.InternalRequest != null)
             {
                 IEdmModel model = resourceContext.EdmModel;
                 IEdmNavigationSource navigationSource = resourceContext.NavigationSource;
@@ -1144,7 +1144,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                     if (serializerContext.NavigationSource == null || serializerContext.NavigationSource == serializerContext.Path.NavigationSource)
                     {
                         edmType = serializerContext.Path.EdmType;
-                        if (edmType.TypeKind == EdmTypeKind.Collection)
+                        if (edmType != null && edmType.TypeKind == EdmTypeKind.Collection)
                         {
                             edmType = (edmType as IEdmCollectionType).ElementType.Definition;
                         }

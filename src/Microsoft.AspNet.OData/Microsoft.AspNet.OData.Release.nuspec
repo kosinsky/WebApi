@@ -10,14 +10,14 @@
     <summary>This package contains everything you need to create OData v4.0 endpoints using ASP.NET Web API.</summary>
     <language>en-US</language>
     <projectUrl>http://odata.github.io</projectUrl>
-    <licenseUrl>http://www.microsoft.com/web/webpi/eula/net_library_eula_ENU.htm</licenseUrl>
+    <licenseUrl>https://raw.githubusercontent.com/OData/WebApi/master/License.txt</licenseUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <tags>Microsoft AspNet WebApi AspNetWebApi OData</tags>
     <dependencies>
-      <dependency id="Microsoft.AspNet.WebApi.Client" version="$WebApiClientPackageDependency$" />
-      <dependency id="Microsoft.AspNet.WebApi.Core" version="$WebApiCorePackageDependency$" />
-      <dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="$DependencyInjectionPackageDependency$" />
-      <dependency id="Microsoft.Extensions.DependencyInjection" version="$DependencyInjectionPackageDependency$" />
+      <dependency id="Microsoft.AspNet.WebApi.Client" version="$AspNetPackageDependency$" />
+      <dependency id="Microsoft.AspNet.WebApi.Core" version="$AspNetPackageDependency$" />
+      <dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="$DependencyInjection1PackageDependency$" />
+      <dependency id="Microsoft.Extensions.DependencyInjection" version="$DependencyInjection1PackageDependency$" />
       <dependency id="Mseng.OData.Core" version="$ODataLibPackageDependency$" />
     </dependencies>
     <frameworkAssemblies>
@@ -25,21 +25,20 @@
     </frameworkAssemblies>
   </metadata>
   <files>
-    <file src="$ProductRoot$\Microsoft.TeamFoundation.Web.OData.dll" target="lib\net45" />
-    <file src="$ProductRoot$\Microsoft.TeamFoundation.Web.OData.pdb" target="lib\net45" />
-    <file src="$ProductRoot$\Microsoft.TeamFoundation.Web.OData.xml" target="lib\net45" />
-    <file src="$ProductRoot$\localize\CHS\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\zh-Hans" />
-    <file src="$ProductRoot$\localize\CHT\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\zh-Hant" />
-    <file src="$ProductRoot$\localize\DEU\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\de" />
-    <file src="$ProductRoot$\localize\ESN\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\es" />
-    <file src="$ProductRoot$\localize\FRA\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\fr" />
-    <file src="$ProductRoot$\localize\ITA\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\it" />
-    <file src="$ProductRoot$\localize\JPN\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\ja" />
-    <file src="$ProductRoot$\localize\KOR\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\ko" />
-    <file src="$ProductRoot$\localize\RUS\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\ru" />
-    <file src="$ProductRoot$\localize\TRK\Microsoft.TeamFoundation.Web.OData.resources.dll" target="lib\net45\tr" />
-    <file src="$SourcesRoot$\src\System.Web.OData\Extensions\**\*.cs" target="src\System.Web.OData\Extensions" />
-    <file src="$SourcesRoot$\src\System.Web.OData\OData\**\*.cs" target="src\System.Web.OData\OData" />
-    <file src="$SourcesRoot$\src\System.Web.OData\Properties\*.cs" target="src\System.Web.OData\Properties" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.dll" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.pdb" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.xml" target="lib\net45" />
+    <file src="$ProductRoot$\localize\CHS\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hans" />
+    <file src="$ProductRoot$\localize\CHT\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hant" />
+    <file src="$ProductRoot$\localize\DEU\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\de" />
+    <file src="$ProductRoot$\localize\ESN\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\es" />
+    <file src="$ProductRoot$\localize\FRA\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\fr" />
+    <file src="$ProductRoot$\localize\ITA\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\it" />
+    <file src="$ProductRoot$\localize\JPN\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\ja" />
+    <file src="$ProductRoot$\localize\KOR\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\ko" />
+    <file src="$ProductRoot$\localize\RUS\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\ru" />
+    <file src="$ProductRoot$\localize\TRK\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\tr" />
+    <file src="$SourcesRoot$\src\Microsoft.AspNet.OData\**\*.cs" target="src\Microsoft.AspNet.OData" />
+    <file src="$SourcesRoot$\src\Microsoft.AspNet.OData.Shared\**\*.cs" target="src\Microsoft.AspNet.OData.Shared" />
   </files>
 </package>

@@ -3,7 +3,6 @@
 
 using System.Net.Http;
 using System.Web.Http.Routing;
-using Microsoft.AspNet.OData.Interfaces;
 
 namespace Microsoft.AspNet.OData
 {
@@ -20,8 +19,9 @@ namespace Microsoft.AspNet.OData
     public partial class ResourceContext
     {
         /// <summary>
-        /// Gets or sets the HTTP request that causes this instance to be generated.
+        /// Gets or sets the HTTP request that caused this instance to be generated.
         /// </summary>
+        /// <remarks>This signature uses types that are AspNet-specific.</remarks>
         public HttpRequestMessage Request
         {
             get
@@ -35,9 +35,10 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <summary>
-        /// Gets or sets a <see cref="IWebApiUrlHelper"/> that may be used to generate links while serializing this resource
+        /// Gets or sets a <see cref="UrlHelper"/> that may be used to generate links while serializing this resource
         /// instance.
         /// </summary>
+        /// <remarks>This signature uses types that are AspNet-specific.</remarks>
         public UrlHelper Url
         {
             get

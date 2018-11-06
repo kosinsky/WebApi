@@ -5,9 +5,11 @@ using System;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Linq.Expressions;
+using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Interfaces;
 using Microsoft.AspNet.OData.Query.Expressions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.OData.UriParser.Aggregation;
@@ -19,8 +21,6 @@ namespace Microsoft.AspNet.OData.Query
     /// </summary>
     public class ApplyQueryOption
     {
-        private readonly IWebApiAssembliesResolver _assembliesResolver;
-
         private ApplyClause _applyClause;
         private ODataQueryOptionParser _queryOptionParser;
 
@@ -54,7 +54,6 @@ namespace Microsoft.AspNet.OData.Query
             //Validator = new FilterQueryValidator();
             _queryOptionParser = queryOptionParser;
             ResultClrType = Context.ElementClrType;
-            _assembliesResolver = context.GetAssembliesResolver();
         }
 
         /// <summary>
@@ -120,24 +119,37 @@ namespace Microsoft.AspNet.OData.Query
 
             ODataQuerySettings updatedSettings = Context.UpdateQuerySettings(querySettings, query);
 
+            // The IWebApiAssembliesResolver service is internal and can only be injected by WebApi.
+            // This code path may be used in cases when the service container is not available
+            // and the service container is available but may not contain an instance of IWebApiAssembliesResolver.
+            IWebApiAssembliesResolver assembliesResolver = WebApiAssembliesResolver.Default;
+            if (Context.RequestContainer != null)
+            { 
+                IWebApiAssembliesResolver injectedResolver = Context.RequestContainer.GetService<IWebApiAssembliesResolver>();
+                if (injectedResolver != null)
+                {
+                    assembliesResolver = injectedResolver;
+                }
+            }
+
             foreach (var transformation in applyClause.Transformations)
             {
                 if (transformation.Kind == TransformationNodeKind.Aggregate || transformation.Kind == TransformationNodeKind.GroupBy)
                 {
-                    var binder = new AggregationBinder(updatedSettings, _assembliesResolver, ResultClrType, Context.Model, transformation);
+                    var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
                 }
                 else if (transformation.Kind == TransformationNodeKind.Compute)
                 {
-                    var binder = new ComputeBinder(updatedSettings, _assembliesResolver, ResultClrType, Context.Model, (ComputeTransformationNode)transformation);
+                    var binder = new ComputeBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, (ComputeTransformationNode)transformation);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
                 }
                 else if (transformation.Kind == TransformationNodeKind.Filter)
                 {
                     var filterTransformation = transformation as FilterTransformationNode;
-                    Expression filter = FilterBinder.Bind(query, filterTransformation.FilterClause, ResultClrType, Context.RequestContainer);
+                    Expression filter = FilterBinder.Bind(query, filterTransformation.FilterClause, ResultClrType, Context, querySettings);
                     query = ExpressionHelpers.Where(query, filter, ResultClrType);
                 }
             }

@@ -2,9 +2,8 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-#if !NETCORE
+#if NETFX // System.Data.Linq.Binary is only supported in the AspNet version.
 using System.Data.Linq;
 #endif
 using System.Diagnostics.Contracts;
@@ -12,8 +11,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Web.Http.Dispatcher;
 using System.Xml.Linq;
+using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Interfaces;
@@ -28,7 +27,7 @@ using ODataPath = Microsoft.AspNet.OData.Routing.ODataPath;
 
 namespace Microsoft.AspNet.OData.Formatter
 {
-    internal static partial class EdmLibHelpers
+    internal static class EdmLibHelpers
     {
         private static readonly EdmCoreModel _coreModel = EdmCoreModel.Instance;
 
@@ -85,7 +84,7 @@ namespace Microsoft.AspNet.OData.Formatter
 
                 // Keep the Binary and XElement in the end, since there are not the default mappings for Edm.Binary and Edm.String.
                 new KeyValuePair<Type, IEdmPrimitiveType>(typeof(XElement), GetPrimitiveType(EdmPrimitiveTypeKind.String)),
-#if !NETCORE
+#if NETFX // System.Data.Linq.Binary is only supported in the AspNet version.
                 new KeyValuePair<Type, IEdmPrimitiveType>(typeof(Binary), GetPrimitiveType(EdmPrimitiveTypeKind.Binary)),
 #endif
                 new KeyValuePair<Type, IEdmPrimitiveType>(typeof(ushort), GetPrimitiveType(EdmPrimitiveTypeKind.Int32)),
@@ -221,7 +220,7 @@ namespace Microsoft.AspNet.OData.Formatter
 
         public static Type GetClrType(IEdmTypeReference edmTypeReference, IEdmModel edmModel)
         {
-            return GetClrType(edmTypeReference, edmModel, _defaultAssemblyResolver);
+            return GetClrType(edmTypeReference, edmModel, WebApiAssembliesResolver.Default);
         }
 
         public static Type GetClrType(IEdmTypeReference edmTypeReference, IEdmModel edmModel, IWebApiAssembliesResolver assembliesResolver)
@@ -254,7 +253,7 @@ namespace Microsoft.AspNet.OData.Formatter
 
         public static Type GetClrType(IEdmType edmType, IEdmModel edmModel)
         {
-            return GetClrType(edmType, edmModel, _defaultAssemblyResolver);
+            return GetClrType(edmType, edmModel, WebApiAssembliesResolver.Default);
         }
 
         public static Type GetClrType(IEdmType edmType, IEdmModel edmModel, IWebApiAssembliesResolver assembliesResolver)
@@ -1047,13 +1046,6 @@ namespace Microsoft.AspNet.OData.Formatter
                     type.Name.Replace('`', '_'),
                     String.Join("_", type.GetGenericArguments().Select(t => MangleClrTypeName(t))));
             }
-        }
-
-        /// <summary>
-        /// Annotation to store cache for concurrency properties
-        /// </summary>
-        private class ConcurrencyPropertiesAnnotation : ConcurrentDictionary<IEdmNavigationSource, IEnumerable<IEdmStructuralProperty>>
-        {
         }
     }
 }
