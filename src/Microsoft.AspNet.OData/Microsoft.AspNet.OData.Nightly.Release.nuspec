@@ -25,11 +25,11 @@
     </frameworkAssemblies>
   </metadata>
   <files>
-<file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.dll" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.dll" target="lib\net45" />
     <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.pdb" target="lib\net45" />
     <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.xml" target="lib\net45" />
     <file src="$SourcesRoot$\src\Microsoft.AspNet.OData\Extensions\**\*.cs" target="src\Microsoft.AspNet.OData\Extensions" />
-    <file src="$SourcesRoot$\src\Microsoft.AspNet.OData\OData\**\*.cs" target="src\Microsoft.AspNet.OData\OData" />
+    <file src="$SourcesRoot$\src\Microsoft.AspNet.OData\**\*.cs" target="src\Microsoft.AspNet.OData" />
     <file src="$SourcesRoot$\src\Microsoft.AspNet.OData\Properties\*.cs" target="src\Microsoft.AspNet.OData\Properties" />
     <file src="$ProductRoot$\localize\CHS\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hans" />
     <file src="$ProductRoot$\localize\CHT\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hant" />
