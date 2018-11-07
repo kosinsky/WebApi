@@ -384,15 +384,7 @@ namespace Microsoft.AspNet.OData.Query
                 result = orderBy.ApplyTo(result, querySettings);
             }
 
-            if (IsAvailableODataQueryOption(Skip, AllowedQueryOptions.Skip))
-            {
-                result = Skip.ApplyTo(result, querySettings);
-            }
-
-            if (IsAvailableODataQueryOption(Top, AllowedQueryOptions.Top))
-            {
-                result = Top.ApplyTo(result, querySettings);
-            }
+           
 
             if (!IsAggregated(apply))
             {
@@ -408,6 +400,15 @@ namespace Microsoft.AspNet.OData.Query
                 }
             }
 
+            if (IsAvailableODataQueryOption(Skip, AllowedQueryOptions.Skip))
+            {
+                result = Skip.ApplyTo(result, querySettings);
+            }
+
+            if (IsAvailableODataQueryOption(Top, AllowedQueryOptions.Top))
+            {
+                result = Top.ApplyTo(result, querySettings);
+            }
             if (!querySettings.PostponePaging)
             {
                 int pageSize = -1;
