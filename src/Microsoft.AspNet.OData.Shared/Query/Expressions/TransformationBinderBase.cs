@@ -52,12 +52,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 : expression;
         }
 
-        public override Expression Bind(QueryNode node)
+        public override Expression Bind(QueryNode node, Expression baseElement = null)
         {
             SingleValueNode singleValueNode = node as SingleValueNode;
             if (node != null)
             {
-                return BindAccessor(singleValueNode);
+                return BindAccessor(singleValueNode, baseElement);
             }
 
             throw new ArgumentException("Only SigleValueNode supported", "node");
@@ -71,20 +71,23 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
         }
 
-        protected Expression BindAccessor(SingleValueNode node)
+        protected Expression BindAccessor(QueryNode node, Expression baseElement = null)
         {
             switch (node.Kind)
             {
                 case QueryNodeKind.ResourceRangeVariableReference:
                     return this._lambdaParameter.Type.IsGenericType && this._lambdaParameter.Type.GetGenericTypeDefinition() == typeof(FlatteningWrapper<>)
                         ? (Expression)Expression.Property(this._lambdaParameter, "Source")
-                        : this._lambdaParameter;
+                        : (baseElement ?? this._lambdaParameter);
                 case QueryNodeKind.SingleValuePropertyAccess:
                     var propAccessNode = node as SingleValuePropertyAccessNode;
-                    return CreatePropertyAccessExpression(BindAccessor(propAccessNode.Source), propAccessNode.Property, GetFullPropertyPath(propAccessNode));
+                    return CreatePropertyAccessExpression(BindAccessor(propAccessNode.Source, baseElement), propAccessNode.Property, GetFullPropertyPath(propAccessNode));
+                case QueryNodeKind.AggregatedCollectionPropertyNode:
+                    var aggPropAccessNode = node as AggregatedCollectionPropertyNode;
+                    return CreatePropertyAccessExpression(BindAccessor(aggPropAccessNode.Source, baseElement), aggPropAccessNode.Property);
                 case QueryNodeKind.SingleComplexNode:
                     var singleComplexNode = node as SingleComplexNode;
-                    return CreatePropertyAccessExpression(BindAccessor(singleComplexNode.Source), singleComplexNode.Property, GetFullPropertyPath(singleComplexNode));
+                    return CreatePropertyAccessExpression(BindAccessor(singleComplexNode.Source, baseElement), singleComplexNode.Property, GetFullPropertyPath(singleComplexNode));
                 case QueryNodeKind.SingleValueOpenPropertyAccess:
                     var openNode = node as SingleValueOpenPropertyAccessNode;
                     return GetFlattenedPropertyExpression(openNode.Name) ?? CreateOpenPropertyAccessExpression(openNode);
@@ -94,14 +97,16 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     return CreatePropertyAccessExpression(BindAccessor(navNode.Source), navNode.NavigationProperty);
                 case QueryNodeKind.BinaryOperator:
                     var binaryNode = (BinaryOperatorNode)node;
-                    return BindBinaryOperatorNode(binaryNode);
+                    return BindBinaryOperatorNode(binaryNode, baseElement);
                 case QueryNodeKind.Convert:
                     var convertNode = (ConvertNode)node;
-                    return CreateConvertExpression(convertNode, BindAccessor(convertNode.Source));
+                    return CreateConvertExpression(convertNode, BindAccessor(convertNode.Source, baseElement));
                 case QueryNodeKind.SingleValueFunctionCall:
                     return BindSingleValueFunctionCallNode(node as SingleValueFunctionCallNode);
                 case QueryNodeKind.Constant:
                     return BindConstantNode(node as ConstantNode);
+                case QueryNodeKind.CollectionNavigationNode:
+                    return baseElement ?? this._lambdaParameter;
                 default:
                     throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, node.Kind,
                         typeof(AggregationBinder).Name);

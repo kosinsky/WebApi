@@ -27,6 +27,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
     /// <summary>
     /// The base class for all expression binders.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Relies on many ODataLib classes.")]
     public abstract partial class ExpressionBinderBase
     {
         internal static readonly MethodInfo StringCompareMethodInfo = typeof(string).GetMethod("Compare", new[] { typeof(string), typeof(string), typeof(StringComparison) });
@@ -115,11 +116,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         /// represents the semantics of the <see cref="BinaryOperatorNode"/>.
         /// </summary>
         /// <param name="binaryOperatorNode">The node to bind.</param>
+        /// <param name="baseElement"></param>
         /// <returns>The LINQ <see cref="Expression"/> created.</returns>
-        public virtual Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode)
+        public Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode, Expression baseElement = null)
         {
-            Expression left = Bind(binaryOperatorNode.Left);
-            Expression right = Bind(binaryOperatorNode.Right);
+            Expression left = Bind(binaryOperatorNode.Left, baseElement);
+            Expression right = Bind(binaryOperatorNode.Right, baseElement);
 
             PromoteExpressionTypes(binaryOperatorNode, ref left, ref right);
 
@@ -1187,7 +1189,21 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         /// <returns>The LINQ <see cref="Expression"/> created.</returns>
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
             Justification = "These are simple conversion function and cannot be split up.")]
-        public abstract Expression Bind(QueryNode node);
+        public Expression Bind(QueryNode node)
+        {
+            return Bind(node, null);
+        }
+
+        /// <summary>
+        /// Binds a <see cref="QueryNode"/> to create a LINQ <see cref="Expression"/> that represents the semantics
+        /// of the <see cref="QueryNode"/>.
+        /// </summary>
+        /// <param name="node">The node to bind.</param>
+        /// <param name="baseElement">Base element.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
+            Justification = "These are simple conversion function and cannot be split up.")]
+        public abstract Expression Bind(QueryNode node, Expression baseElement);
 
         /// <summary>
         /// Gets $it parameter

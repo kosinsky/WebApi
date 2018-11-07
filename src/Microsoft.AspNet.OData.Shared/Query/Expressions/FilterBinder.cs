@@ -179,11 +179,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         /// of the <see cref="QueryNode"/>.
         /// </summary>
         /// <param name="node">The node to bind.</param>
+        /// <param name="baseElement"></param>
         /// <returns>The LINQ <see cref="Expression"/> created.</returns>
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
             Justification = "These are simple conversion function and cannot be split up.")]
         [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Relies on many ODataLib classes.")]
-        public override Expression Bind(QueryNode node)
+        public override Expression Bind(QueryNode node, Expression baseElement)
         {
             // Recursion guard to avoid stack overflows
             RuntimeHelpers.EnsureSufficientExecutionStack();

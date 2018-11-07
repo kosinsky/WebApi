@@ -199,4 +199,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             throw new NotImplementedException();
         }
     }
+
+    internal class EntitySetAggregationWrapper : GroupByWrapper
+    {
+    }    
 }
