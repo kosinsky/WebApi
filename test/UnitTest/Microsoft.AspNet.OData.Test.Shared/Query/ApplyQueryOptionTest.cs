@@ -1135,8 +1135,8 @@ namespace Microsoft.AspNet.OData.Test.Query
             model.SetAnnotationValue(customerEdmType, new ModelBoundQuerySettings() { DefaultSelectType = SelectExpandType.Automatic });
 
             var context = new ODataQueryContext(model, typeof(Customer));
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost/?" + filter);
-            request.EnableHttpDependencyInjectionSupport();
+            var configuration = RoutingConfigurationFactory.CreateWithRootContainer("OData");
+            var request = RequestFactory.Create(HttpMethod.Get, "http://localhost/?" + filter, configuration, "OData");
 
             var options = new ODataQueryOptions(context, request);
 

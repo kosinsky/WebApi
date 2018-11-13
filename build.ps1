@@ -349,7 +349,7 @@ Function BuildProcess
     RunBuild ($ClassicUnitTestSLN)
 
     # Asp.Net Core (Product & Unit Test)
-    #RunBuild ($NetCoreUnitTesSLN) -vsToolVersion '15.0'
+    RunBuild ($NetCoreUnitTesSLN) -vsToolVersion '15.0'
 
     if ($TestType -ne 'Quick')
     {
@@ -357,7 +357,7 @@ Function BuildProcess
         RunBuild ($ClassicE2ETestSLN)
 
         # Asp.Net Core (Product & Unit Test & E2E)
-        #RunBuild ($NetCoreE2ETestSLN) -vsToolVersion '15.0'
+        RunBuild ($NetCoreE2ETestSLN) -vsToolVersion '15.0'
     }
 
     Success("Build Done!")
@@ -402,13 +402,13 @@ Function TestProcess
 
     RunTest -title 'AspNetClassic UnitTest' -testdir $ClassicUnitTestSuite -framework $ClassicUnitTestFramework
 
-    #RunTest -title 'AspNetCore UnitTest' -testdir $NetCoreUnitTestSuite -framework $NetCoreUnitTestFramework
+    RunTest -title 'AspNetCore UnitTest' -testdir $NetCoreUnitTestSuite -framework $NetCoreUnitTestFramework
 
     if ($TestType -ne 'Quick')
     {
         RunTest -title 'AspNetClassic E2ETests' -testdir $ClassicE2ETestSuite -framework $ClassicE2ETestFramework
 
-        #RunTest -title 'AspNetCore E2ETests' -testdir $NetCoreE2ETestSuite -framework $NetCoreE2ETestFramework
+        RunTest -title 'AspNetCore E2ETests' -testdir $NetCoreE2ETestSuite -framework $NetCoreE2ETestFramework
     }
 
     Info("Test Done.")

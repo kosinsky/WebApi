@@ -101,7 +101,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Formatter.JsonLight
             await PostGetUpdateAndDelete(entityType, entitySetName);
         }
 
-        [Theory]
+        [Theory(Skip = "VSTS AX: Flaky test")]
         [InlineData("application/json;odata.metadata=minimal;odata.streaming=true")]
         [InlineData("application/json;odata.metadata=minimal;odata.streaming=false")]
         [InlineData("application/json;odata.metadata=minimal")]
