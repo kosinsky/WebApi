@@ -197,8 +197,22 @@ namespace Microsoft.AspNet.OData.Builder
             {
                 bool isParameterNullable = parameter.Nullable;
                 IEdmTypeReference parameterTypeReference = GetEdmTypeReference(edmTypeMap, parameter.TypeConfiguration, nullable: isParameterNullable);
-                IEdmOperationParameter operationParameter = new EdmOperationParameter(operation, parameter.Name, parameterTypeReference);
-                operation.AddParameter(operationParameter);
+                if (parameter.IsOptional)
+                {
+                    if (parameter.DefaultValue != null)
+                    {
+                        operation.AddOptionalParameter(parameter.Name, parameterTypeReference, parameter.DefaultValue);
+                    }
+                    else
+                    {
+                        operation.AddOptionalParameter(parameter.Name, parameterTypeReference);
+                    }
+                }
+                else
+                {
+                    IEdmOperationParameter operationParameter = new EdmOperationParameter(operation, parameter.Name, parameterTypeReference);
+                    operation.AddParameter(operationParameter);
+                }
             }
         }
 
@@ -582,12 +596,17 @@ namespace Microsoft.AspNet.OData.Builder
         {
             EntityTypeConfiguration entityTypeConfig = navigationSourceConfiguration.EntityType;
 
-            IEnumerable<StructuralPropertyConfiguration> concurrencyPropertyies =
+            IEnumerable<StructuralPropertyConfiguration> concurrencyProperties =
                 entityTypeConfig.Properties.OfType<StructuralPropertyConfiguration>().Where(property => property.ConcurrencyToken);
+            foreach (var baseType in entityTypeConfig.BaseTypes())
+            {
+                concurrencyProperties = concurrencyProperties.Concat(
+                    baseType.Properties.OfType<StructuralPropertyConfiguration>().Where(property => property.ConcurrencyToken));
+            }
 
             IList<IEdmStructuralProperty> edmProperties = new List<IEdmStructuralProperty>();
 
-            foreach (StructuralPropertyConfiguration property in concurrencyPropertyies)
+            foreach (StructuralPropertyConfiguration property in concurrencyProperties)
             {
                 IEdmProperty value;
                 if (edmTypeMap.EdmProperties.TryGetValue(property.PropertyInfo, out value))

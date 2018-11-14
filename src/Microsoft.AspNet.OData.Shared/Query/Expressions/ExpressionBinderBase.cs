@@ -111,6 +111,18 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         internal bool HasInstancePropertyContainer;
 
+
+        /// <summary>
+        /// Binds a <see cref="BinaryOperatorNode"/> to create a LINQ <see cref="Expression"/> that
+        /// represents the semantics of the <see cref="BinaryOperatorNode"/>.
+        /// </summary>
+        /// <param name="binaryOperatorNode">The node to bind.</param>
+        /// <returns>The LINQ <see cref="Expression"/> created.</returns>
+        public Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode)
+        {
+            return BindBinaryOperatorNode(binaryOperatorNode, null);
+        }
+
         /// <summary>
         /// Binds a <see cref="BinaryOperatorNode"/> to create a LINQ <see cref="Expression"/> that
         /// represents the semantics of the <see cref="BinaryOperatorNode"/>.

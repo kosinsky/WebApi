@@ -864,6 +864,7 @@ public class Microsoft.AspNet.OData.Batch.DefaultODataBatchHandler : ODataBatchH
 
 public class Microsoft.AspNet.OData.Batch.ODataBatchContent {
 	public ODataBatchContent (System.Collections.Generic.IEnumerable`1[[Microsoft.AspNet.OData.Batch.ODataBatchResponseItem]] responses, System.IServiceProvider requestContainer)
+	public ODataBatchContent (System.Collections.Generic.IEnumerable`1[[Microsoft.AspNet.OData.Batch.ODataBatchResponseItem]] responses, System.IServiceProvider requestContainer, string contentType)
 
 	Microsoft.AspNetCore.Http.HeaderDictionary Headers  { public get; }
 	System.Collections.Generic.IEnumerable`1[[Microsoft.AspNet.OData.Batch.ODataBatchResponseItem]] Responses  { public get; }
@@ -1054,9 +1055,15 @@ public abstract class Microsoft.AspNet.OData.Builder.OperationConfiguration {
 public abstract class Microsoft.AspNet.OData.Builder.ParameterConfiguration {
 	protected ParameterConfiguration (string name, IEdmTypeConfiguration parameterType)
 
+	string DefaultValue  { public get; protected set; }
+	bool IsOptional  { public get; protected set; }
 	string Name  { public get; protected set; }
 	bool Nullable  { public get; public set; }
 	IEdmTypeConfiguration TypeConfiguration  { public get; protected set; }
+
+	public ParameterConfiguration HasDefaultValue (string defaultValue)
+	public ParameterConfiguration Optional ()
+	public ParameterConfiguration Required ()
 }
 
 public abstract class Microsoft.AspNet.OData.Builder.PropertyConfiguration {
@@ -1894,6 +1901,19 @@ public sealed class Microsoft.AspNet.OData.Extensions.HttpResponseExtensions {
 ExtensionAttribute(),
 ]
 public sealed class Microsoft.AspNet.OData.Extensions.ODataApplicationBuilderExtensions {
+	public static readonly string DefaultRouteName = "odata"
+	public static readonly string DefaultRoutePrefix = "odata"
+
+	[
+	ExtensionAttribute(),
+	]
+	public static Microsoft.AspNetCore.Builder.IApplicationBuilder UseOData (Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.OData.Edm.IEdmModel model)
+
+	[
+	ExtensionAttribute(),
+	]
+	public static Microsoft.AspNetCore.Builder.IApplicationBuilder UseOData (Microsoft.AspNetCore.Builder.IApplicationBuilder app, string routeName, string routePrerix, Microsoft.OData.Edm.IEdmModel model)
+
 	[
 	ExtensionAttribute(),
 	]
@@ -2595,6 +2615,7 @@ public class Microsoft.AspNet.OData.Query.ParameterAliasNodeTranslator : Microso
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.AnyNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.BinaryOperatorNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CollectionComplexNode nodeIn)
+	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CollectionConstantNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CollectionFunctionCallNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CollectionNavigationNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CollectionOpenPropertyAccessNode nodeIn)
@@ -2603,6 +2624,7 @@ public class Microsoft.AspNet.OData.Query.ParameterAliasNodeTranslator : Microso
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CollectionResourceFunctionCallNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.ConstantNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.ConvertNode nodeIn)
+	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.InNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.NamedFunctionParameterNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.NonResourceRangeVariableReferenceNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.ParameterAliasNode nodeIn)
@@ -2857,6 +2879,7 @@ public sealed class Microsoft.AspNet.OData.Routing.ODataRouteConstants {
 	public static readonly string NavigationProperty = "navigationProperty"
 	public static readonly string ODataPath = "odataPath"
 	public static readonly string ODataPathTemplate = "{*odataPath}"
+	public static readonly string OptionalParameters = "Microsoft.AspNet.OData.Routing.ODataOptionalParameter"
 	public static readonly string RelatedKey = "relatedKey"
 	public static readonly string VersionConstraintName = "ODataVersionConstraint"
 }
@@ -3386,6 +3409,7 @@ public abstract class Microsoft.AspNet.OData.Query.Expressions.ExpressionBinderB
 	public System.Linq.Expressions.Expression Bind (Microsoft.OData.UriParser.QueryNode node)
 	public abstract System.Linq.Expressions.Expression Bind (Microsoft.OData.UriParser.QueryNode node, System.Linq.Expressions.Expression baseElement)
 	protected System.Linq.Expressions.Expression[] BindArguments (System.Collections.Generic.IEnumerable`1[[Microsoft.OData.UriParser.QueryNode]] nodes)
+	public System.Linq.Expressions.Expression BindBinaryOperatorNode (Microsoft.OData.UriParser.BinaryOperatorNode binaryOperatorNode)
 	public System.Linq.Expressions.Expression BindBinaryOperatorNode (Microsoft.OData.UriParser.BinaryOperatorNode binaryOperatorNode, params System.Linq.Expressions.Expression baseElement)
 	public virtual System.Linq.Expressions.Expression BindConstantNode (Microsoft.OData.UriParser.ConstantNode constantNode)
 	public virtual System.Linq.Expressions.Expression BindSingleValueFunctionCallNode (Microsoft.OData.UriParser.SingleValueFunctionCallNode node)
@@ -3403,11 +3427,13 @@ public class Microsoft.AspNet.OData.Query.Expressions.FilterBinder : ExpressionB
 	public virtual System.Linq.Expressions.Expression BindAllNode (Microsoft.OData.UriParser.AllNode allNode)
 	public virtual System.Linq.Expressions.Expression BindAnyNode (Microsoft.OData.UriParser.AnyNode anyNode)
 	public virtual System.Linq.Expressions.Expression BindCollectionComplexNode (Microsoft.OData.UriParser.CollectionComplexNode collectionComplexNode)
+	public virtual System.Linq.Expressions.Expression BindCollectionConstantNode (Microsoft.OData.UriParser.CollectionConstantNode node)
 	public virtual System.Linq.Expressions.Expression BindCollectionPropertyAccessNode (Microsoft.OData.UriParser.CollectionPropertyAccessNode propertyAccessNode)
 	public virtual System.Linq.Expressions.Expression BindCollectionResourceCastNode (Microsoft.OData.UriParser.CollectionResourceCastNode node)
 	public virtual System.Linq.Expressions.Expression BindConvertNode (Microsoft.OData.UriParser.ConvertNode convertNode)
 	public virtual System.Linq.Expressions.Expression BindDynamicPropertyAccessQueryNode (Microsoft.OData.UriParser.SingleValueOpenPropertyAccessNode openNode)
 	public System.Linq.Expressions.LambdaExpression BindExpression (Microsoft.OData.UriParser.SingleValueNode expression, Microsoft.OData.UriParser.RangeVariable rangeVariable, System.Type elementType)
+	public virtual System.Linq.Expressions.Expression BindInNode (Microsoft.OData.UriParser.InNode inNode)
 	public virtual System.Linq.Expressions.Expression BindNavigationPropertyNode (Microsoft.OData.UriParser.QueryNode sourceNode, Microsoft.OData.Edm.IEdmNavigationProperty navigationProperty)
 	public virtual System.Linq.Expressions.Expression BindPropertyAccessQueryNode (Microsoft.OData.UriParser.SingleValuePropertyAccessNode propertyAccessNode)
 	public virtual System.Linq.Expressions.Expression BindRangeVariable (Microsoft.OData.UriParser.RangeVariable rangeVariable)
