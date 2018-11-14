@@ -35,5 +35,6 @@ project.lock.json
 *.ncrunchsolution
 *.*sdf
 *.ipch
+Nuget/
 *.mdf
 *.ldf
