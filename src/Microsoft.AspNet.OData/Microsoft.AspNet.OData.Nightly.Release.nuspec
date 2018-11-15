@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+  <metadata>
+    <id>Mseng.AspNet.OData</id>
+    <title>Microsoft ASP.NET Web API 2.2 for OData v4.0</title>
+    <version>$VersionFullSemantic$-Nightly$NightlyBuildVersion$</version>
+    <authors>Microsoft</authors>
+    <copyright>&#169; Microsoft Corporation. All rights reserved.</copyright>
+    <description>This package contains everything you need to create OData v4.0 endpoints using ASP.NET Web API and to support OData query syntax for your web APIs.</description>
+    <summary>This package contains everything you need to create OData v4.0 endpoints using ASP.NET Web API.</summary>
+    <language>en-US</language>
+    <projectUrl>http://odata.github.io</projectUrl>
+    <licenseUrl>https://raw.githubusercontent.com/OData/WebApi/master/License.txt</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <tags>Microsoft AspNet WebApi AspNetWebApi OData</tags>
+    <dependencies>
+      <dependency id="Microsoft.AspNet.WebApi.Client" version="$AspNetPackageDependency$" />
+      <dependency id="Microsoft.AspNet.WebApi.Core" version="$AspNetPackageDependency$" />
+      <dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="$DependencyInjection1PackageDependency$" />
+      <dependency id="Microsoft.Extensions.DependencyInjection" version="$DependencyInjection1PackageDependency$" />
+      <dependency id="Mseng.OData.Core" version="$ODataLibPackageDependency$" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System.Net.Http" targetFramework="net45"/>
+    </frameworkAssemblies>
+  </metadata>
+  <files>
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.dll" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.pdb" target="lib\net45" />
+    <file src="$ProductRoot$\Microsoft.TeamFoundation.AspNet.OData.xml" target="lib\net45" />
+    <file src="$SourcesRoot$\src\Microsoft.AspNet.OData\**\*.cs" target="src\Microsoft.AspNet.OData" />
+    <file src="$SourcesRoot$\src\Microsoft.AspNet.OData.Shared\**\*.cs" target="src\Microsoft.AspNet.OData.Shared" />
+    <file src="$ProductRoot$\localize\CHS\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hans" />
+    <file src="$ProductRoot$\localize\CHT\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\zh-Hant" />
+    <file src="$ProductRoot$\localize\DEU\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\de" />
+    <file src="$ProductRoot$\localize\ESN\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\es" />
+    <file src="$ProductRoot$\localize\FRA\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\fr" />
+    <file src="$ProductRoot$\localize\ITA\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\it" />
+    <file src="$ProductRoot$\localize\JPN\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\ja" />
+    <file src="$ProductRoot$\localize\KOR\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\ko" />
+    <file src="$ProductRoot$\localize\RUS\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\ru" />
+    <file src="$ProductRoot$\localize\TRK\Microsoft.TeamFoundation.AspNet.OData.resources.dll" target="lib\net45\tr" />
+  </files>
+</package>

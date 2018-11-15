@@ -36,3 +36,5 @@ project.lock.json
 *.*sdf
 *.ipch
 Nuget/
+*.mdf
+*.ldf
