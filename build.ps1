@@ -346,7 +346,7 @@ Function BuildProcess
     }
 
     # Asp.Net Classic (Product & Unit Test)
-    RunBuild ($ClassicUnitTestSLN)
+    RunBuild ($ClassicUnitTestSLN) -vsToolVersion '15.0'
 
     # Asp.Net Core (Product & Unit Test)
     RunBuild ($NetCoreUnitTesSLN) -vsToolVersion '15.0'
@@ -354,7 +354,7 @@ Function BuildProcess
     if ($TestType -ne 'Quick')
     {
         # Asp.Net Classic (Product & Unit Test & E2E)
-        RunBuild ($ClassicE2ETestSLN)
+        RunBuild ($ClassicE2ETestSLN) -vsToolVersion '15.0'
 
         # Asp.Net Core (Product & Unit Test & E2E)
         RunBuild ($NetCoreE2ETestSLN) -vsToolVersion '15.0'

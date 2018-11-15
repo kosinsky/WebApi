@@ -130,7 +130,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         /// <param name="binaryOperatorNode">The node to bind.</param>
         /// <param name="baseElement"></param>
         /// <returns>The LINQ <see cref="Expression"/> created.</returns>
-        public Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode, Expression baseElement = null)
+        public Expression BindBinaryOperatorNode(BinaryOperatorNode binaryOperatorNode, Expression baseElement)
         {
             Expression left = Bind(binaryOperatorNode.Left, baseElement);
             Expression right = Bind(binaryOperatorNode.Right, baseElement);
