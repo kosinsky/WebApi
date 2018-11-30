@@ -357,7 +357,9 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             var entitySet = Expression.Call(null, selectManyMethod, asQueryableExpression, selectManyLambda);
 
             // Getting method and lambda expression of groupBy
-            var groupKeyType = typeof(object);
+            // TODO: We always aggregatin whole collection. Not sure that we really need it
+            // Using object (I replaced by bool caused an issue with Linq-to-objects)
+            var groupKeyType = typeof(bool);
             MethodInfo groupByMethod =
                 ExpressionHelperMethods.EnumerableGroupByGeneric.MakeGenericMethod(selectedElementType, groupKeyType);
             var groupByLambda = Expression.Lambda(

@@ -16,9 +16,9 @@ namespace Microsoft.AspNet.OData.Test.Builder.TestModels
         public string Website { get; set; }
         public string ShareSymbol { get; set; }
         public Decimal? SharePrice { get; set; }
-        public List<Order> Orders { get; set; }
+        public List<Order> Orders { get; set; } = new List<Order>();
         public List<string> Aliases { get; set; }
-        public List<Address> Addresses { get; set; }
+        public List<Address> Addresses { get; set; } 
         public Dictionary<string, object> DynamicProperties { get; set; }
         public DateTimeOffset? StartDate { get; set; }
     }

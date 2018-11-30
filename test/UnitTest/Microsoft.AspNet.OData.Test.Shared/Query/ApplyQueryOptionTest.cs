@@ -17,6 +17,7 @@ using Microsoft.AspNet.OData.Test.Extensions;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Address = Microsoft.AspNet.OData.Test.Builder.TestModels.Address;
@@ -478,6 +479,14 @@ namespace Microsoft.AspNet.OData.Test.Query
                             new Dictionary<string, object> { { "Address/State", null}, { "FakePrice", 0M } },
                         }
                     },
+                    {
+                        "groupby((Address/State), aggregate(Orders($count as Count)))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Address/State", "WA"}, { "Orders", new object[] { new { Count = 2 } } } },
+                            new Dictionary<string, object> { { "Address/State", null}, { "Orders", new object[] { new { Count = 1 } } } },
+                        }
+                    },
                 };
             }
         }
@@ -907,6 +916,7 @@ namespace Microsoft.AspNet.OData.Test.Query
                     DynamicProperties = new Dictionary<string, object> { { "StringProp", "Test2" }, { "IntProp", 2 }, { "MixedProp", "String" } },
                     StartDate = new DateTimeOffset(new DateTime(2017, 03, 07, 5, 6, 7))
                 };
+
                 customerList.Add(c);
 
                 c = new Customer
@@ -917,6 +927,10 @@ namespace Microsoft.AspNet.OData.Test.Query
                     Aliases = new List<string> { "alias2", "alias34", "alias31" },
                     DynamicProperties = new Dictionary<string, object> { { "StringProp", "Test3" } },
                     StartDate = new DateTimeOffset(new DateTime(2018, 01, 01, 2, 3, 4))
+                };
+                c.Orders = new List<Order>
+                {
+                    new Order { OrderId = 13, Customer = c },
                 };
                 customerList.Add(c);
 
@@ -999,7 +1013,8 @@ namespace Microsoft.AspNet.OData.Test.Query
                 foreach (var key in expected.Keys)
                 {
                     object value = GetValue(agg, key);
-                    Assert.Equal(expected[key], value);
+
+                    Assert.Equal(JsonConvert.SerializeObject(expected[key]), JsonConvert.SerializeObject(value));
                 }
             }
         }
