@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Linq.Expressions;
@@ -10,6 +11,7 @@ using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Interfaces;
 using Microsoft.AspNet.OData.Query.Expressions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.OData.UriParser.Aggregation;
@@ -97,6 +99,8 @@ namespace Microsoft.AspNet.OData.Query
         /// <param name="query">The original <see cref="IQueryable"/>.</param>
         /// <param name="querySettings">The <see cref="ODataQuerySettings"/> that contains all the query application related settings.</param>
         /// <returns>The new <see cref="IQueryable"/> after the filter query has been applied to.</returns>
+        [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling",
+            Justification = "The majority of types referenced by this method are EdmLib types this method needs to know about to operate correctly")]
         public IQueryable ApplyTo(IQueryable query, ODataQuerySettings querySettings)
         {
             if (query == null)
@@ -132,11 +136,15 @@ namespace Microsoft.AspNet.OData.Query
                 }
             }
 
+            // TODO: Put long comment explaining filter pushdown from expand
+            SelectExpandClause selectExpandClause = null;
+
+
             foreach (var transformation in applyClause.Transformations)
             {
                 if (transformation.Kind == TransformationNodeKind.Aggregate || transformation.Kind == TransformationNodeKind.GroupBy)
                 {
-                    var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation);
+                    var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation, Context, selectExpandClause);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
                 }
@@ -151,6 +159,18 @@ namespace Microsoft.AspNet.OData.Query
                     var filterTransformation = transformation as FilterTransformationNode;
                     Expression filter = FilterBinder.Bind(query, filterTransformation.FilterClause, ResultClrType, Context, querySettings);
                     query = ExpressionHelpers.Where(query, filter, ResultClrType);
+                }
+                else if (transformation.Kind == TransformationNodeKind.Expand)
+                {
+                    selectExpandClause = ((ExpandTransformationNode)transformation).ExpandClause;
+                    //var expandTransformation = transformation as ExpandTransformationNode;
+                    ////var newUri = ODataUriExtensions.BuildUri(new ODataUri()
+                    ////{
+                    ////    SelectAndExpand = expandTransformation.ExpandClause
+                    ////}, ODataUrlKeyDelimiter.Slash);
+                    
+                    //var selectExpandQueryOption = new SelectExpandQueryOption(null, "Orders($filter=OrderId gt 11)", Context, expandTransformation.ExpandClause);
+                    //query = SelectExpandBinder.Bind(query, querySettings, selectExpandQueryOption);
                 }
             }
 

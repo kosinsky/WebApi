@@ -487,6 +487,14 @@ namespace Microsoft.AspNet.OData.Test.Query
                             new Dictionary<string, object> { { "Address/State", null}, { "Orders", new object[] { new { Count = 1 } } } },
                         }
                     },
+                    {
+                        "expand(Orders, filter(OrderId gt 11))/groupby((Address/State), aggregate(Orders(OrderId with sum as Count)))",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> { { "Address/State", "WA"}, { "Orders", new object[] { new { Count = 12 } } } },
+                            new Dictionary<string, object> { { "Address/State", null}, { "Orders", new object[] { new { Count = 13 } } } },
+                        }
+                    },
                 };
             }
         }

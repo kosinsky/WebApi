@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Linq;
@@ -22,6 +23,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
     {
         private const string GroupByContainerProperty = "GroupByContainer";
         private TransformationNode _transformation;
+        private SelectExpandClause _selectExpandClause;
+        private ODataQueryContext _context;
 
         private IEnumerable<AggregateExpressionBase> _aggregateExpressions;
         private IEnumerable<GroupByPropertyNode> _groupingProperties;
@@ -29,12 +32,14 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         private Type _groupByClrType;
 
         internal AggregationBinder(ODataQuerySettings settings, IWebApiAssembliesResolver assembliesResolver, Type elementType,
-            IEdmModel model, TransformationNode transformation)
+            IEdmModel model, TransformationNode transformation, ODataQueryContext context, SelectExpandClause selectExpandClause = null)
             : base(settings, assembliesResolver, elementType, model)
         {
             Contract.Assert(transformation != null);
 
             _transformation = transformation;
+            _selectExpandClause = selectExpandClause;
+            _context = context;
 
             switch (transformation.Kind)
             {
@@ -315,6 +320,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
         }
 
+        [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling",
+            Justification = "The majority of types referenced by this method are EdmLib types this method needs to know about to operate correctly")]
         private Expression CreateEntitySetAggregateExpression(
             ParameterExpression accum, EntitySetAggregateExpression expression, Type baseType)
         {
@@ -355,6 +362,23 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             // Get expression to get collection of entities
             var entitySet = Expression.Call(null, selectManyMethod, asQueryableExpression, selectManyLambda);
+
+            // Do we have filter from expand to push down?
+            if (_selectExpandClause != null)
+            {
+                var expands = _selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().ToList();
+                if (expands.Count > 0)
+                {
+                    var nav = expands.FirstOrDefault(e => e.FilterOption != null && e.NavigationSource.Name == expression.Expression.NavigationProperty.Name);
+                    if (nav != null)
+                    {
+                        var filterExpression = FilterBinder.Bind(null, nav.FilterOption, selectedElementType, _context, QuerySettings);
+                        var whereMethod = ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(selectedElementType);
+                        var asNestedQueryableMethod = ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(selectedElementType);
+                        entitySet = Expression.Call(null, whereMethod, Expression.Call(null, asNestedQueryableMethod, entitySet), filterExpression);
+                    }
+                }
+            }
 
             // Getting method and lambda expression of groupBy
             // TODO: We always aggregatin whole collection. Not sure that we really need it
@@ -416,7 +440,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             {
                 body = BindAccessor(expression.Expression, lambdaParameter);
             }
-            
+
             LambdaExpression propertyLambda = Expression.Lambda(body,
                 lambdaParameter);
 

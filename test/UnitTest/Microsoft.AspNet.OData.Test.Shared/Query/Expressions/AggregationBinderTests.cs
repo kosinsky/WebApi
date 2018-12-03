@@ -187,7 +187,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 assembliesResolver,
                 typeof(T),
                 model,
-                clause.Transformations.First());
+                clause.Transformations.First(), null);
 
             var query = Enumerable.Empty<T>().AsQueryable();
 
