@@ -237,5 +237,40 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             var customerOnePrice = customerOneOrders.First["TotalPrice"].ToObject<int>();
             Assert.Equal(2 * (25 + 75), customerOnePrice);
         }
+
+        [Fact]
+        public async Task ExpandWithoutAggregation()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=expand(Orders, filter(Price gt 25))",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            var result = await response.Content.ReadAsObject<JObject>();
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var value = (JArray)result["value"];
+            Assert.Equal(3, value.Count);
+
+            Assert.Equal("Customer0", value[0]["Name"].ToObject<string>());
+            Assert.Equal("Customer1", value[1]["Name"].ToObject<string>());
+            Assert.Equal("Customer0", value[2]["Name"].ToObject<string>());
+
+            var customerZeroOrders = (JArray)value[0]["Orders"];
+            Assert.Equal(1, customerZeroOrders.Count);
+            Assert.Equal(75, customerZeroOrders[0]["Price"].ToObject<int>());
+
+            var customerOneOrders = (JArray)value[1]["Orders"];
+            Assert.Equal(2, customerOneOrders.Count);
+            Assert.Equal(50, customerOneOrders[0]["Price"].ToObject<int>());
+            Assert.Equal(150, customerOneOrders[1]["Price"].ToObject<int>());
+        }
     }
 }

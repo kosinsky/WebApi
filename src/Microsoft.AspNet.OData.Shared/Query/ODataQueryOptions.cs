@@ -329,6 +329,7 @@ namespace Microsoft.AspNet.OData.Query
             {
                 result = Apply.ApplyTo(result, querySettings);
                 InternalRequest.Context.ApplyClause = Apply.ApplyClause;
+                InternalRequest.Context.SelectExpandClause = Apply.SelectExpandClause;
                 this.Context.ElementClrType = Apply.ResultClrType;
                 apply = Apply.ApplyClause;
             }

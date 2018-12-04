@@ -84,6 +84,9 @@ namespace Microsoft.AspNet.OData.Query
             }
         }
 
+        internal SelectExpandClause SelectExpandClause { get; private set; }
+
+
         /// <summary>
         ///  Gets the raw $apply value.
         /// </summary>
@@ -137,14 +140,13 @@ namespace Microsoft.AspNet.OData.Query
             }
 
             // TODO: Put long comment explaining filter pushdown from expand
-            SelectExpandClause selectExpandClause = null;
             bool aggregated = false;
 
             foreach (var transformation in applyClause.Transformations)
             {
                 if (transformation.Kind == TransformationNodeKind.Aggregate || transformation.Kind == TransformationNodeKind.GroupBy)
                 {
-                    var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation, Context, selectExpandClause);
+                    var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation, Context, SelectExpandClause);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
                     aggregated = true;
@@ -164,18 +166,18 @@ namespace Microsoft.AspNet.OData.Query
                 }
                 else if (transformation.Kind == TransformationNodeKind.Expand)
                 {
-                    selectExpandClause = ((ExpandTransformationNode)transformation).ExpandClause;
+                    SelectExpandClause = ((ExpandTransformationNode)transformation).ExpandClause;
                     //var expandTransformation = transformation as ExpandTransformationNode;
 
                 }
             }
 
-            if (selectExpandClause != null && !aggregated)
+            if (SelectExpandClause != null && !aggregated)
             {
-                var expandString = GetExpandsOnlyString(selectExpandClause);
+                var expandString = GetExpandsOnlyString(SelectExpandClause);
 
-                var selectExpandQueryOption = new SelectExpandQueryOption(null, expandString, Context, selectExpandClause);
-                query = SelectExpandBinder.Bind(query, querySettings, selectExpandQueryOption);
+                var selectExpandQueryOption = new SelectExpandQueryOption(null, expandString, Context, SelectExpandClause);
+                query = SelectExpandBinder.Bind(query, updatedSettings, selectExpandQueryOption);
             }
 
             return query;
