@@ -204,5 +204,38 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             var customerOnePrice = customerOneOrders.First["TotalPrice"].ToObject<int>();
             Assert.Equal(2 * (25 + 75), customerOnePrice);
         }
+
+
+        [Fact]
+        public async Task AggregationOnEntitySetWorksWithExpandGroupby()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl + "?$apply=expand(Orders, filter(Price gt 25))/groupby((Name), aggregate(Orders(Price with sum as TotalPrice)))",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            var result = await response.Content.ReadAsObject<JObject>();
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var value = result["value"];
+
+            Assert.Equal("Customer0", value[0]["Name"].ToObject<string>());
+            Assert.Equal("Customer1", value[1]["Name"].ToObject<string>());
+
+            var customerZeroOrders = value[0]["Orders"];
+            var customerZeroPrice = customerZeroOrders.First["TotalPrice"].ToObject<int>();
+            Assert.Equal(1 * (75) + 3 * (25 + 75), customerZeroPrice);
+
+            var customerOneOrders = value[1]["Orders"];
+            var customerOnePrice = customerOneOrders.First["TotalPrice"].ToObject<int>();
+            Assert.Equal(2 * (25 + 75), customerOnePrice);
+        }
     }
 }
