@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -891,6 +892,19 @@ namespace Microsoft.AspNet.OData.Test.Query
             }
         }
 
+        public static TheoryDataSet<string, int[]> CustomerTestSimpleApplies
+        {
+            get
+            {
+                return new TheoryDataSet<string, int[]>
+                {
+                    {"filter(CustomerId eq 1)/expand(Orders, filter(OrderId eq 11))", new int[] {11} },
+                    {"filter(CustomerId eq 1)/expand(Orders)", new int[] {11, 12} },
+                    {"expand(Orders, filter(OrderId eq 11))/filter(CustomerId eq 1)", new int[] {11} },
+                };
+            }
+        }
+
         // Test data used by CustomerTestApplies TheoryDataSet
         public static List<Customer> CustomerApplyTestData
         {
@@ -1025,6 +1039,41 @@ namespace Microsoft.AspNet.OData.Test.Query
                     Assert.Equal(JsonConvert.SerializeObject(expected[key]), JsonConvert.SerializeObject(value));
                 }
             }
+        }
+
+
+        [Theory]
+        [MemberData(nameof(CustomerTestSimpleApplies))]
+        public void ApplyWithoutAggregation_Returns_Correct_Queryable(string filter, int[] orderIds)
+        {
+            // Arrange
+            var model = new ODataModelBuilder()
+                            .Add_Order_EntityType()
+                            .Add_Customer_EntityType_With_Address()
+                            .Add_CustomerOrders_Relationship()
+                            .Add_Customer_EntityType_With_CollectionProperties()
+                            .Add_Customers_EntitySet()
+                            .GetEdmModel();
+            var context = new ODataQueryContext(model, typeof(Customer)) { RequestContainer = new MockContainer() };
+            var queryOptionParser = new ODataQueryOptionParser(
+                context.Model,
+                context.ElementType,
+                context.NavigationSource,
+                new Dictionary<string, string> { { "$apply", filter } });
+            var filterOption = new ApplyQueryOption(filter, context, queryOptionParser);
+            IEnumerable<Customer> customers = CustomerApplyTestData;
+
+            // Act
+            IQueryable queryable = filterOption.ApplyTo(customers.AsQueryable(), new ODataQuerySettings { HandleNullPropagation = HandleNullPropagationOption.True });
+
+            // Assert
+            Assert.NotNull(queryable);
+            var actualCustomers = Assert.IsAssignableFrom<IEnumerable<SelectExpandWrapper<Customer>>>(queryable);
+            Assert.Single(actualCustomers);
+            var testCustomer = actualCustomers.First();
+            testCustomer.TryGetPropertyValue("Orders", out object untypedOrders);
+            var orders = Assert.IsAssignableFrom<IEnumerable<SelectExpandWrapper<Order>>>(untypedOrders);
+            Assert.Equal(orderIds, orders.Select(order => order.Instance.OrderId));
         }
 
         [Theory]

@@ -138,7 +138,7 @@ namespace Microsoft.AspNet.OData.Query
 
             // TODO: Put long comment explaining filter pushdown from expand
             SelectExpandClause selectExpandClause = null;
-
+            bool aggregated = false;
 
             foreach (var transformation in applyClause.Transformations)
             {
@@ -147,12 +147,14 @@ namespace Microsoft.AspNet.OData.Query
                     var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation, Context, selectExpandClause);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
+                    aggregated = true;
                 }
                 else if (transformation.Kind == TransformationNodeKind.Compute)
                 {
                     var binder = new ComputeBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, (ComputeTransformationNode)transformation);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
+                    aggregated = true;
                 }
                 else if (transformation.Kind == TransformationNodeKind.Filter)
                 {
@@ -164,17 +166,31 @@ namespace Microsoft.AspNet.OData.Query
                 {
                     selectExpandClause = ((ExpandTransformationNode)transformation).ExpandClause;
                     //var expandTransformation = transformation as ExpandTransformationNode;
-                    ////var newUri = ODataUriExtensions.BuildUri(new ODataUri()
-                    ////{
-                    ////    SelectAndExpand = expandTransformation.ExpandClause
-                    ////}, ODataUrlKeyDelimiter.Slash);
-                    
-                    //var selectExpandQueryOption = new SelectExpandQueryOption(null, "Orders($filter=OrderId gt 11)", Context, expandTransformation.ExpandClause);
-                    //query = SelectExpandBinder.Bind(query, querySettings, selectExpandQueryOption);
+
                 }
             }
 
+            if (selectExpandClause != null && !aggregated)
+            {
+                var expandString = GetExpandsOnlyString(selectExpandClause);
+
+                var selectExpandQueryOption = new SelectExpandQueryOption(null, expandString, Context, selectExpandClause);
+                query = SelectExpandBinder.Bind(query, querySettings, selectExpandQueryOption);
+            }
+
             return query;
+        }
+
+        private static string GetExpandsOnlyString(SelectExpandClause selectExpandClause)
+        {
+            string result = "$expand=";
+
+            foreach(var item in selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>())
+            {
+                result += item.NavigationSource.Name;
+            }
+
+            return result;
         }
     }
 }
