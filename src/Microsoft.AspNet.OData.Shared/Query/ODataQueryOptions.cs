@@ -329,7 +329,11 @@ namespace Microsoft.AspNet.OData.Query
             {
                 result = Apply.ApplyTo(result, querySettings);
                 InternalRequest.Context.ApplyClause = Apply.ApplyClause;
-                InternalRequest.Context.SelectExpandClause = Apply.SelectExpandClause;
+                if (Apply.SelectExpandClause != null)
+                {
+                    // In case of just expand in $apply falling back to $expand serialization
+                    InternalRequest.Context.SelectExpandClause = Apply.SelectExpandClause;
+                }
                 this.Context.ElementClrType = Apply.ResultClrType;
                 apply = Apply.ApplyClause;
             }
