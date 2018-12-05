@@ -139,7 +139,10 @@ namespace Microsoft.AspNet.OData.Query
                 }
             }
 
-            // TODO: Put long comment explaining filter pushdown from expand
+            // groupby and aggregate transform input  by collapsing everything not used in groipby/aggregate 
+            // as a result we have to distinct cases for expand implementation
+            // 1. Expands followed by groupby/aggregate with entity set aggregations => filters in expand need to be applied (pushed down) to corresponding entityset aggregations 
+            // 2. Mix of expands and filters w/o any groupby/aggregation => falling back to $expand behavior and could just use SelectExpandBinder
             bool aggregated = false;
 
             foreach (var transformation in applyClause.Transformations)

@@ -364,25 +364,18 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             var entitySet = Expression.Call(null, selectManyMethod, asQueryableExpression, selectManyLambda);
 
             // Do we have filter from expand to push down?
-            if (_selectExpandClause != null)
+            EnsurePushedDownFilters();
+            if (_filtersPushDown.TryGetValue(expression.Expression.NavigationProperty.Name, out FilterClause filterClause))
             {
-                var expands = _selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().ToList();
-                if (expands.Count > 0)
-                {
-                    var nav = expands.FirstOrDefault(e => e.FilterOption != null && e.NavigationSource.Name == expression.Expression.NavigationProperty.Name);
-                    if (nav != null)
-                    {
-                        var filterExpression = FilterBinder.Bind(null, nav.FilterOption, selectedElementType, _context, QuerySettings);
-                        var whereMethod = ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(selectedElementType);
-                        var asNestedQueryableMethod = ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(selectedElementType);
-                        entitySet = Expression.Call(null, whereMethod, Expression.Call(null, asNestedQueryableMethod, entitySet), filterExpression);
-                    }
-                }
+                var filterExpression = FilterBinder.Bind(null, filterClause, selectedElementType, _context, QuerySettings);
+                var whereMethod = ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(selectedElementType);
+                var asNestedQueryableMethod = ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(selectedElementType);
+                entitySet = Expression.Call(null, whereMethod, Expression.Call(null, asNestedQueryableMethod, entitySet), filterExpression);
             }
 
             // Getting method and lambda expression of groupBy
             // TODO: We always aggregatin whole collection. Not sure that we really need it
-            // Using object (I replaced by bool caused an issue with Linq-to-objects)
+            // Using object caused an issue with Linq-to-objects (I replaced by bool )
             var groupKeyType = typeof(bool);
             MethodInfo groupByMethod =
                 ExpressionHelperMethods.EnumerableGroupByGeneric.MakeGenericMethod(selectedElementType, groupKeyType);
@@ -419,6 +412,30 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     selectLambda.Body.Type);
 
             return Expression.Call(null, selectMethod, groupedEntitySet, selectLambda);
+        }
+
+
+        private Dictionary<string, FilterClause> _filtersPushDown = null;
+        /// <summary>
+        /// Collects of filters that need to by appplied to entity set aggregations.
+        /// </summary>
+        /// <remarks>
+        /// EntitySet aggregations doens't support more thatn one level as  a result we don't need to look deeper.
+        /// </remarks>
+        private void EnsurePushedDownFilters()
+        {
+            if (_filtersPushDown == null)
+            {
+                _filtersPushDown = new Dictionary<string, FilterClause>();
+            }
+
+            if (_selectExpandClause != null)
+            {
+                foreach (var expand in _selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(e => e.FilterOption != null))
+                {
+                    _filtersPushDown[expand.NavigationSource.Name] = expand.FilterOption;
+                }
+            }
         }
 
         private Expression CreatePropertyAggregateExpression(ParameterExpression accum, AggregateExpression expression, Type baseType)
