@@ -31,14 +31,14 @@
       <HintPath>..\..\sln\packages\Microsoft.Extensions.DependencyInjection.Abstractions.1.0.0\lib\netstandard1.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.5.1.21129, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.OData.Core.7.5.1-Nightly201811291053\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.5.2.21206, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Core.7.5.2-Nightly201812060942\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.5.1.21129, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.OData.Edm.7.5.1-Nightly201811291053\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.5.2.21206, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Edm.7.5.2-Nightly201812060942\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.5.1.21129, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.Spatial.7.5.1-Nightly201811291053\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.5.2.21206, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.Spatial.7.5.2-Nightly201812060942\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\sln\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>

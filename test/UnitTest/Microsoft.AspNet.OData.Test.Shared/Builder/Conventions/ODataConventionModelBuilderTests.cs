@@ -3039,7 +3039,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
                 nav => Assert.Equal("HeadquartersAddress/CountryDetails", nav.Path.Path));
         }
 
-        [Fact]
+        [Fact(Skip = "7.5.2 flakyness")]
         public void GetEdmModel_CreatesNavigationPropertyBindings_ForMutuallyRecursiveLoopOfComplexTypes()
         {
             // Arrange

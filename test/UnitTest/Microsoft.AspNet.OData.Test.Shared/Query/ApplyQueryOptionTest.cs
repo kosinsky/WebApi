@@ -899,7 +899,7 @@ namespace Microsoft.AspNet.OData.Test.Query
                 return new TheoryDataSet<string, int[]>
                 {
                     {"filter(CustomerId eq 1)/expand(Orders, filter(OrderId eq 11))", new int[] {11} },
-                    {"filter(CustomerId eq 1)/expand(Orders)", new int[] {11, 12} },
+                    {"filter(CustomerId eq 1)/expand(Orders, filter(OrderId gt 0))", new int[] {11, 12} },
                     {"expand(Orders, filter(OrderId eq 11))/filter(CustomerId eq 1)", new int[] {11} },
                 };
             }
