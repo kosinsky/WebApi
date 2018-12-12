@@ -199,7 +199,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter
                 await response.Content.ReadAsAsync(type, _configuration.Formatters));
         }
 
-        [Fact]
+        [Fact(Skip = "7.5.2 Flaky")]
         public async Task ODataModelBinderProvider_Works_DateTime()
         {
             TimeZoneInfoHelper.TimeZone = null;
