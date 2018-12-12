@@ -139,11 +139,11 @@ namespace Microsoft.AspNet.OData.Query
                 }
             }
 
-            // groupby and aggregate transform input  by collapsing everything not used in groipby/aggregate 
+            // groupby and aggregate transform input  by collapsing everything not used in groupby/aggregate 
             // as a result we have to distinct cases for expand implementation
             // 1. Expands followed by groupby/aggregate with entity set aggregations => filters in expand need to be applied (pushed down) to corresponding entityset aggregations 
             // 2. Mix of expands and filters w/o any groupby/aggregation => falling back to $expand behavior and could just use SelectExpandBinder
-            bool aggregated = false;
+            bool inputShapeChanged = false;
 
             foreach (var transformation in applyClause.Transformations)
             {
@@ -152,14 +152,14 @@ namespace Microsoft.AspNet.OData.Query
                     var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation, Context, SelectExpandClause);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
-                    aggregated = true;
+                    inputShapeChanged = true;
                 }
                 else if (transformation.Kind == TransformationNodeKind.Compute)
                 {
                     var binder = new ComputeBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, (ComputeTransformationNode)transformation);
                     query = binder.Bind(query);
                     this.ResultClrType = binder.ResultClrType;
-                    aggregated = true;
+                    inputShapeChanged = true;
                 }
                 else if (transformation.Kind == TransformationNodeKind.Filter)
                 {
@@ -169,13 +169,19 @@ namespace Microsoft.AspNet.OData.Query
                 }
                 else if (transformation.Kind == TransformationNodeKind.Expand)
                 {
-                    SelectExpandClause = ((ExpandTransformationNode)transformation).ExpandClause;
-                    //var expandTransformation = transformation as ExpandTransformationNode;
-
+                    var newClause = ((ExpandTransformationNode)transformation).ExpandClause;
+                    if (SelectExpandClause == null)
+                    {
+                        SelectExpandClause = newClause;
+                    }
+                    else
+                    {
+                        SelectExpandClause = new SelectExpandClause(SelectExpandClause.SelectedItems.Concat(newClause.SelectedItems), false);
+                    }
                 }
             }
 
-            if (SelectExpandClause != null && !aggregated)
+            if (SelectExpandClause != null && !inputShapeChanged)
             {
                 var expandString = GetExpandsOnlyString(SelectExpandClause);
 
