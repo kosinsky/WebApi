@@ -365,7 +365,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             // Do we have filter from expand to push down?
             EnsurePushedDownFilters();
-            if (_filtersPushDown.TryGetValue(expression.Expression.NavigationProperty.Name, out FilterClause filterClause))
+            if (_filtersPushDown.TryGetValue(expression.Expression.NavigationSource.Path.Path, out FilterClause filterClause))
             {
                 var filterExpression = FilterBinder.Bind(null, filterClause, selectedElementType, _context, QuerySettings);
                 var whereMethod = ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(selectedElementType);
@@ -433,7 +433,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             {
                 foreach (var expand in _selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(e => e.FilterOption != null))
                 {
-                    _filtersPushDown[expand.NavigationSource.Name] = expand.FilterOption;
+                    _filtersPushDown[expand.NavigationSource.Path.Path] = expand.FilterOption;
                 }
             }
         }
