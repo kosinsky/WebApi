@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Linq;
@@ -22,6 +23,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
     {
         private const string GroupByContainerProperty = "GroupByContainer";
         private TransformationNode _transformation;
+        private SelectExpandClause _selectExpandClause;
+        private ODataQueryContext _context;
 
         private IEnumerable<AggregateExpressionBase> _aggregateExpressions;
         private IEnumerable<GroupByPropertyNode> _groupingProperties;
@@ -29,12 +32,14 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         private Type _groupByClrType;
 
         internal AggregationBinder(ODataQuerySettings settings, IWebApiAssembliesResolver assembliesResolver, Type elementType,
-            IEdmModel model, TransformationNode transformation)
+            IEdmModel model, TransformationNode transformation, ODataQueryContext context, SelectExpandClause selectExpandClause = null)
             : base(settings, assembliesResolver, elementType, model)
         {
             Contract.Assert(transformation != null);
 
             _transformation = transformation;
+            _selectExpandClause = selectExpandClause;
+            _context = context;
 
             switch (transformation.Kind)
             {
@@ -315,6 +320,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
         }
 
+        [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling",
+            Justification = "The majority of types referenced by this method are EdmLib types this method needs to know about to operate correctly")]
         private Expression CreateEntitySetAggregateExpression(
             ParameterExpression accum, EntitySetAggregateExpression expression, Type baseType)
         {
@@ -356,8 +363,20 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             // Get expression to get collection of entities
             var entitySet = Expression.Call(null, selectManyMethod, asQueryableExpression, selectManyLambda);
 
+            // Do we have filter from expand to push down?
+            EnsurePushedDownFilters();
+            if (_filtersPushDown.TryGetValue(expression.Expression.NavigationSource.Path.Path, out FilterClause filterClause))
+            {
+                var filterExpression = FilterBinder.Bind(null, filterClause, selectedElementType, _context, QuerySettings);
+                var whereMethod = ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(selectedElementType);
+                var asNestedQueryableMethod = ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(selectedElementType);
+                entitySet = Expression.Call(null, whereMethod, Expression.Call(null, asNestedQueryableMethod, entitySet), filterExpression);
+            }
+
             // Getting method and lambda expression of groupBy
-            var groupKeyType = typeof(object);
+            // TODO: We always aggregatin whole collection. Not sure that we really need it
+            // Using object caused an issue with Linq-to-objects (I replaced by bool )
+            var groupKeyType = typeof(bool);
             MethodInfo groupByMethod =
                 ExpressionHelperMethods.EnumerableGroupByGeneric.MakeGenericMethod(selectedElementType, groupKeyType);
             var groupByLambda = Expression.Lambda(
@@ -395,6 +414,30 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             return Expression.Call(null, selectMethod, groupedEntitySet, selectLambda);
         }
 
+
+        private Dictionary<string, FilterClause> _filtersPushDown = null;
+        /// <summary>
+        /// Collects of filters that need to by appplied to entity set aggregations.
+        /// </summary>
+        /// <remarks>
+        /// EntitySet aggregations doens't support more thatn one level as  a result we don't need to look deeper.
+        /// </remarks>
+        private void EnsurePushedDownFilters()
+        {
+            if (_filtersPushDown == null)
+            {
+                _filtersPushDown = new Dictionary<string, FilterClause>();
+            }
+
+            if (_selectExpandClause != null)
+            {
+                foreach (var expand in _selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Where(e => e.FilterOption != null))
+                {
+                    _filtersPushDown[expand.NavigationSource.Path.Path] = expand.FilterOption;
+                }
+            }
+        }
+
         private Expression CreatePropertyAggregateExpression(ParameterExpression accum, AggregateExpression expression, Type baseType)
         {
             // I substitute the element type for all generic arguments.
@@ -414,7 +457,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             {
                 body = BindAccessor(expression.Expression, lambdaParameter);
             }
-            
+
             LambdaExpression propertyLambda = Expression.Lambda(body,
                 lambdaParameter);
 

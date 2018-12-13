@@ -161,6 +161,31 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 + ".Select($it => new AggregationWrapper() {GroupByContainer = $it.Key.GroupByContainer, Container = new AggregationPropertyContainer() {Name = CategoryID, Value = Convert($it.AsQueryable().Sum($it => Convert($it.GroupByContainer.Next.Value))), Next = new LastInChain() {Name = SupplierID, Value = Convert($it.AsQueryable().Sum($it => Convert($it.GroupByContainer.Value))), }, }, })");
         }
 
+        [Fact]
+        public void EntitySetAggregations()
+        {
+            var filters = VerifyQueryDeserialization<Category>(
+                "aggregate(Products($count as Count))",
+                ".GroupBy($it => new NoGroupByWrapper())"
+                + ".Select($it => new NoGroupByAggregationWrapper() {Container = new LastInChain() {"
+                + "Name = Products, Value = $it.AsQueryable().SelectMany($it => $it.Products)"
+                + ".GroupBy($gr => new Boolean())"
+                + ".Select($p => new EntitySetAggregationWrapper() {Container = new LastInChain() {Name = Count, Value = Convert($p.AsQueryable().LongCount()), }, }), }, })");
+        }
+
+        [Fact]
+        public void EntitySetAggregationsWithExpandFilter()
+        {
+            var filters = VerifyQueryDeserialization<Category>(
+                "expand(Products, filter(SupplierID eq 1))/aggregate(Products($count as Count))",
+                ".GroupBy($it => new NoGroupByWrapper())"
+                + ".Select($it => new NoGroupByAggregationWrapper() {Container = new LastInChain() {"
+                + "Name = Products, Value = $it.AsQueryable().SelectMany($it => $it.Products)"
+                + ".AsQueryable().Where($it => ($it.SupplierID == 1)).GroupBy($gr => new Boolean())"
+                + ".Select($p => new EntitySetAggregationWrapper() {Container = new LastInChain() {Name = Count, Value = Convert($p.AsQueryable().LongCount()), }, }), }, })");
+        }
+
+
         private Expression VerifyQueryDeserialization(string filter, string expectedResult = null, Action<ODataQuerySettings> settingsCustomizer = null)
         {
             return VerifyQueryDeserialization<Product>(filter, expectedResult, settingsCustomizer);
@@ -182,12 +207,16 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 return settings;
             };
 
+            var context = new ODataQueryContext(model, typeof(T)) { RequestContainer = new MockContainer() };
+
+            var expandClause = clause.Transformations.OfType<ExpandTransformationNode>().FirstOrDefault()?.ExpandClause;
+
             var binder = new AggregationBinder(
                 customizeSettings(new ODataQuerySettings { HandleNullPropagation = HandleNullPropagationOption.False }),
                 assembliesResolver,
                 typeof(T),
                 model,
-                clause.Transformations.First());
+                clause.Transformations.First(t => t.Kind != TransformationNodeKind.Expand), context, expandClause);
 
             var query = Enumerable.Empty<T>().AsQueryable();
 
@@ -225,6 +254,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             return parser.ParseApply();
         }
 
+
         private IEdmModel GetModel<T>() where T : class
         {
             Type key = typeof(T);
@@ -234,6 +264,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             {
                 ODataModelBuilder model = ODataConventionModelBuilderFactory.Create();
                 model.EntitySet<T>("Products");
+                model.EntitySet<Category>("Categories");
                 if (key == typeof(Product))
                 {
                     model.EntityType<DerivedProduct>().DerivesFrom<Product>();
@@ -246,3 +277,4 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         }
     }
 }
+

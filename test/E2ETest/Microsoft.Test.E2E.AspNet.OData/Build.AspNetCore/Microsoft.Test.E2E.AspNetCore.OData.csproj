@@ -1733,17 +1733,17 @@
     <Reference Include="Microsoft.Net.Http.Headers, Version=2.0.3.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\..\..\..\sln\packages\Microsoft.Net.Http.Headers.2.0.3\lib\netstandard2.0\Microsoft.Net.Http.Headers.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.5.1.21115, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\sln\packages\Mseng.OData.Core.7.5.1\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.5.2.21213, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\..\sln\packages\Mseng.OData.Core.7.5.2\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.5.1.21115, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\sln\packages\Mseng.OData.Edm.7.5.1\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.5.2.21213, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\..\sln\packages\Mseng.OData.Edm.7.5.2\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.5.1.21115, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\sln\packages\Mseng.Spatial.7.5.1\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.5.2.21213, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\..\sln\packages\Mseng.Spatial.7.5.2\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
     </Reference> 
-    <Reference Include="Microsoft.TeamFoundation.OData.Client, Version=7.5.1.21115, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\sln\packages\Mseng.OData.Client.7.5.1\lib\netstandard1.1\Microsoft.TeamFoundation.OData.Client.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Client, Version=7.5.2.21213, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\..\sln\packages\Mseng.OData.Client.7.5.2\lib\netstandard1.1\Microsoft.TeamFoundation.OData.Client.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\..\..\sln\packages\Newtonsoft.Json.10.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
