@@ -1311,6 +1311,47 @@ namespace Microsoft.AspNet.OData.Test.Query
         }
 
         [Fact]
+        public async Task ExpandWithApplyToSerializationWorks()
+        {
+            // Arrange
+            var model = new ODataModelBuilder()
+                            .Add_Order_EntityType()
+                            .Add_Customer_EntityType_With_Address()
+                            .Add_CustomerOrders_Relationship()
+                            .Add_OrderCustomer_Relationship()
+                            .Add_Customer_EntityType_With_CollectionProperties()
+                            .Add_Customers_EntitySet()
+                            .GetEdmModel();
+
+            var controllers = new[] { typeof(MetadataController), typeof(CustomersController) };
+            var server = TestServerFactory.Create(controllers, (config) =>
+            {
+                config.MapODataServiceRoute("odata", "odata", model);
+                config.Select().Expand().Filter();
+            });
+
+            HttpClient client = TestServerFactory.CreateClient(server);
+
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get,
+                "http://localhost/odata/Customers?$expand=Orders($apply=aggregate($count as Count))&$filter=CustomerId eq 1");
+
+            // Act
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            // Assert
+            Assert.True(response.IsSuccessStatusCode);
+            Assert.NotNull(response);
+            var result = await response.Content.ReadAsObject<JObject>();
+            var results = result["value"] as JArray;
+            Assert.Single(results);
+            Assert.Equal("1", results[0]["CustomerId"].ToString());
+            var orders = results[0]["Orders"] as JArray;
+            Assert.Single(orders);
+            Assert.Equal("2", orders[0]["Count"].ToString());
+
+        }
+
+        [Fact]
         public async Task ApplyToSerializationWorksForCompelxTypes()
         {
             // Arrange
