@@ -45,6 +45,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             _settings = settings;
         }
 
+        /// <summary>
+        /// IQueryProvider used for $apply binding. 
+        /// It's visible internally to allow testing of the internal implementation details.
+        /// </summary>
+        internal IQueryProvider QueryProvider { get; set; }
+
         public static IQueryable Bind(IQueryable queryable, ODataQuerySettings settings,
             SelectExpandQueryOption selectExpandQuery)
         {
@@ -72,11 +78,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             // TODO: cache this ?
             return projectionLambda.Compile().DynamicInvoke(entity);
         }
-        private IQueryProvider _provider;
+        
         private IQueryable Bind(IQueryable queryable)
         {
             Type elementType = _selectExpandQuery.Context.ElementClrType;
-            _provider = queryable.Provider;
+            QueryProvider = queryable.Provider;
             LambdaExpression projectionLambda = GetProjectionLambda();
 
             MethodInfo selectMethod = ExpressionHelperMethods.QueryableSelectGeneric.MakeGenericMethod(elementType, projectionLambda.Body.Type);
@@ -162,12 +168,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Contract.Assert(property != null);
             Contract.Assert(source != null);
 
-            return CreatePropertyValueExpressionWithFilter(elementType, property, source, filterClause: null);
+            return CreatePropertyValueExpressionWithClauses(elementType, property, source, filterClause: null, applyClause: null);
         }
 
         [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Class coupling acceptable")]
-        internal Expression CreatePropertyValueExpressionWithFilter(IEdmEntityType elementType, IEdmProperty property,
-            Expression source, FilterClause filterClause, ApplyClause applyClause = null)
+        internal Expression CreatePropertyValueExpressionWithClauses(IEdmEntityType elementType, IEdmProperty property,
+            Expression source, FilterClause filterClause, ApplyClause applyClause)
         {
             Contract.Assert(elementType != null);
             Contract.Assert(property != null);
@@ -287,7 +293,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                                 nullablePropertyValue)
                             : nullablePropertyValue;
 
-                    var query = _provider.CreateQuery(filterSource);
+                    var query = QueryProvider.CreateQuery(filterSource);
 
                     ODataQuerySettings querySettings = new ODataQuerySettings()
                     {
@@ -489,7 +495,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     _context.Model);
 
                 Expression propertyName = CreatePropertyNameExpression(elementType, propertyToExpand, source);
-                Expression propertyValue = CreatePropertyValueExpressionWithFilter(elementType, propertyToExpand, source,
+                Expression propertyValue = CreatePropertyValueExpressionWithClauses(elementType, propertyToExpand, source,
                     expandItem.FilterOption, expandItem.ApplyOption);
                 Expression nullCheck = GetNullCheckExpression(propertyToExpand, propertyValue, projection);
 
@@ -603,7 +609,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Expression keysNullCheckExpression = null;
             foreach (var key in propertyToExpand.ToEntityType().Key())
             {
-                var propertyValueExpression = CreatePropertyValueExpressionWithFilter(propertyToExpand.ToEntityType(), key, propertyValue, null);
+                var propertyValueExpression = CreatePropertyValueExpressionWithClauses(propertyToExpand.ToEntityType(), key, propertyValue, null, null);
                 var keyExpression = Expression.Equal(
                     propertyValueExpression,
                     Expression.Constant(null, propertyValueExpression.Type));
