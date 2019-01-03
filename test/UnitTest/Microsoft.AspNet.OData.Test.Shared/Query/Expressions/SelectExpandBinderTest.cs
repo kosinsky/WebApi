@@ -722,6 +722,44 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         }
 
         [Fact]
+        public void CreatePropertyValueExpressionWithClauses_Collection_WorksWithApplyAndFilter()
+        {
+            // Arrange
+            _model.Model.SetAnnotationValue(_model.Order, new ClrTypeAnnotation(typeof(Order)));
+            var customer =
+                Expression.Constant(new Customer { Orders = new[] { new Order { ID = 1 }, new Order { ID = 2 } } });
+            var ordersProperty = _model.Customer.NavigationProperties().Single(p => p.Name == "Orders");
+            var parser = new ODataQueryOptionParser(
+                _model.Model,
+                _model.Order,
+                _model.Orders,
+                new Dictionary<string, string> { { "$apply", "aggregate($count as Count)" }, { "$filter", "ID eq 1" } });
+            var applyClause = parser.ParseApply();
+            var filterClause = parser.ParseFilter();
+
+            // Act
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(
+                _model.Customer,
+                ordersProperty,
+                customer,
+                filterClause,
+                applyClause);
+
+            // Assert
+            Assert.Equal(
+                string.Format(
+                    "value({0}).Orders.AsQueryable().Where($it => ($it.ID == value(" +
+                    "Microsoft.AspNet.OData.Query.Expressions.LinqParameterContainer+TypedLinqParameterContainer`1[System.Int32]).TypedProperty))" +
+                    ".GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount())}}}})",
+                    customer.Type),
+                filterInExpand.ToString());
+            var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<DynamicTypeWrapper>;
+            Assert.Single(orders);
+            Assert.Equal(1L, orders.ToList()[0].Values["Count"]);
+        }
+
+        [Fact]
         public void CreatePropertyValueExpressionWithFilter_Single_ThrowsODataException_IfMappingTypeIsNotFoundInModel()
         {
             // Arrange

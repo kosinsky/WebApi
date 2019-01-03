@@ -287,11 +287,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     }
 
                     Expression filterSource =
-                        typeof(IEnumerable).IsAssignableFrom(source.Type.GetProperty(propertyName).PropertyType)
-                            ? Expression.Call(
+                        typeof(IQueryable).IsAssignableFrom(nullablePropertyValue.Type)
+                            ? nullablePropertyValue
+                            : Expression.Call(
                                 ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
                                 nullablePropertyValue)
-                            : nullablePropertyValue;
+                            ;
 
                     var query = QueryProvider.CreateQuery(filterSource);
 
