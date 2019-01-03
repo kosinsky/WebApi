@@ -708,13 +708,18 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 customer,
                 filterClause: null,
                 applyClause: applyClause);
-
+#if NETCORE
+            var suffix = ", Object";
+#else
+            var suffix = "";
+#endif
             // Assert
             Assert.Equal(
                 string.Format(
                     "value({0}).Orders.AsQueryable().GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
-                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount())}}}})",
-                    customer.Type),
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount(){1})}}}})",
+                    customer.Type,
+                    suffix),
                 filterInExpand.ToString());
             var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<DynamicTypeWrapper>;
             Assert.Single(orders);
@@ -745,14 +750,20 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 filterClause,
                 applyClause);
 
+#if NETCORE
+            var suffix = ", Object";
+#else
+            var suffix = "";
+#endif
             // Assert
             Assert.Equal(
                 string.Format(
                     "value({0}).Orders.AsQueryable().Where($it => ($it.ID == value(" +
                     "Microsoft.AspNet.OData.Query.Expressions.LinqParameterContainer+TypedLinqParameterContainer`1[System.Int32]).TypedProperty))" +
                     ".GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
-                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount())}}}})",
-                    customer.Type),
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount(){1})}}}})",
+                    customer.Type,
+                    suffix),
                 filterInExpand.ToString());
             var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<DynamicTypeWrapper>;
             Assert.Single(orders);
