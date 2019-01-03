@@ -759,6 +759,38 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             Assert.Equal(1L, orders.ToList()[0].Values["Count"]);
         }
 
+
+        [Fact]
+        public void CreatePropertyValueExpressionWithFilter_Single_ThrowsODataException_IfApplyUsed()
+        {
+            // Arrange
+            _settings.HandleReferenceNavigationPropertyExpandFilter = false;
+            var order = Expression.Constant(
+                    new Order
+                    {
+                        Customer = new Customer
+                        {
+                            ID = 1
+                        }
+                    }
+            );
+            var customerProperty = _model.Order.NavigationProperties().Single(p => p.Name == "Customer");
+
+            var parser = new ODataQueryOptionParser(
+                _model.Model,
+                _model.Customer,
+                _model.Customers,
+                new Dictionary<string, string> { { "$apply", "aggregate($count as Count)" } });
+
+            var applyClause = parser.ParseApply();
+
+
+            // Act & Assert
+            ExceptionAssert.Throws<ODataException>(
+                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterClause: null, applyClause: applyClause),
+                "$apply not supported for single property Customer");
+        }
+
         [Fact]
         public void CreatePropertyValueExpressionWithFilter_Single_ThrowsODataException_IfMappingTypeIsNotFoundInModel()
         {

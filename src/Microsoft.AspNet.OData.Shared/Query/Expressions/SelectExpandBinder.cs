@@ -311,7 +311,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 }
                 else
                 {
-                    // TODO: Throw
+                    throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForSingleProperty, property.Name));
                 }
             }
 

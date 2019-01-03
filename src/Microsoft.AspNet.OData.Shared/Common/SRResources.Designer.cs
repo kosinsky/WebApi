@@ -144,16 +144,27 @@ namespace Microsoft.AspNet.OData.Common
                 return ResourceManager.GetString("AggregationMethodNotSupported", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Looks up a localized string similar to Aggregation &apos;{0}&apos; not supported for property &apos;{1}&apos; of type &apos;{2}&apos;..
+        ///   Looks up a localized string similar to $apply not supported for single property {0}..
         /// </summary>
         internal static string AggregationNotSupportedForType {
             get {
                 return ResourceManager.GetString("AggregationNotSupportedForType", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Aggregation &apos;{0}&apos; not supported for property &apos;{1}&apos; of type &apos;{2}&apos;..
+        /// </summary>
+        internal static string AggregationNotSupportedForSingleProperty
+        {
+            get
+            {
+                return ResourceManager.GetString("AggregationNotSupportedForSingleProperty", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to The query option is not bound to any CLR type. &apos;{0}&apos; is only supported with a query option bound to a CLR type..
         /// </summary>
