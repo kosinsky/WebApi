@@ -89,7 +89,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.ODataPathHandler
             // update entity and verify if it's saved
             await UpdateEntityAsync(uri, entitySetName, firstVersion, data =>
             {
-                data.Nameü = InstanceCreator.CreateInstanceOf<string>(rand);
+                data.Nameü = InstanceCreator.CreateInstanceOf<string>(rand, creatorSettings);
             });
 
             var secondVersion = await GetFirstEntityAsync(uri, entitySetName);
