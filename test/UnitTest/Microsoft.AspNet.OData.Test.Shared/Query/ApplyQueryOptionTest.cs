@@ -9,6 +9,7 @@ using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Query.Expressions;
+using Microsoft.AspNet.OData.Routing;
 using Microsoft.AspNet.OData.Test.Abstraction;
 using Microsoft.AspNet.OData.Test.Builder.TestModels;
 using Microsoft.AspNet.OData.Test.Common;
@@ -934,6 +935,45 @@ namespace Microsoft.AspNet.OData.Test.Query
             Assert.Equal("redmond", address0["City"].ToString());
         }
 
+        [Fact]
+        public async Task ApplyToSerializationWorksForFunctions()
+        {
+            // Arrange
+            var builder = new ODataModelBuilder()
+                            .Add_Order_EntityType()
+                            .Add_Customer_EntityType_With_Address()
+                            .Add_CustomerOrders_Relationship()
+                            .Add_Customer_EntityType_With_CollectionProperties()
+                            .Add_Customers_EntitySet();
+            builder.Function(nameof(CustomersController.GetAddress)).ReturnsCollection<Address>();
+
+            var model = builder.GetEdmModel();
+
+            var controllers = new[] { typeof(MetadataController), typeof(CustomersController) };
+            var server = TestServerFactory.Create(controllers, (config) =>
+            {
+                config.MapODataServiceRoute("odata", "odata", model);
+            });
+
+            HttpClient client = TestServerFactory.CreateClient(server);
+
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get,
+                "http://localhost/odata/GetAddress?$apply=aggregate(HouseNumber with sum as NumberSum)");
+
+            // Act
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            // Assert
+            Assert.True(response.IsSuccessStatusCode);
+            Assert.NotNull(response);
+            var result = await response.Content.ReadAsObject<JObject>();
+            var results = result["value"] as JArray;
+            Assert.Equal(4, results.Count);
+            Assert.Equal("6", results[0]["TotalId"].ToString());
+            var address0 = results[0]["Address"] as JObject;
+            Assert.Equal("redmond", address0["City"].ToString());
+        }
+
         private object GetValue(DynamicTypeWrapper wrapper, string path)
         {
             var parts = path.Split('/');
@@ -975,5 +1015,26 @@ namespace Microsoft.AspNet.OData.Test.Query
             return Ok(_customers);
         }
 #endif
+
+        [EnableQuery(MaxOrderByNodeCount = 32)]
+        [ODataRoute(nameof(GetAddress))]
+        public ITestActionResult GetAddress()
+        {
+            return Ok(new List<Address>
+        {
+            new Address { HouseNumber =  1 },
+            new Address { HouseNumber =  2 },
+            new Address { HouseNumber =  3 }
+        });
+        }
+        //public IQueryable<Address> GetAddress()
+        //{
+        //    return new List<Address>
+        //    {
+        //        new Address { HouseNumber =  1 },
+        //        new Address { HouseNumber =  2 },
+        //        new Address { HouseNumber =  3 }
+        //    }.AsQueryable();
+        //}
     }
 }
