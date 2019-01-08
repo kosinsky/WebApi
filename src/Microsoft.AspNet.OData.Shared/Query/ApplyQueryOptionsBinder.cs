@@ -26,19 +26,11 @@ namespace Microsoft.AspNet.OData.Query
             this._context = context;
             this._settings = settings;
             this.ResultClrType = clrType;
-            //this._assembliesResolver = assembliesResolver;
+
             // The IWebApiAssembliesResolver service is internal and can only be injected by WebApi.
             // This code path may be used in cases when the service container is not available
             // and the service container is available but may not contain an instance of IWebApiAssembliesResolver.
-            _assembliesResolver = WebApiAssembliesResolver.Default;
-            if (_context.RequestContainer != null)
-            {
-                IWebApiAssembliesResolver injectedResolver = _context.RequestContainer.GetService<IWebApiAssembliesResolver>();
-                if (injectedResolver != null)
-                {
-                    _assembliesResolver = injectedResolver;
-                }
-            }
+            _assembliesResolver = _context.RequestContainer?.GetService<IWebApiAssembliesResolver>() ?? WebApiAssembliesResolver.Default;
         }
 
         public Type ResultClrType { get; private set; }
@@ -49,7 +41,7 @@ namespace Microsoft.AspNet.OData.Query
         {
 
             // groupby and aggregate transform input  by collapsing everything not used in groupby/aggregate 
-            // as a result we have to distinct cases for expand implementation
+            // as a result we have two distinct cases for expand implementation
             // 1. Expands followed by groupby/aggregate with entity set aggregations => filters in expand need to be applied (pushed down) to corresponding entityset aggregations 
             // 2. Mix of expands and filters w/o any groupby/aggregation => falling back to $expand behavior and could just use SelectExpandBinder
             bool inputShapeChanged = false;
@@ -72,7 +64,7 @@ namespace Microsoft.AspNet.OData.Query
                 }
                 else if (transformation.Kind == TransformationNodeKind.Filter)
                 {
-                    var filterTransformation = transformation as FilterTransformationNode;
+                    var filterTransformation = (FilterTransformationNode)transformation;
                     Expression filter = FilterBinder.Bind(query, filterTransformation.FilterClause, ResultClrType, _context, _settings);
                     query = ExpressionHelpers.Where(query, filter, ResultClrType);
                 }
@@ -105,12 +97,7 @@ namespace Microsoft.AspNet.OData.Query
 
         private static string GetExpandsOnlyString(SelectExpandClause selectExpandClause)
         {
-            string result = "$expand=";
-
-            foreach (var item in selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>())
-            {
-                result += item.NavigationSource.Name;
-            }
+            string result = "$expand=" + string.Join(",", selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Select(i => i.NavigationSource.Name));
 
             return result;
         }
