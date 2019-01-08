@@ -146,7 +146,7 @@ namespace Microsoft.AspNet.OData.Common
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to $apply not supported for single property {0}..
+        ///   Looks up a localized string similar to Aggregation &apos;{0}&apos; not supported for property &apos;{1}&apos; of type &apos;{2}&apos;..
         /// </summary>
         internal static string AggregationNotSupportedForType {
             get {
@@ -155,7 +155,7 @@ namespace Microsoft.AspNet.OData.Common
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Aggregation &apos;{0}&apos; not supported for property &apos;{1}&apos; of type &apos;{2}&apos;..
+        ///   Looks up a localized string similar to $apply not supported for single property {0}..
         /// </summary>
         internal static string AggregationNotSupportedForSingleProperty
         {
