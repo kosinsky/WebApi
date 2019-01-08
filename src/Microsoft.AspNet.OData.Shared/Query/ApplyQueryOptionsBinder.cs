@@ -14,6 +14,10 @@ using Microsoft.OData.UriParser.Aggregation;
 
 namespace Microsoft.AspNet.OData.Query
 {
+    /// <summary>
+    /// Coordinates binding for $apply query option.
+    /// It will apply binders for each supported transforamtion one by one.
+    /// </summary>
     internal class ApplyQueryOptionsBinder
     {
         ODataQueryContext _context;
