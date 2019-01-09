@@ -726,8 +726,10 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             Assert.Equal(2L, orders.ToList()[0].Values["Count"]);
         }
 
-        [Fact]
-        public void CreatePropertyValueExpressionWithClauses_Collection_WorksWithApplyAndFilter()
+        [Theory]
+        [InlineData("aggregate($count as Count)", "ID eq 1")]
+        [InlineData("filter(ID eq 1)/aggregate($count as Count)", null)]
+        public void CreatePropertyValueExpressionWithClauses_Collection_WorksWithApplyAndFilter(string apply, string filter)
         {
             // Arrange
             _model.Model.SetAnnotationValue(_model.Order, new ClrTypeAnnotation(typeof(Order)));
@@ -738,7 +740,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 _model.Model,
                 _model.Order,
                 _model.Orders,
-                new Dictionary<string, string> { { "$apply", "aggregate($count as Count)" }, { "$filter", "ID eq 1" } });
+                new Dictionary<string, string> { { "$apply", apply }, { "$filter", filter } }.Where(kvp => kvp.Value != null).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
             var applyClause = parser.ParseApply();
             var filterClause = parser.ParseFilter();
 

@@ -1348,7 +1348,6 @@ namespace Microsoft.AspNet.OData.Test.Query
             var orders = results[0]["Orders"] as JArray;
             Assert.Single(orders);
             Assert.Equal("2", orders[0]["Count"].ToString());
-
         }
 
         [Fact]
