@@ -43,6 +43,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             customer.Orders.Add(order);
 
             _queryable = new[] { customer }.AsQueryable();
+            _binder.QueryProvider = _queryable.Provider;
         }
 
         [Fact]
@@ -581,7 +582,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
             // Act & Assert
             ExceptionAssert.Throws<ODataException>(
-                () => _binder.CreatePropertyValueExpressionWithFilter(_model.Customer, ordersProperty, customer, filterCaluse),
+                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Customer, ordersProperty, customer, filterCaluse, applyClause: null),
                 "The provided mapping does not contain a resource for the resource type 'NS.Order'.");
 
             // NetFx and NetCore differ in the way Expression is converted to a string.
@@ -608,7 +609,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
         //    // Act & Assert
         //    ExceptionAssert.Throws<ODataException>(
-        //        () => _binder.CreatePropertyValueExpressionWithFilter(_model.Customer, ordersProperty, customer, filterCaluse),
+        //        () => _binder.CreatePropertyValueExpressionWithClauses(_model.Customer, ordersProperty, customer, filterCaluse, applyClause: null),
         //        "The provided mapping does not contain a resource for the resource type 'NS.Order'.");
         //}
 
@@ -629,11 +630,12 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithFilter(
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(
                 _model.Customer,
                 ordersProperty,
                 customer,
-                filterCaluse);
+                filterCaluse,
+                applyClause: null);
 
             // Assert
             Assert.Equal(
@@ -665,11 +667,12 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithFilter(
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(
                 _model.Customer,
                 ordersProperty,
                 customer,
-                filterCaluse);
+                filterCaluse,
+                applyClause:null);
 
             // Assert
             Assert.Equal(
@@ -681,6 +684,124 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<Order>;
             Assert.Single(orders);
             Assert.Equal(1, orders.ToList()[0].ID);
+        }
+
+        [Fact]
+        public void CreatePropertyValueExpressionWithClauses_Collection_WorksWithApply()
+        {
+            // Arrange
+            _model.Model.SetAnnotationValue(_model.Order, new ClrTypeAnnotation(typeof(Order)));
+            var customer =
+                Expression.Constant(new Customer { Orders = new[] { new Order { ID = 1 }, new Order { ID = 2 } } });
+            var ordersProperty = _model.Customer.NavigationProperties().Single(p => p.Name == "Orders");
+            var parser = new ODataQueryOptionParser(
+                _model.Model,
+                _model.Order,
+                _model.Orders,
+                new Dictionary<string, string> { { "$apply", "aggregate($count as Count)" } });
+            var applyClause = parser.ParseApply();
+
+            // Act
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(
+                _model.Customer,
+                ordersProperty,
+                customer,
+                filterClause: null,
+                applyClause: applyClause);
+#if NETCORE
+            var suffix = ", Object";
+#else
+            var suffix = "";
+#endif
+            // Assert
+            Assert.Equal(
+                string.Format(
+                    "value({0}).Orders.AsQueryable().GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount(){1})}}}})",
+                    customer.Type,
+                    suffix),
+                filterInExpand.ToString());
+            var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<DynamicTypeWrapper>;
+            Assert.Single(orders);
+            Assert.Equal(2L, orders.ToList()[0].Values["Count"]);
+        }
+
+        [Theory]
+        [InlineData("aggregate($count as Count)", "ID eq 1")]
+        [InlineData("filter(ID eq 1)/aggregate($count as Count)", null)]
+        public void CreatePropertyValueExpressionWithClauses_Collection_WorksWithApplyAndFilter(string apply, string filter)
+        {
+            // Arrange
+            _model.Model.SetAnnotationValue(_model.Order, new ClrTypeAnnotation(typeof(Order)));
+            var customer =
+                Expression.Constant(new Customer { Orders = new[] { new Order { ID = 1 }, new Order { ID = 2 } } });
+            var ordersProperty = _model.Customer.NavigationProperties().Single(p => p.Name == "Orders");
+            var parser = new ODataQueryOptionParser(
+                _model.Model,
+                _model.Order,
+                _model.Orders,
+                new Dictionary<string, string> { { "$apply", apply }, { "$filter", filter } }.Where(kvp => kvp.Value != null).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+            var applyClause = parser.ParseApply();
+            var filterClause = parser.ParseFilter();
+
+            // Act
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(
+                _model.Customer,
+                ordersProperty,
+                customer,
+                filterClause,
+                applyClause);
+
+#if NETCORE
+            var suffix = ", Object";
+#else
+            var suffix = "";
+#endif
+            // Assert
+            Assert.Equal(
+                string.Format(
+                    "value({0}).Orders.AsQueryable().Where($it => ($it.ID == value(" +
+                    "Microsoft.AspNet.OData.Query.Expressions.LinqParameterContainer+TypedLinqParameterContainer`1[System.Int32]).TypedProperty))" +
+                    ".GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount(){1})}}}})",
+                    customer.Type,
+                    suffix),
+                filterInExpand.ToString());
+            var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<DynamicTypeWrapper>;
+            Assert.Single(orders);
+            Assert.Equal(1L, orders.ToList()[0].Values["Count"]);
+        }
+
+
+        [Fact]
+        public void CreatePropertyValueExpressionWithFilter_Single_ThrowsODataException_IfApplyUsed()
+        {
+            // Arrange
+            _settings.HandleReferenceNavigationPropertyExpandFilter = false;
+            var order = Expression.Constant(
+                    new Order
+                    {
+                        Customer = new Customer
+                        {
+                            ID = 1
+                        }
+                    }
+            );
+            var customerProperty = _model.Order.NavigationProperties().Single(p => p.Name == "Customer");
+
+            var parser = new ODataQueryOptionParser(
+                _model.Model,
+                _model.Customer,
+                _model.Customers,
+                new Dictionary<string, string> { { "$apply", "aggregate($count as Count)" } });
+
+            var applyClause = parser.ParseApply();
+
+
+            // Act & Assert
+            ExceptionAssert.Throws<ODataException>(
+                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterClause: null, applyClause: applyClause),
+                "$apply not supported for single property Customer");
         }
 
         [Fact]
@@ -701,7 +822,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
             // Act & Assert
             ExceptionAssert.Throws<ODataException>(
-                () => _binder.CreatePropertyValueExpressionWithFilter(_model.Order, customerProperty, order, filterCaluse),
+                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null),
                 "The provided mapping does not contain a resource for the resource type 'NS.Customer'.");
         }
 
@@ -729,7 +850,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act 
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithFilter(_model.Order, customerProperty, order, filterCaluse);
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null);
 
             // Assert            
             var customer = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as Customer;
@@ -762,7 +883,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithFilter(_model.Order, customerProperty, order, filterCaluse);
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null);
             
             // Assert
             Assert.Equal(
@@ -801,7 +922,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithFilter(_model.Order, customerProperty, order, filterCaluse);
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause:null);
 
             // Assert
             Assert.Equal(

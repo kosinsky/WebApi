@@ -15,6 +15,7 @@ using Microsoft.AspNet.OData.Formatter.Serialization;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
+using Microsoft.OData.UriParser.Aggregation;
 
 namespace Microsoft.AspNet.OData.Query.Expressions
 {
@@ -44,6 +45,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             _settings = settings;
         }
 
+        /// <summary>
+        /// IQueryProvider used for $apply binding. 
+        /// It's visible internally to allow testing of the internal implementation details.
+        /// </summary>
+        internal IQueryProvider QueryProvider { get; set; }
+
         public static IQueryable Bind(IQueryable queryable, ODataQuerySettings settings,
             SelectExpandQueryOption selectExpandQuery)
         {
@@ -71,11 +78,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             // TODO: cache this ?
             return projectionLambda.Compile().DynamicInvoke(entity);
         }
-
+        
         private IQueryable Bind(IQueryable queryable)
         {
             Type elementType = _selectExpandQuery.Context.ElementClrType;
-
+            QueryProvider = queryable.Provider;
             LambdaExpression projectionLambda = GetProjectionLambda();
 
             MethodInfo selectMethod = ExpressionHelperMethods.QueryableSelectGeneric.MakeGenericMethod(elementType, projectionLambda.Body.Type);
@@ -104,6 +111,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Type elementType;
             if (TypeHelper.IsCollection(source.Type, out elementType))
             {
+                if (EdmLibHelpers.IsDynamicTypeWrapper(elementType))
+                {
+                    return source;
+                }
+
                 // new CollectionWrapper<ElementType> { Instance = source.Select(s => new Wrapper { ... }) };
                 return ProjectCollection(source, elementType, selectExpandClause, entityType, navigationSource, expandedItem,
                     modelBoundPageSize);
@@ -156,11 +168,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Contract.Assert(property != null);
             Contract.Assert(source != null);
 
-            return CreatePropertyValueExpressionWithFilter(elementType, property, source, filterClause: null);
+            return CreatePropertyValueExpressionWithClauses(elementType, property, source, filterClause: null, applyClause: null);
         }
 
-        internal Expression CreatePropertyValueExpressionWithFilter(IEdmEntityType elementType, IEdmProperty property,
-            Expression source, FilterClause filterClause)
+        [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Class coupling acceptable")]
+        internal Expression CreatePropertyValueExpressionWithClauses(IEdmEntityType elementType, IEdmProperty property,
+            Expression source, FilterClause filterClause, ApplyClause applyClause)
         {
             Contract.Assert(elementType != null);
             Contract.Assert(property != null);
@@ -259,8 +272,52 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 }
             }
 
+            if (applyClause != null)
+            {
+                bool isCollection = property.Type.IsCollection();
+
+                if (isCollection)
+                {
+                    IEdmTypeReference edmElementType = (isCollection ? property.Type.AsCollection().ElementType() : property.Type);
+                    Type clrElementType = EdmLibHelpers.GetClrType(edmElementType, _model);
+                    if (clrElementType == null)
+                    {
+                        throw new ODataException(Error.Format(SRResources.MappingDoesNotContainResourceType,
+                            edmElementType.FullName()));
+                    }
+
+                    Expression filterSource =
+                        typeof(IQueryable).IsAssignableFrom(nullablePropertyValue.Type)
+                            ? nullablePropertyValue
+                            : Expression.Call(
+                                ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
+                                nullablePropertyValue)
+                            ;
+
+                    var query = QueryProvider.CreateQuery(filterSource);
+
+                    ODataQuerySettings querySettings = new ODataQuerySettings()
+                    {
+                        HandleNullPropagation = HandleNullPropagationOption.True,
+                    };
+
+                    var applyBinder = new ApplyQueryOptionsBinder(_context, querySettings, clrElementType);
+
+                    query = applyBinder.Bind(query, applyClause);
+
+                    nullablePropertyValue = query.Expression;
+                    nullablePropertyType = nullablePropertyValue.Type;
+
+                }
+                else
+                {
+                    throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForSingleProperty, property.Name));
+                }
+            }
+
             if (_settings.HandleNullPropagation == HandleNullPropagationOption.True)
             {
+
                 // create expression similar to: 'source == null ? null : propertyValue'
                 propertyValue = Expression.Condition(
                     test: Expression.Equal(source, Expression.Constant(value: null)),
@@ -439,8 +496,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     _context.Model);
 
                 Expression propertyName = CreatePropertyNameExpression(elementType, propertyToExpand, source);
-                Expression propertyValue = CreatePropertyValueExpressionWithFilter(elementType, propertyToExpand, source,
-                    expandItem.FilterOption);
+                Expression propertyValue = CreatePropertyValueExpressionWithClauses(elementType, propertyToExpand, source,
+                    expandItem.FilterOption, expandItem.ApplyOption);
                 Expression nullCheck = GetNullCheckExpression(propertyToExpand, propertyValue, projection);
 
                 Expression countExpression = CreateTotalCountExpression(propertyValue, expandItem);
@@ -553,7 +610,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Expression keysNullCheckExpression = null;
             foreach (var key in propertyToExpand.ToEntityType().Key())
             {
-                var propertyValueExpression = CreatePropertyValueExpressionWithFilter(propertyToExpand.ToEntityType(), key, propertyValue, null);
+                var propertyValueExpression = CreatePropertyValueExpressionWithClauses(propertyToExpand.ToEntityType(), key, propertyValue, null, null);
                 var keyExpression = Expression.Equal(
                     propertyValueExpression,
                     Expression.Constant(null, propertyValueExpression.Type));

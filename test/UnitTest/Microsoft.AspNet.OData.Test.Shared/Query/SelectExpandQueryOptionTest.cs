@@ -701,6 +701,27 @@ namespace Microsoft.AspNet.OData.Test.Query
             Assert.Empty(clauseOfCustomer.SelectedItems);
         }
 
+        [Fact]
+        public void SelectExpandClause_Property_ApplyOnNavigationSource()
+        {
+            // Arrange
+            IEdmModel model = _model.Model;
+            _model.Model.SetAnnotationValue(_model.Customer, new ClrTypeAnnotation(typeof(Customer)));
+            ODataPath odataPath = new ODataPath(new EntitySetSegment(_model.Customers));
+            ODataQueryContext context = new ODataQueryContext(model, typeof(Customer), odataPath);
+            context.RequestContainer = new MockContainer();
+            SelectExpandQueryOption option = new SelectExpandQueryOption(null, "Orders($apply=aggregate($count as Count))", context);
+
+            // Act
+            SelectExpandClause selectExpandClause = option.SelectExpandClause;
+
+            // Assert
+            Assert.NotEmpty(selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>());
+            ExpandedNavigationSelectItem navigationItem = selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single();
+            Assert.NotNull(navigationItem.ApplyOption);
+            
+        }
+
         private IEdmModel GetAutoExpandEdmModel()
         {
             var builder = ODataConventionModelBuilderFactory.Create();

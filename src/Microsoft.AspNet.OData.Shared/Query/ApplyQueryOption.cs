@@ -5,13 +5,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Linq.Expressions;
-using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Common;
-using Microsoft.AspNet.OData.Interfaces;
-using Microsoft.AspNet.OData.Query.Expressions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using Microsoft.OData.UriParser.Aggregation;
@@ -126,82 +120,12 @@ namespace Microsoft.AspNet.OData.Query
 
             ODataQuerySettings updatedSettings = Context.UpdateQuerySettings(querySettings, query);
 
-            // The IWebApiAssembliesResolver service is internal and can only be injected by WebApi.
-            // This code path may be used in cases when the service container is not available
-            // and the service container is available but may not contain an instance of IWebApiAssembliesResolver.
-            IWebApiAssembliesResolver assembliesResolver = WebApiAssembliesResolver.Default;
-            if (Context.RequestContainer != null)
-            { 
-                IWebApiAssembliesResolver injectedResolver = Context.RequestContainer.GetService<IWebApiAssembliesResolver>();
-                if (injectedResolver != null)
-                {
-                    assembliesResolver = injectedResolver;
-                }
-            }
-
-            // groupby and aggregate transform input  by collapsing everything not used in groupby/aggregate 
-            // as a result we have to distinct cases for expand implementation
-            // 1. Expands followed by groupby/aggregate with entity set aggregations => filters in expand need to be applied (pushed down) to corresponding entityset aggregations 
-            // 2. Mix of expands and filters w/o any groupby/aggregation => falling back to $expand behavior and could just use SelectExpandBinder
-            bool inputShapeChanged = false;
-
-            foreach (var transformation in applyClause.Transformations)
-            {
-                if (transformation.Kind == TransformationNodeKind.Aggregate || transformation.Kind == TransformationNodeKind.GroupBy)
-                {
-                    var binder = new AggregationBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, transformation, Context, SelectExpandClause);
-                    query = binder.Bind(query);
-                    this.ResultClrType = binder.ResultClrType;
-                    inputShapeChanged = true;
-                }
-                else if (transformation.Kind == TransformationNodeKind.Compute)
-                {
-                    var binder = new ComputeBinder(updatedSettings, assembliesResolver, ResultClrType, Context.Model, (ComputeTransformationNode)transformation);
-                    query = binder.Bind(query);
-                    this.ResultClrType = binder.ResultClrType;
-                    inputShapeChanged = true;
-                }
-                else if (transformation.Kind == TransformationNodeKind.Filter)
-                {
-                    var filterTransformation = transformation as FilterTransformationNode;
-                    Expression filter = FilterBinder.Bind(query, filterTransformation.FilterClause, ResultClrType, Context, querySettings);
-                    query = ExpressionHelpers.Where(query, filter, ResultClrType);
-                }
-                else if (transformation.Kind == TransformationNodeKind.Expand)
-                {
-                    var newClause = ((ExpandTransformationNode)transformation).ExpandClause;
-                    if (SelectExpandClause == null)
-                    {
-                        SelectExpandClause = newClause;
-                    }
-                    else
-                    {
-                        SelectExpandClause = new SelectExpandClause(SelectExpandClause.SelectedItems.Concat(newClause.SelectedItems), false);
-                    }
-                }
-            }
-
-            if (SelectExpandClause != null && !inputShapeChanged)
-            {
-                var expandString = GetExpandsOnlyString(SelectExpandClause);
-
-                var selectExpandQueryOption = new SelectExpandQueryOption(null, expandString, Context, SelectExpandClause);
-                query = SelectExpandBinder.Bind(query, updatedSettings, selectExpandQueryOption);
-            }
+            var binder = new ApplyQueryOptionsBinder(Context, updatedSettings, ResultClrType);
+            query = binder.Bind(query, ApplyClause);
+            this.ResultClrType = binder.ResultClrType;
+            this.SelectExpandClause = binder.SelectExpandClause;
 
             return query;
-        }
-
-        private static string GetExpandsOnlyString(SelectExpandClause selectExpandClause)
-        {
-            string result = "$expand=";
-
-            foreach(var item in selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>())
-            {
-                result += item.NavigationSource.Name;
-            }
-
-            return result;
         }
     }
 }
