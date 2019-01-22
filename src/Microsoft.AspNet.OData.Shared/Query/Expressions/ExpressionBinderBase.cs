@@ -466,6 +466,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         // creates an expression for the corresponding OData function.
         internal Expression MakeFunctionCall(MemberInfo member, params Expression[] arguments)
         {
+            return MakeFunctionCall(member, true, arguments);
+        }
+
+        internal Expression MakeFunctionCall(MemberInfo member, bool canonical, params Expression[] arguments)
+        {
             Contract.Assert(member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Method);
 
             IEnumerable<Expression> functionCallArguments = arguments;
@@ -476,9 +481,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 functionCallArguments = arguments.Select(a => RemoveInnerNullPropagation(a));
             }
 
-            // if the argument is of type Nullable<T>, then translate the argument to Nullable<T>.Value as none
-            // of the canonical functions have overloads for Nullable<> arguments.
-            functionCallArguments = ExtractValueFromNullableArguments(functionCallArguments);
+            if (canonical)
+            {
+                // if the argument is of type Nullable<T>, then translate the argument to Nullable<T>.Value as none
+                // of the canonical functions have overloads for Nullable<> arguments.
+                functionCallArguments = ExtractValueFromNullableArguments(functionCallArguments);
+            }
 
             Expression functionCall;
             if (member.MemberType == MemberTypes.Method)
@@ -1970,7 +1978,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             MethodInfo methodInfo;
             if (UriFunctionsBinder.TryGetMethodInfo(node.Name, methodArgumentsType, out methodInfo))
             {
-                return MakeFunctionCall(methodInfo, arguments);
+                return MakeFunctionCall(methodInfo, false, arguments);
             }
 
             return null;
