@@ -1555,9 +1555,39 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             }
         }
 
-#endregion
+        [Fact]
+        public void CustomMethod_NullableParameters()
+        {
+            FunctionSignatureWithReturnType padrightStringEdmFunction = new FunctionSignatureWithReturnType(
+                EdmCoreModel.Instance.GetDecimal(true),
+                EdmCoreModel.Instance.GetDecimal(true));
 
-#region Data Types
+            MethodInfo funcMethodInfo = typeof(FilterBinderTests).GetMethod(nameof(NullableFuncStatic), BindingFlags.NonPublic | BindingFlags.Static);
+
+            const string funcMethodName = "nullablefunc";
+            try
+            {
+                // Add the custom function
+                CustomUriFunctions.AddCustomUriFunction(funcMethodName, padrightStringEdmFunction);
+                UriFunctionsBinder.BindUriFunctionName(funcMethodName, funcMethodInfo);
+
+                string filter = "nullablefunc(UnitPrice) eq null";
+                var filters = VerifyQueryDeserialization(filter);
+
+                RunFilters(filters,
+                  new Product { UnitPrice = null },
+                  new { WithNullPropagation = true, WithoutNullPropagation = true });
+            }
+            finally
+            {
+                Assert.True(CustomUriFunctions.RemoveCustomUriFunction(funcMethodName));
+                Assert.True(UriFunctionsBinder.UnbindUriFunctionName(funcMethodName, funcMethodInfo));
+            }
+        }
+
+        #endregion
+
+        #region Data Types
         [Fact]
         public void GuidExpression()
         {
@@ -3017,6 +3047,12 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         private static string PadRightStatic(string str, int number)
         {
             return str.PadRight(number);
+        }
+
+        // Used by Custom Method binder tests - by reflection
+        private static decimal? NullableFuncStatic(decimal? value)
+        {
+            return value;
         }
     }
 
