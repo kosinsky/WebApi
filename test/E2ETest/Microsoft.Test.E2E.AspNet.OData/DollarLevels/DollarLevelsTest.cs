@@ -55,7 +55,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.DollarLevels
                 result["error"]["innererror"]["message"].Value<string>());
         }
 
-        [Theory(Skip ="7.5.2 Flakyness")]
+        [Theory]
         [InlineData("$expand=Manager($levels=3)", 
             "$expand=Manager($expand=Manager($expand=Manager))")]
         [InlineData("$expand=Manager($levels=0)", 
