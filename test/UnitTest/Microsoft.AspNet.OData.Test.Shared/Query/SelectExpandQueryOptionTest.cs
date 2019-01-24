@@ -338,7 +338,7 @@ namespace Microsoft.AspNet.OData.Test.Query
             Assert.Empty(clause.SelectedItems);
         }
 
-        [Fact(Skip = "7.5.2 mismatch")]
+        [Fact]
         public void ProcessLevelsCorrectly_NotAllSelected()
         {
             // Arrange

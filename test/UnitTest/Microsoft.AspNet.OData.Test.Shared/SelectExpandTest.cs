@@ -62,7 +62,7 @@ namespace Microsoft.AspNet.OData.Test
             Assert.NotNull(response);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
-            Assert.Equal("http://localhost/odata/$metadata#SelectExpandTestCustomers(ID,Orders,Orders())", result["@odata.context"]);
+            Assert.Equal("http://localhost/odata/$metadata#SelectExpandTestCustomers(ID,Orders)", result["@odata.context"]);
             ValidateCustomer(result["value"][0]);
         }
 
@@ -112,7 +112,7 @@ namespace Microsoft.AspNet.OData.Test
             Assert.NotNull(response);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             JObject result = JObject.Parse(response.Content.ReadAsStringAsync().Result);
-            Assert.Equal("http://localhost/odata-autoselect/$metadata#SelectExpandTestCustomers(Orders,Orders())", result["@odata.context"]);
+            Assert.Equal("http://localhost/odata-autoselect/$metadata#SelectExpandTestCustomers(Orders)", result["@odata.context"]);
         }
 
         [Fact]
@@ -128,7 +128,7 @@ namespace Microsoft.AspNet.OData.Test
             Assert.NotNull(response);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             JObject result = JObject.Parse(response.Content.ReadAsStringAsync().Result);
-            Assert.Equal("http://localhost/odata-autoselect/$metadata#SelectExpandTestCustomers(Orders,Orders(ID))", result["@odata.context"]);
+            Assert.Equal("http://localhost/odata-autoselect/$metadata#SelectExpandTestCustomers(Orders(ID))", result["@odata.context"]);
         }
 
         [Theory]
@@ -243,7 +243,7 @@ namespace Microsoft.AspNet.OData.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
             Assert.Equal(
-                "http://localhost/odata-alias/$metadata#SelectExpandTestCustomersAlias(ID,OrdersAlias,OrdersAlias())",
+                "http://localhost/odata-alias/$metadata#SelectExpandTestCustomersAlias(ID,OrdersAlias)",
                 result["@odata.context"]);
             ValidateCustomerAlias(result["value"][0]);
         }
@@ -336,7 +336,7 @@ namespace Microsoft.AspNet.OData.Test
             Assert.NotNull(response);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
-            Assert.Equal("http://localhost/odata/$metadata#SelectExpandTestCustomers(ID,Orders,Orders())/$entity", result["@odata.context"]);
+            Assert.Equal("http://localhost/odata/$metadata#SelectExpandTestCustomers(ID,Orders)/$entity", result["@odata.context"]);
             ValidateCustomer(result);
         }
 

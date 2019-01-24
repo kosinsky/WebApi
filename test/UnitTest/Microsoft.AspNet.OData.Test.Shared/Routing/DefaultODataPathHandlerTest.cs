@@ -1654,7 +1654,7 @@ namespace Microsoft.AspNet.OData.Test.Routing
             Assert.Equal(parameterValue, address);
         }
 
-        [Theory]
+        [Theory(Skip = "7.5.3 supports that")]
         [InlineData("(address={\"@odata.type\":\"Microsoft.AspNet.OData.Test.Routing.Address\",\"Street\":\"NE 24th St.\",\"City\":\"Redmond\"})")]
         public void ParseComplexTypeAsFunctionParameterInlineThrows(string parameterValue)
         {
