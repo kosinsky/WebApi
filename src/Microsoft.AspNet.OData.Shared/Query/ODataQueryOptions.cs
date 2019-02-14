@@ -372,16 +372,22 @@ namespace Microsoft.AspNet.OData.Query
                  IsAvailableODataQueryOption(Top, AllowedQueryOptions.Top) ||
                  querySettings.PageSize.HasValue))
             {
-                // If there is no OrderBy present, we manufacture a default.
-                // If an OrderBy is already present, we add any missing
-                // properties necessary to make a stable sort.
-                // Instead of failing early here if we cannot generate the OrderBy,
-                // let the IQueryable backend fail (if it has to).
-                List<string> applySortOptions = GetApplySortOptions(apply);
+                // If we have only aggregate() transformation result will be single record
+                // in that case we don't need to force any sorting
+                if (!IsAggregatedToSingleResult(apply))
+                {
+                    // If there is no OrderBy present, we manufacture a default.
+                    // If an OrderBy is already present, we add any missing
+                    // properties necessary to make a stable sort.
+                    // Instead of failing early here if we cannot generate the OrderBy,
+                    // let the IQueryable backend fail (if it has to).
 
-                orderBy = orderBy == null
-                            ? GenerateDefaultOrderBy(Context, applySortOptions)
-                            : EnsureStableSortOrderBy(orderBy, Context, applySortOptions);
+                    List<string> applySortOptions = GetApplySortOptions(apply);
+
+                    orderBy = orderBy == null
+                                ? GenerateDefaultOrderBy(Context, applySortOptions)
+                                : EnsureStableSortOrderBy(orderBy, Context, applySortOptions);
+                }
             }
 
             if (IsAvailableODataQueryOption(orderBy, AllowedQueryOptions.OrderBy))
@@ -445,6 +451,11 @@ namespace Microsoft.AspNet.OData.Query
         private static bool IsAggregated(ApplyClause apply)
         {
             return apply != null && apply.Transformations.Any(_aggregateTransformPredicate);
+        }
+
+        private static bool IsAggregatedToSingleResult(ApplyClause apply)
+        {
+            return apply != null && apply.Transformations.Any(t => t.Kind == TransformationNodeKind.Aggregate);
         }
 
         private static List<string> GetApplySortOptions(ApplyClause apply)

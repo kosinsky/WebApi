@@ -20,6 +20,14 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             return db.Customers;
         }
 
+        [EnableQuery(PageSize = 2)]
+        public IQueryable<Customer> ResultLimit()
+        {
+            ResetDataSource();
+            var db = new EntitySetAggregationContext();
+            return db.Customers;
+        }
+
         [EnableQuery]
         public TestSingleResult<Customer> Get(int key)
         {

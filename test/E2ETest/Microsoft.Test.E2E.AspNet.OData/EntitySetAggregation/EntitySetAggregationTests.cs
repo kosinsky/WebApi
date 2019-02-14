@@ -27,6 +27,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             configuration.AddControllers(typeof(CustomersController));
             configuration.JsonReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
             configuration.Count().Filter().OrderBy().Expand().MaxTop(null);
+            
             configuration.MapODataServiceRoute("aggregation", "aggregation",
                 EntitySetAggregationEdmModel.GetEdmModel(configuration));
         }
@@ -59,6 +60,33 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             var TotalPrice = orders.First["TotalPrice"].ToObject<int>();
 
             Assert.Equal(expected, TotalPrice);
+        }
+
+        [Fact]
+        public async Task AggregationOnEntitySetWorksWithPaging()
+        {
+            // Arrange
+            string queryUrl =
+                string.Format(
+                    AggregationTestBaseUrl +"/Default.ResultLimit?$apply=aggregate(Orders(Price with sum as TotalPrice))",
+                    BaseAddress);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, queryUrl);
+            request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
+            HttpClient client = new HttpClient();
+
+            // Act
+            HttpResponseMessage response = client.SendAsync(request).Result;
+
+            // Assert
+            var result = await response.Content.ReadAsObject<JObject>();
+            System.Console.WriteLine(result);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var value = result["value"];
+            var orders = value.First["Orders"];
+            var TotalPrice = orders.First["TotalPrice"].ToObject<int>();
+
+            Assert.Equal(600, TotalPrice);
         }
 
         [Theory]

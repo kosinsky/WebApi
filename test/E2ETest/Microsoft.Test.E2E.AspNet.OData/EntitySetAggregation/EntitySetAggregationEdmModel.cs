@@ -12,7 +12,8 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
         public static IEdmModel GetEdmModel(WebRouteConfiguration configuration)
         {
             var builder = configuration.CreateConventionModelBuilder();
-            builder.EntitySet<Customer>("Customers");
+            var customers = builder.EntitySet<Customer>("Customers");
+            customers.EntityType.Collection.Action("ResultLimit").ReturnsCollectionFromEntitySet<Customer>("Customers");
             builder.EntitySet<Order>("Orders");
             IEdmModel model = builder.GetEdmModel();
             return model;
