@@ -1148,6 +1148,34 @@ namespace Microsoft.AspNet.OData.Test.Query
             });
         }
 
+
+        [Fact]
+        public void EntiySetSyntaxForSingleNavigation_Throw_ODataException()
+        {
+            // Arrange
+            var model = new ODataModelBuilder()
+                            .Add_Order_EntityType()
+                            .Add_Customer_EntityType_With_Address()
+                            .Add_CustomerOrders_Relationship()
+                            .Add_Customer_EntityType_With_CollectionProperties()
+                            .Add_Customers_EntitySet()
+                            .GetEdmModel();
+            var context = new ODataQueryContext(model, typeof(Customer));
+
+            var configuration = RoutingConfigurationFactory.CreateWithRootContainer("OData");
+            var request = RequestFactory.Create(HttpMethod.Get, "http://localhost/?$apply=aggregate(Address($count as Count))", configuration, "OData");
+
+            var options = new ODataQueryOptions(context, request);
+
+            IEnumerable<Customer> customers = CustomerApplyTestData;
+
+            // Act & Assert
+            ExceptionAssert.Throws<ODataException>(() =>
+            {
+                IQueryable queryable = options.ApplyTo(customers.AsQueryable(), new ODataQuerySettings { HandleNullPropagation = HandleNullPropagationOption.True });
+            });
+        }
+
         [Theory]
         [MemberData(nameof(CustomerTestAppliesForPaging))]
         public void StableSortingAndPagingApplyTo_Returns_Correct_Queryable(string filter, List<Dictionary<string, object>> aggregation)
