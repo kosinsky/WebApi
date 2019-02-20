@@ -496,7 +496,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             Contract.Assert(selectExpandNode != null);
             Contract.Assert(resourceContext != null);
 
-            if (!resourceContext.StructuredType.IsOpen || // non-open type
+            if (//!resourceContext.StructuredType.IsOpen || // non-open type
                 (!selectExpandNode.SelectAllDynamicProperties && !selectExpandNode.SelectedDynamicProperties.Any()))
             {
                 return;
@@ -523,7 +523,14 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 if (dynamicPropertyInfo == null || structuredObject == null ||
                     !structuredObject.TryGetPropertyValue(dynamicPropertyInfo.Name, out value) || value == null)
                 {
-                    return;
+                    if (selectExpandNode.SelectedDynamicProperties.Any())
+                    {
+                        value = (structuredObject as SelectExpandWrapper)?.ToDictionary();
+                    }
+                    else
+                    {
+                        return;
+                    }
                 }
             }
             else

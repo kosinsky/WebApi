@@ -41,6 +41,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Validators
                     { AllowedQueryOptions.Skip, "$skip=5", "Skip" },
                     { AllowedQueryOptions.Top, "$top=10", "Top" },
                     { AllowedQueryOptions.Apply, "$apply=groupby((Name))", "Apply" },
+                    { AllowedQueryOptions.Compute, "$compute=ID as ID2", "Compute" },
                 };
             }
         }

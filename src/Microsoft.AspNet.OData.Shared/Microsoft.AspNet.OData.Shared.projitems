@@ -66,6 +66,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)IPerRouteContainer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ODataNullValueMessageHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PerRouteContainerBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\ComputeQueryOption.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -90,7 +91,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\ComputeBinder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\DynamicTypeWrapperConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapperOfT.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\TransformationBinderBase.cs" />    
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\TransformationBinderBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\SelectAttribute.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\ExpandConfiguration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\QueryOptionSetting.cs" />
@@ -442,5 +443,5 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>PropertyContainer.generated.cs</LastGenOutput>
     </Content>
-  </ItemGroup>  
+  </ItemGroup>
 </Project>

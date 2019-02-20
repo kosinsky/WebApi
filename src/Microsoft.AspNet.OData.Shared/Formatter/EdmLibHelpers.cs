@@ -142,12 +142,23 @@ namespace Microsoft.AspNet.OData.Formatter
                             elementClrType = entityType;
                         }
 
+                        if (IsComputeWrapper(elementClrType, out entityType))
+                        {
+                            elementClrType = entityType;
+                        }
+
                         IEdmType elementType = GetEdmType(edmModel, elementClrType, testCollections: false);
                         if (elementType != null)
                         {
                             return new EdmCollectionType(elementType.ToEdmTypeReference(IsNullable(elementClrType)));
                         }
                     }
+                }
+
+                Type entityType1;
+                if (IsComputeWrapper(clrType, out entityType1))
+                {
+                    clrType = entityType1;
                 }
 
                 Type underlyingType = TypeHelper.GetUnderlyingTypeOrSelf(clrType);
@@ -1016,6 +1027,24 @@ namespace Microsoft.AspNet.OData.Formatter
             }
 
             return IsSelectExpandWrapper(TypeHelper.GetBaseType(type), out entityType);
+        }
+
+
+        private static bool IsComputeWrapper(Type type, out Type entityType)
+        {
+            if (type == null)
+            {
+                entityType = null;
+                return false;
+            }
+
+            if (TypeHelper.IsGenericType(type) && type.GetGenericTypeDefinition() == typeof(ComputeWrapper<>))
+            {
+                entityType = type.GetGenericArguments()[0];
+                return true;
+            }
+
+            return IsComputeWrapper(TypeHelper.GetBaseType(type), out entityType);
         }
 
         private static Type ExtractGenericInterface(Type queryType, Type interfaceType)

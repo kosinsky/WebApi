@@ -82,6 +82,12 @@ namespace Microsoft.AspNet.OData.Query.Validators
                 ValidateQueryOptionAllowed(AllowedQueryOptions.Select, validationSettings.AllowedQueryOptions);
             }
 
+            if (options.Compute != null)
+            {
+                ValidateQueryOptionAllowed(AllowedQueryOptions.Compute, validationSettings.AllowedQueryOptions);
+                options.Compute.Validate(validationSettings);
+            }
+
             if (options.SelectExpand != null)
             {
                 options.SelectExpand.Validate(validationSettings);

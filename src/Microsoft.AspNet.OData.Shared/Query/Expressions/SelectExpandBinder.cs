@@ -72,8 +72,10 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         private object Bind(object entity)
         {
             Contract.Assert(entity != null);
+            Type elementType = _selectExpandQuery.Context.ElementClrType;
+            ParameterExpression source = Expression.Parameter(elementType);
 
-            LambdaExpression projectionLambda = GetProjectionLambda();
+            LambdaExpression projectionLambda = GetProjectionLambda(source);
 
             // TODO: cache this ?
             return projectionLambda.Compile().DynamicInvoke(entity);
@@ -81,19 +83,222 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         
         private IQueryable Bind(IQueryable queryable)
         {
-            Type elementType = _selectExpandQuery.Context.ElementClrType;
+            
             QueryProvider = queryable.Provider;
-            LambdaExpression projectionLambda = GetProjectionLambda();
+
+            this.BaseQuery = queryable;
+            Type elementType = this.BaseQuery.ElementType;
+
+            ParameterExpression source = Expression.Parameter(elementType);
+
+            EnsureFlattenedPropertyContainer(source);
+            LambdaExpression projectionLambda = GetProjectionLambda(source);
 
             MethodInfo selectMethod = ExpressionHelperMethods.QueryableSelectGeneric.MakeGenericMethod(elementType, projectionLambda.Body.Type);
             return selectMethod.Invoke(null, new object[] { queryable, projectionLambda }) as IQueryable;
         }
 
-        private LambdaExpression GetProjectionLambda()
+
+        protected void EnsureFlattenedPropertyContainer(ParameterExpression source)
         {
-            Type elementType = _selectExpandQuery.Context.ElementClrType;
+            if (this.BaseQuery != null)
+            {
+                this.HasInstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType
+                    && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
+
+                this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? this.GetFlattenedProperties(source);
+            }
+        }
+
+        internal IDictionary<string, Expression> GetFlattenedProperties(ParameterExpression source)
+        {
+            if (this.BaseQuery == null)
+            {
+                return null;
+            }
+
+            if (!typeof(GroupByWrapper).IsAssignableFrom(BaseQuery.ElementType))
+            {
+                return null;
+            }
+
+            var expression = BaseQuery.Expression as MethodCallExpression;
+            if (expression == null)
+            {
+                return null;
+            }
+
+            // After $apply we could have other clauses, like $filter, $orderby etc.
+            // Skip of filter expressions
+            expression = SkipFilters(expression);
+
+            if (expression == null)
+            {
+                return null;
+            }
+
+            var result = new Dictionary<string, Expression>();
+            CollectContainerAssugments(source, expression, result);
+            if (this.HasInstancePropertyContainer)
+            {
+                var instanceProperty = Expression.Property(source, "Instance");
+                if (typeof(DynamicTypeWrapper).IsAssignableFrom(instanceProperty.Type))
+                {
+                    var computeExpression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
+                    computeExpression = SkipFilters(computeExpression);
+                    if (computeExpression != null)
+                    {
+                        CollectContainerAssugments(instanceProperty, computeExpression, result);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static MethodCallExpression SkipFilters(MethodCallExpression expression)
+        {
+            while (expression.Method.Name == "Where")
+            {
+                expression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
+            }
+
+            return expression;
+        }
+
+
+        private static void CollectContainerAssugments(Expression source, MethodCallExpression expression, Dictionary<string, Expression> result)
+        {
+            CollectAssigments(result, Expression.Property(source, "GroupByContainer"), ExtractContainerExpression(expression.Arguments.FirstOrDefault() as MethodCallExpression, "GroupByContainer"));
+            CollectAssigments(result, Expression.Property(source, "Container"), ExtractContainerExpression(expression, "Container"));
+        }
+
+        private static MemberInitExpression ExtractContainerExpression(MethodCallExpression expression, string containerName)
+        {
+            if (expression == null || expression.Arguments.Count < 2)
+            {
+                return null;
+            }
+            var memberInitExpression = ((expression.Arguments[1] as UnaryExpression).Operand as LambdaExpression).Body as MemberInitExpression;
+            if (memberInitExpression != null)
+            {
+                var containerAssigment = memberInitExpression.Bindings.FirstOrDefault(m => m.Member.Name == containerName) as MemberAssignment;
+                if (containerAssigment != null)
+                {
+                    return containerAssigment.Expression as MemberInitExpression;
+                }
+            }
+            return null;
+        }
+
+        private static void CollectAssigments(IDictionary<string, Expression> flattenPropertyContainer, Expression source, MemberInitExpression expression, string prefix = null)
+        {
+            if (expression == null)
+            {
+                return;
+            }
+
+            string nameToAdd = null;
+            Type resultType = null;
+            MemberInitExpression nextExpression = null;
+            Expression nestedExpression = null;
+            foreach (var expr in expression.Bindings.OfType<MemberAssignment>())
+            {
+                var initExpr = expr.Expression as MemberInitExpression;
+                if (initExpr != null && expr.Member.Name == "Next")
+                {
+                    nextExpression = initExpr;
+                }
+                else if (expr.Member.Name == "Name")
+                {
+                    nameToAdd = (expr.Expression as ConstantExpression).Value as string;
+                }
+                else if (expr.Member.Name == "Value" || expr.Member.Name == "NestedValue")
+                {
+                    resultType = expr.Expression.Type;
+                    if (resultType == typeof(object) && expr.Expression.NodeType == ExpressionType.Convert)
+                    {
+                        resultType = ((UnaryExpression)expr.Expression).Operand.Type;
+                    }
+
+                    if (typeof(GroupByWrapper).IsAssignableFrom(resultType))
+                    {
+                        nestedExpression = expr.Expression;
+                    }
+                }
+            }
+
+            if (prefix != null)
+            {
+                nameToAdd = prefix + "\\" + nameToAdd;
+            }
+
+            if (typeof(GroupByWrapper).IsAssignableFrom(resultType))
+            {
+                flattenPropertyContainer.Add(nameToAdd, Expression.Property(source, "NestedValue"));
+            }
+            else
+            {
+                flattenPropertyContainer.Add(nameToAdd, Expression.Convert(Expression.Property(source, "Value"), resultType));
+            }
+
+            if (nextExpression != null)
+            {
+                CollectAssigments(flattenPropertyContainer, Expression.Property(source, "Next"), nextExpression, prefix);
+            }
+
+            if (nestedExpression != null)
+            {
+                var nestedAccessor = ((nestedExpression as MemberInitExpression).Bindings.First() as MemberAssignment).Expression as MemberInitExpression;
+                var newSource = Expression.Property(Expression.Property(source, "NestedValue"), "GroupByContainer");
+                CollectAssigments(flattenPropertyContainer, newSource, nestedAccessor, nameToAdd);
+            }
+        }
+
+        /// <summary>
+        /// Gets expression for property from previously aggregated query
+        /// </summary>
+        /// <param name="propertyPath"></param>
+        /// <returns>Returns null if no aggregations were used so far</returns>
+        protected Expression GetFlattenedPropertyExpression(string propertyPath)
+        {
+            if (FlattenedPropertyContainer == null)
+            {
+                return null;
+            }
+
+            Expression expression;
+            if (FlattenedPropertyContainer.TryGetValue(propertyPath, out expression))
+            {
+                return expression;
+            }
+
+            if (this.HasInstancePropertyContainer)
+            {
+                return null;
+            }
+            throw new ODataException(Error.Format(SRResources.PropertyOrPathWasRemovedFromContext, propertyPath));
+        }
+
+
+
+        internal bool HasInstancePropertyContainer;
+
+        /// <summary>
+        /// Base query used for the binder.
+        /// </summary>
+        internal IQueryable BaseQuery;
+
+        /// <summary>
+        /// Flattened list of properties from base query, for case when binder is applied for aggregated query.
+        /// </summary>
+        internal IDictionary<string, Expression> FlattenedPropertyContainer;
+
+
+        private LambdaExpression GetProjectionLambda(ParameterExpression source)
+        {
             IEdmNavigationSource navigationSource = _selectExpandQuery.Context.NavigationSource;
-            ParameterExpression source = Expression.Parameter(elementType);
+            
 
             // expression looks like -> new Wrapper { Instance = source , Properties = "...", Container = new PropertyContainer { ... } }
             Expression projectionExpression = ProjectElement(source, _selectExpandQuery.SelectExpandClause, _context.ElementType as IEdmEntityType, navigationSource);
@@ -171,6 +376,39 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             return CreatePropertyValueExpressionWithClauses(elementType, property, source, filterClause: null, applyClause: null);
         }
 
+
+        internal Expression CreatePropertyAccessExpression(Expression source, IEdmProperty property, string propertyPath = null)
+        {
+            string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
+            propertyPath = propertyPath ?? propertyName;
+            //if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) &&
+            //    source != this.ItParameter)
+            //{
+            //    Expression cleanSource = RemoveInnerNullPropagation(source);
+            //    Expression propertyAccessExpression = null;
+            //    propertyAccessExpression = GetFlattenedPropertyExpression(propertyPath) ?? Expression.Property(cleanSource, propertyName);
+
+            //    // source.property => source == null ? null : [CastToNullable]RemoveInnerNullPropagation(source).property
+            //    // Notice that we are checking if source is null already. so we can safely remove any null checks when doing source.Property
+
+            //    Expression ifFalse = ToNullable(ConvertNonStandardPrimitives(propertyAccessExpression));
+            //    return
+            //        Expression.Condition(
+            //            test: Expression.Equal(source, NullConstant),
+            //            ifTrue: Expression.Constant(null, ifFalse.Type),
+            //            ifFalse: ifFalse);
+            //}
+            //else
+            //{
+            //    return GetFlattenedPropertyExpression(propertyPath)
+            //        ?? ConvertNonStandardPrimitives(ExpressionBinderBase.GetPropertyExpression(source, (this.HasInstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName));
+            //}
+
+            return GetFlattenedPropertyExpression(propertyPath)
+                ?? ExpressionBinderBase.GetPropertyExpression(source, (this.HasInstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName);
+
+        }
+
         [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Class coupling acceptable")]
         internal Expression CreatePropertyValueExpressionWithClauses(IEdmEntityType elementType, IEdmProperty property,
             Expression source, FilterClause filterClause, ApplyClause applyClause)
@@ -197,7 +435,10 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
 
-            Expression propertyValue = ExpressionBinderBase.GetPropertyExpression(source, propertyName);
+            //Expression propertyValue = ExpressionBinderBase.GetPropertyExpression(source, propertyName);
+
+
+            Expression propertyValue = CreatePropertyAccessExpression(source, property, propertyName);
 
             Type nullablePropertyType = TypeHelper.ToNullable(propertyValue.Type);
             Expression nullablePropertyValue = ExpressionHelpers.ToNullable(propertyValue);
@@ -402,15 +643,17 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 ISet<IEdmStructuralProperty> autoSelectedProperties;
 
                 ISet<IEdmStructuralProperty> propertiesToInclude = GetPropertiesToIncludeInQuery(selectExpandClause, entityType, navigationSource, _model, out autoSelectedProperties);
+                
                 bool isSelectingOpenTypeSegments = GetSelectsOpenTypeSegments(selectExpandClause, entityType);
+                ISet<DynamicPathSegment> dynamicProperties = new HashSet<DynamicPathSegment>(selectExpandClause.SelectedItems.OfType<PathSelectItem>().Select(p => p.SelectedPath.LastSegment).OfType<DynamicPathSegment>());
 
-                if (propertiesToExpand.Count > 0 || propertiesToInclude.Count > 0 || autoSelectedProperties.Count > 0)
+                if (propertiesToExpand.Count > 0 || propertiesToInclude.Count > 0 || autoSelectedProperties.Count > 0 || dynamicProperties.Count > 0)
                 {
                     wrapperProperty = wrapperType.GetProperty("Container");
                     Contract.Assert(wrapperProperty != null);
 
                     Expression propertyContainerCreation =
-                        BuildPropertyContainer(entityType, source, propertiesToExpand, propertiesToInclude, autoSelectedProperties, isSelectingOpenTypeSegments);
+                        BuildPropertyContainer(entityType, source, propertiesToExpand, propertiesToInclude, autoSelectedProperties, dynamicProperties, isSelectingOpenTypeSegments);
 
                     wrapperTypeMemberAssignments.Add(Expression.Bind(wrapperProperty, propertyContainerCreation));
                     isContainerPropertySet = true;
@@ -481,7 +724,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Class coupling acceptable")]
         private Expression BuildPropertyContainer(IEdmEntityType elementType, Expression source,
             Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem> propertiesToExpand,
-            ISet<IEdmStructuralProperty> propertiesToInclude, ISet<IEdmStructuralProperty> autoSelectedProperties, bool isSelectingOpenTypeSegments)
+            ISet<IEdmStructuralProperty> propertiesToInclude, ISet<IEdmStructuralProperty> autoSelectedProperties, ISet<DynamicPathSegment> dynamicProperties, bool isSelectingOpenTypeSegments)
         {
             IList<NamedPropertyExpression> includedProperties = new List<NamedPropertyExpression>();
 
@@ -547,6 +790,19 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 Expression propertyName = CreatePropertyNameExpression(elementType, propertyToInclude, source);
                 Expression propertyValue = CreatePropertyValueExpression(elementType, propertyToInclude, source);
                 includedProperties.Add(new NamedPropertyExpression(propertyName, propertyValue) { AutoSelected = true });
+            }
+
+            if (!isSelectingOpenTypeSegments)
+            {
+                foreach (var propertyToInclude in dynamicProperties)
+                {
+                    if (FlattenedPropertyContainer.TryGetValue(propertyToInclude.Identifier, out Expression expression))
+                    {
+                        Expression propertyName = Expression.Constant(propertyToInclude.Identifier);
+                        Expression propertyValue = expression;
+                        includedProperties.Add(new NamedPropertyExpression(propertyName, propertyValue));
+                    }
+                }
             }
 
             if (isSelectingOpenTypeSegments)

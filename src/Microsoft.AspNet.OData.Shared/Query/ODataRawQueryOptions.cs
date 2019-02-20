@@ -62,5 +62,10 @@ namespace Microsoft.AspNet.OData.Query
         ///  Gets the raw $deltatoken query value from the incoming request Uri if exists.
         /// </summary>
         public string DeltaToken { get; internal set; }
+
+        /// <summary>
+        ///  Gets the raw $compute query value from the incoming request Uri if exists.
+        /// </summary>
+        public string Compute { get; internal set; }
     }
 }

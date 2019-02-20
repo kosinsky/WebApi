@@ -136,6 +136,11 @@ namespace Microsoft.AspNet.OData.Query
         public CountQueryOption Count { get; private set; }
 
         /// <summary>
+        /// Get the <see cref="ComputeQueryOption"/>
+        /// </summary>
+        public ComputeQueryOption Compute { get; private set; }
+
+        /// <summary>
         /// Gets or sets the query validator.
         /// </summary>
         public ODataQueryValidator Validator { get; set; }
@@ -179,7 +184,8 @@ namespace Microsoft.AspNet.OData.Query
                  fixedQueryOptionName.Equals("$format", StringComparison.Ordinal) ||
                  fixedQueryOptionName.Equals("$skiptoken", StringComparison.Ordinal) ||
                  fixedQueryOptionName.Equals("$deltatoken", StringComparison.Ordinal) ||
-                 fixedQueryOptionName.Equals("$apply", StringComparison.Ordinal);
+                 fixedQueryOptionName.Equals("$apply", StringComparison.Ordinal) ||
+                 fixedQueryOptionName.Equals("$compute", StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -337,6 +343,13 @@ namespace Microsoft.AspNet.OData.Query
                 }
                 this.Context.ElementClrType = Apply.ResultClrType;
                 apply = Apply.ApplyClause;
+            }
+
+            // Apply compute
+            // It should be executed before $filter, because it defines computed properties that can be used in a $select or within a $filter or $orderby expression.
+            if (IsAvailableODataQueryOption(Compute, AllowedQueryOptions.Compute))
+            {
+                result = Compute.ApplyTo(result, querySettings);
             }
 
             // Construct the actual query and apply them in the following order: filter, orderby, skip, top
@@ -944,6 +957,11 @@ namespace Microsoft.AspNet.OData.Query
                         ThrowIfEmpty(kvp.Value, "$apply");
                         RawValues.Apply = kvp.Value;
                         Apply = new ApplyQueryOption(kvp.Value, Context, _queryOptionParser);
+                        break;
+                    case "$compute":
+                        ThrowIfEmpty(kvp.Value, "$compute");
+                        RawValues.Compute = kvp.Value;
+                        Compute = new ComputeQueryOption(kvp.Value, Context, _queryOptionParser);
                         break;
                     default:
                         // we don't throw if we can't recognize the query
