@@ -141,7 +141,7 @@ namespace Microsoft.AspNet.OData.Query
             ODataQuerySettings updatedSettings = Context.UpdateQuerySettings(querySettings, query);
 
             Expression filter = FilterBinder.Bind(query, filterClause, Context.ElementClrType, Context, updatedSettings);
-            query = ExpressionHelpers.Where(query, filter, Context.ElementClrType);
+            query = ExpressionHelpers.Where(query, filter, query.ElementType);
             return query;
         }
 

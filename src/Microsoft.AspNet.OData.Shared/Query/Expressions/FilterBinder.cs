@@ -70,10 +70,10 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             FilterBinder binder = GetOrCreateFilterBinder(context, querySettings);
 
-            binder._filterType = filterType;
+            binder._filterType = baseQuery?.ElementType ?? filterType;
             binder.BaseQuery = baseQuery;
 
-            return BindFilterClause(binder, filterClause, filterType);
+            return BindFilterClause(binder, filterClause, binder._filterType);
         }
 
         internal static LambdaExpression Bind(

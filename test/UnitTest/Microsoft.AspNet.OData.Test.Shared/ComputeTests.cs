@@ -51,7 +51,8 @@ namespace Microsoft.AspNet.OData.Test
         [Theory]
         [InlineData("$compute=ID add ID as DoubleID&$select=ID,DoubleID")]
         [InlineData("$compute=ID add ID as DoubleID")]
-        //[InlineData("")]
+        [InlineData("$compute=ID add ID as DoubleID&$filter=ID gt 0")]
+        [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0")]
         public async Task Compute_Works(string clause)
         {
             // Arrange
