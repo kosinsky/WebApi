@@ -48,11 +48,14 @@ namespace Microsoft.AspNet.OData.Test
         private const string AcceptJsonFullMetadata = "application/json;odata.metadata=full";
         private const string AcceptJson = "application/json";
 
-        [Fact]
-        public async Task Compute_Works()
+        [Theory]
+        [InlineData("$compute=ID add ID as DoubleID&$select=ID,DoubleID")]
+        [InlineData("$compute=ID add ID as DoubleID")]
+        //[InlineData("")]
+        public async Task Compute_Works(string clause)
         {
             // Arrange
-            var uri = "/odata/SelectExpandTestCustomers?$compute=ID add ID as DoubleID&$select=ID,DoubleID";
+            var uri = $"/odata/SelectExpandTestCustomers?{clause}";
 
             // Act
             HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);

@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Common;
+using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Query.Expressions;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
@@ -326,7 +327,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         {
             Contract.Assert(writeContext != null);
 
-            if (EdmLibHelpers.IsDynamicTypeWrapper(graph.GetType()))
+            if (EdmLibHelpers.IsDynamicTypeWrapper(graph.GetType()) && !typeof(ISelectExpandWrapper).IsAssignableFrom(graph.GetType()))
             {
                 WriteDynamicTypeResource(graph, writer, expectedType, writeContext);
                 return;
@@ -336,6 +337,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             ResourceContext resourceContext = new ResourceContext(writeContext, structuredType, graph);
 
             SelectExpandNode selectExpandNode = CreateSelectExpandNode(resourceContext);
+            
             if (selectExpandNode != null)
             {
                 ODataResource resource = CreateResource(selectExpandNode, resourceContext);
@@ -523,9 +525,11 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 if (dynamicPropertyInfo == null || structuredObject == null ||
                     !structuredObject.TryGetPropertyValue(dynamicPropertyInfo.Name, out value) || value == null)
                 {
-                    if (selectExpandNode.SelectedDynamicProperties.Any())
+                    var type = structuredObject.GetType();
+
+                    if (EdmLibHelpers.IsDynamicTypeWrapper(type) || type.IsGenericType && EdmLibHelpers.IsDynamicTypeWrapper(type.GetGenericArguments()[0]))
                     {
-                        value = (structuredObject as SelectExpandWrapper)?.ToDictionary();
+                        value = (structuredObject as ISelectExpandWrapper)?.ToDictionary();
                     }
                     else
                     {
@@ -572,8 +576,9 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
 
                 if (declaredPropertyNameSet.Contains(dynamicProperty.Key))
                 {
-                    throw Error.InvalidOperation(SRResources.DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName,
-                        dynamicProperty.Key, structuredType.FullTypeName());
+                    continue;
+                    //throw Error.InvalidOperation(SRResources.DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName,
+                    //    dynamicProperty.Key, structuredType.FullTypeName());
                 }
 
                 IEdmTypeReference edmTypeReference = resourceContext.SerializerContext.GetEdmType(dynamicProperty.Value,
