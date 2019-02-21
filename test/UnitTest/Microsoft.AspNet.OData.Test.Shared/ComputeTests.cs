@@ -60,7 +60,7 @@ namespace Microsoft.AspNet.OData.Test
         [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID desc, ID desc")]
         [InlineData("$compute=ID add ID as DoubleID&$orderby=ID desc, DoubleID desc")]
         [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0&$orderby=DoubleID")]
-        public async Task Compute_Works(string clause)
+        public async Task DollarCompute_Works(string clause)
         {
             // Arrange
             var uri = $"/odata/SelectExpandTestCustomers?{clause}";
@@ -75,6 +75,58 @@ namespace Microsoft.AspNet.OData.Test
 
             Assert.NotNull(result["value"][0]["ID"]);
             Assert.NotNull(result["value"][0]["DoubleID"]);
+        }
+
+        [Theory]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$select=ID,DoubleID")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$filter=ID gt 0")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$filter=DoubleID gt 0")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$orderby=ID")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$orderby=DoubleID")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$orderby=DoubleID, ID")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$orderby=ID, DoubleID")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$orderby=DoubleID desc, ID desc")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$orderby=ID desc, DoubleID desc")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$filter=DoubleID gt 0&$orderby=DoubleID")]
+        public async Task ApplyCompute_Works(string clause)
+        {
+            // Arrange
+            var uri = $"/odata/SelectExpandTestCustomers?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.NotNull(result["value"][0]["ID"]);
+            Assert.NotNull(result["value"][0]["DoubleID"]);
+        }
+
+        [Theory]
+        [InlineData("$apply=aggregate(ID with sum as TotalID, $count as Count)&$select=TotalID")]
+        [InlineData("$apply=aggregate(ID with sum as TotalID, $count as Count)/compute(Count as Count2)&$select=TotalID")]
+        [InlineData("$apply=groupby((ID))/compute(ID as TotalID)&$select=TotalID")]
+        [InlineData("$apply=groupby((ID), aggregate($count as Count))/compute(ID as TotalID)&$select=TotalID")]
+        public async Task ApplyAndSelect_Works(string clause)
+        {
+            // Arrange
+            var uri = $"/odata/SelectExpandTestCustomers?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.NotNull(result["value"][0]["TotalID"]);
+            Assert.Null(result["value"][0]["Count"]);
+            Assert.Null(result["value"][0]["Count2"]);
         }
 
 

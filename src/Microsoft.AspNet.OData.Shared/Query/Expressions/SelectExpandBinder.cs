@@ -106,6 +106,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 this.HasInstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType
                     && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
 
+                this.InputCollapsed = ExpressionHelpers.HasGroupBy(this.BaseQuery.Expression);
+
                 this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? this.GetFlattenedProperties(source);
             }
         }
@@ -285,6 +287,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         internal bool HasInstancePropertyContainer;
 
         /// <summary>
+        /// $select is applied after $apply with groupby/aggregate
+        /// </summary>
+        internal bool InputCollapsed;
+
+        /// <summary>
         /// Base query used for the binder.
         /// </summary>
         internal IQueryable BaseQuery;
@@ -381,28 +388,6 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         {
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
             propertyPath = propertyPath ?? propertyName;
-            //if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True && IsNullable(source.Type) &&
-            //    source != this.ItParameter)
-            //{
-            //    Expression cleanSource = RemoveInnerNullPropagation(source);
-            //    Expression propertyAccessExpression = null;
-            //    propertyAccessExpression = GetFlattenedPropertyExpression(propertyPath) ?? Expression.Property(cleanSource, propertyName);
-
-            //    // source.property => source == null ? null : [CastToNullable]RemoveInnerNullPropagation(source).property
-            //    // Notice that we are checking if source is null already. so we can safely remove any null checks when doing source.Property
-
-            //    Expression ifFalse = ToNullable(ConvertNonStandardPrimitives(propertyAccessExpression));
-            //    return
-            //        Expression.Condition(
-            //            test: Expression.Equal(source, NullConstant),
-            //            ifTrue: Expression.Constant(null, ifFalse.Type),
-            //            ifFalse: ifFalse);
-            //}
-            //else
-            //{
-            //    return GetFlattenedPropertyExpression(propertyPath)
-            //        ?? ConvertNonStandardPrimitives(ExpressionBinderBase.GetPropertyExpression(source, (this.HasInstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName));
-            //}
 
             return GetFlattenedPropertyExpression(propertyPath)
                 ?? ExpressionBinderBase.GetPropertyExpression(source, (this.HasInstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName);
@@ -1068,7 +1053,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             return properties;
         }
 
-        private static ISet<IEdmStructuralProperty> GetPropertiesToIncludeInQuery(
+        private ISet<IEdmStructuralProperty> GetPropertiesToIncludeInQuery(
             SelectExpandClause selectExpandClause, IEdmEntityType entityType, IEdmNavigationSource navigationSource, IEdmModel model, out ISet<IEdmStructuralProperty> autoSelectedProperties)
         {
             autoSelectedProperties = new HashSet<IEdmStructuralProperty>();
@@ -1088,24 +1073,27 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     }
                 }
 
-                // add keys
-                foreach (IEdmStructuralProperty keyProperty in entityType.Key())
+                if (!this.InputCollapsed)
                 {
-                    if (!propertiesToInclude.Contains(keyProperty))
+                    // add keys
+                    foreach (IEdmStructuralProperty keyProperty in entityType.Key())
                     {
-                        autoSelectedProperties.Add(keyProperty);
-                    }
-                }
-
-                // add concurrency properties, if not added
-                if (navigationSource != null && model != null)
-                {
-                    IEnumerable<IEdmStructuralProperty> concurrencyProperties = model.GetConcurrencyProperties(navigationSource);
-                    foreach (IEdmStructuralProperty concurrencyProperty in concurrencyProperties)
-                    {
-                        if (!propertiesToInclude.Contains(concurrencyProperty))
+                        if (!propertiesToInclude.Contains(keyProperty))
                         {
-                            autoSelectedProperties.Add(concurrencyProperty);
+                            autoSelectedProperties.Add(keyProperty);
+                        }
+                    }
+
+                    // add concurrency properties, if not added
+                    if (navigationSource != null && model != null)
+                    {
+                        IEnumerable<IEdmStructuralProperty> concurrencyProperties = model.GetConcurrencyProperties(navigationSource);
+                        foreach (IEdmStructuralProperty concurrencyProperty in concurrencyProperties)
+                        {
+                            if (!propertiesToInclude.Contains(concurrencyProperty))
+                            {
+                                autoSelectedProperties.Add(concurrencyProperty);
+                            }
                         }
                     }
                 }

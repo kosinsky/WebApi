@@ -273,5 +273,20 @@ namespace Microsoft.AspNet.OData
             MemberExpression propertyAccess = Expression.Property(odataItParameter, propertyName);
             return Expression.Lambda(propertyAccess, odataItParameter);
         }
+
+        public static bool HasGroupBy(Expression expression)
+        {
+            MethodCallExpression methodCall = expression as MethodCallExpression;
+            if (methodCall != null)
+            {
+                if (methodCall.Method.Name == "GroupBy")
+                {
+                    return true;
+                }
+                return HasGroupBy(methodCall.Arguments.First());
+
+            }
+            return false;
+        }
     }
 }

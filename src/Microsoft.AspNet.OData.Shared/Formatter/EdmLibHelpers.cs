@@ -1012,7 +1012,7 @@ namespace Microsoft.AspNet.OData.Formatter
             return _coreModel.GetPrimitiveType(primitiveKind);
         }
 
-        private static bool IsSelectExpandWrapper(Type type, out Type entityType)
+        public static bool IsSelectExpandWrapper(Type type, out Type entityType)
         {
             if (type == null)
             {
@@ -1030,7 +1030,7 @@ namespace Microsoft.AspNet.OData.Formatter
         }
 
 
-        private static bool IsComputeWrapper(Type type, out Type entityType)
+        public static bool IsComputeWrapper(Type type, out Type entityType)
         {
             if (type == null)
             {
