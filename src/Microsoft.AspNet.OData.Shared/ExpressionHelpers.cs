@@ -169,6 +169,8 @@ namespace Microsoft.AspNet.OData
         {
             Type returnType = orderByLambda.Body.Type;
 
+            type = query?.ElementType ?? type;
+
             MethodInfo orderByMethod = null;
             IOrderedQueryable orderedQuery = null;
 

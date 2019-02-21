@@ -89,10 +89,10 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             FilterBinder binder = GetOrCreateFilterBinder(context, querySettings);
 
-            binder._filterType = elementType;
+            binder._filterType = baseQuery?.ElementType ?? elementType;
             binder.BaseQuery = baseQuery;
 
-            return BindOrderByClause(binder, orderBy, elementType);
+            return BindOrderByClause(binder, orderBy, binder._filterType);
         }
 
         private static FilterBinder GetOrCreateFilterBinder(ODataQueryContext context, ODataQuerySettings querySettings)

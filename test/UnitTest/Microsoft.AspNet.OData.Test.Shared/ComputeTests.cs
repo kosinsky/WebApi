@@ -53,6 +53,13 @@ namespace Microsoft.AspNet.OData.Test
         [InlineData("$compute=ID add ID as DoubleID")]
         [InlineData("$compute=ID add ID as DoubleID&$filter=ID gt 0")]
         [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=ID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID, ID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=ID, DoubleID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID desc, ID desc")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=ID desc, DoubleID desc")]
+        [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0&$orderby=DoubleID")]
         public async Task Compute_Works(string clause)
         {
             // Arrange
