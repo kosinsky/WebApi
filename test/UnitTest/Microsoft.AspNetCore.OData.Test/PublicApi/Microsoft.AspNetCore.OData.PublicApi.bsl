@@ -2354,8 +2354,9 @@ public enum Microsoft.AspNet.OData.Query.AllowedLogicalOperators : int {
 FlagsAttribute(),
 ]
 public enum Microsoft.AspNet.OData.Query.AllowedQueryOptions : int {
-	All = 2047
+	All = 4095
 	Apply = 1024
+	Compute = 2048
 	Count = 64
 	DeltaToken = 512
 	Expand = 2
@@ -2366,7 +2367,7 @@ public enum Microsoft.AspNet.OData.Query.AllowedQueryOptions : int {
 	Select = 4
 	Skip = 32
 	SkipToken = 256
-	Supported = 1279
+	Supported = 3327
 	Top = 16
 }
 
@@ -2419,6 +2420,14 @@ public class Microsoft.AspNet.OData.Query.ApplyQueryOption {
 	System.Type ResultClrType  { public get; }
 
 	public System.Linq.IQueryable ApplyTo (System.Linq.IQueryable query, ODataQuerySettings querySettings)
+}
+
+public class Microsoft.AspNet.OData.Query.ComputeQueryOption {
+	public ComputeQueryOption (string rawValue, ODataQueryContext context, Microsoft.OData.UriParser.ODataQueryOptionParser queryOptionParser)
+
+	Microsoft.OData.UriParser.ComputeClause ComputeClause  { public get; }
+	ODataQueryContext Context  { public get; }
+	string RawValue  { public get; }
 }
 
 public class Microsoft.AspNet.OData.Query.CountQueryOption {
@@ -2489,6 +2498,7 @@ public class Microsoft.AspNet.OData.Query.ODataQueryOptions {
 	public ODataQueryOptions (ODataQueryContext context, Microsoft.AspNetCore.Http.HttpRequest request)
 
 	ApplyQueryOption Apply  { public get; }
+	ComputeQueryOption Compute  { public get; }
 	ODataQueryContext Context  { public get; }
 	CountQueryOption Count  { public get; }
 	FilterQueryOption Filter  { public get; }
@@ -2545,6 +2555,7 @@ public class Microsoft.AspNet.OData.Query.ODataRawQueryOptions {
 	public ODataRawQueryOptions ()
 
 	string Apply  { public get; }
+	string Compute  { public get; }
 	string Count  { public get; }
 	string DeltaToken  { public get; }
 	string Expand  { public get; }
