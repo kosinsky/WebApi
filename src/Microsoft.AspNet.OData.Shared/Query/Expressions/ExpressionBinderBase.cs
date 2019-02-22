@@ -701,23 +701,23 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 this.HasInstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType
                     && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
 
-                this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? this.GetFlattenedProperties(source);
+                this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? GetFlattenedProperties(BaseQuery, this.HasInstancePropertyContainer, source);
             }
         }
 
-        internal IDictionary<string, Expression> GetFlattenedProperties(ParameterExpression source)
+        internal static IDictionary<string, Expression> GetFlattenedProperties(IQueryable baseQuery, bool hasInstancePropertyContainer, ParameterExpression source)
         {
-            if (this.BaseQuery == null)
+            if (baseQuery == null)
             {
                 return null;
             }
 
-            if (!typeof(GroupByWrapper).IsAssignableFrom(BaseQuery.ElementType))
+            if (!typeof(GroupByWrapper).IsAssignableFrom(baseQuery.ElementType))
             {
                 return null;
             }
 
-            var expression = BaseQuery.Expression as MethodCallExpression;
+            var expression = baseQuery.Expression as MethodCallExpression;
             if (expression == null)
             {
                 return null;
@@ -733,8 +733,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
 
             var result = new Dictionary<string, Expression>();
-            CollectContainerAssugments(source, expression, result);
-            if (this.HasInstancePropertyContainer)
+            CollectContainerAssigments(source, expression, result);
+            if (hasInstancePropertyContainer)
             {
                 var instanceProperty = Expression.Property(source, "Instance");
                 if (typeof(DynamicTypeWrapper).IsAssignableFrom(instanceProperty.Type))
@@ -743,7 +743,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     computeExpression = SkipFilters(computeExpression);
                     if (computeExpression != null)
                     {
-                        CollectContainerAssugments(instanceProperty, computeExpression, result);
+                        CollectContainerAssigments(instanceProperty, computeExpression, result);
                     }
                 }
             }
@@ -761,7 +761,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             return expression;
         }
 
-        private static void CollectContainerAssugments(Expression source, MethodCallExpression expression, Dictionary<string, Expression> result)
+        private static void CollectContainerAssigments(Expression source, MethodCallExpression expression, Dictionary<string, Expression> result)
         {
             CollectAssigments(result, Expression.Property(source, "GroupByContainer"), ExtractContainerExpression(expression.Arguments.FirstOrDefault() as MethodCallExpression, "GroupByContainer"));
             CollectAssigments(result, Expression.Property(source, "Container"), ExtractContainerExpression(expression, "Container"));
