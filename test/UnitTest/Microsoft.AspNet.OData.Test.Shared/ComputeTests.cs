@@ -129,6 +129,28 @@ namespace Microsoft.AspNet.OData.Test
             Assert.Null(result["value"][0]["Count2"]);
         }
 
+        [Theory]
+        [InlineData("$apply=aggregate(ID with sum as TotalID, $count as Count)&$compute=TotalID as TotalID2")]
+        [InlineData("$apply=aggregate(ID with sum as TotalID, $count as Count)&$compute=TotalID as TotalID2, Count as Count2&$select=TotalID,Count,TotalID2")]
+        public async Task ComputeAfterApply_Works(string clause)
+        {
+            // Arrange
+            var uri = $"/odata/SelectExpandTestCustomers?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.NotNull(result["value"][0]["TotalID"]);
+            Assert.NotNull(result["value"][0]["Count"]);
+            Assert.NotNull(result["value"][0]["TotalID2"]);
+            Assert.Null(result["value"][0]["Count2"]);
+        }
+
 
         private Task<HttpResponseMessage> GetResponse(string uri, string acceptHeader)
         {

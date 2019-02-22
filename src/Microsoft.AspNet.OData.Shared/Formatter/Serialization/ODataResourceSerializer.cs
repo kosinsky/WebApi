@@ -297,18 +297,9 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             Type underType = null;
 
             if (EdmLibHelpers.IsDynamicTypeWrapper(type) && !EdmLibHelpers.IsComputeWrapper(type, out underType)
+                || EdmLibHelpers.IsComputeWrapper(type, out underType) && EdmLibHelpers.IsDynamicTypeWrapper(underType)
                 || EdmLibHelpers.IsSelectExpandWrapper(type, out underType) && EdmLibHelpers.IsDynamicTypeWrapper(underType))
             {
-                //if (EdmLibHelpers.IsComputeWrapper(type, out underType))
-                //{
-                //    return false;
-                //}
-                //else if (!EdmLibHelpers.IsSelectExpandWrapper(type, out underType) && EdmLibHelpers.IsSelectExpandWrapper(underType, out underType)
-                //   && !EdmLibHelpers.IsDynamicTypeWrapper(type))
-                //{
-                //    return false;
-                //}
-
                 var dynamicTypeProperties = new Dictionary<IEdmProperty, object>();
                 var entityType = expectedType.Definition as EdmEntityType;
                 var resource = new ODataResource()
@@ -350,6 +341,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 writer.WriteEnd();
                 return true;
             }
+
             return false;
         }
 
