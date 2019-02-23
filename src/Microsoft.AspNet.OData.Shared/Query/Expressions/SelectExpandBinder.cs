@@ -9,9 +9,11 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNet.OData.Formatter.Serialization;
+using Microsoft.AspNet.OData.Interfaces;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -236,7 +238,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Contract.Assert(property != null);
             Contract.Assert(source != null);
 
-            return CreatePropertyValueExpressionWithClauses(elementType, property, source, filterClause: null, applyClause: null);
+            return CreatePropertyValueExpressionWithClauses(elementType, property, source, filterClause: null, applyClause: null, computeClause: null);
         }
 
 
@@ -252,7 +254,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Class coupling acceptable")]
         internal Expression CreatePropertyValueExpressionWithClauses(IEdmEntityType elementType, IEdmProperty property,
-            Expression source, FilterClause filterClause, ApplyClause applyClause)
+            Expression source, FilterClause filterClause, ApplyClause applyClause, ComputeClause computeClause)
         {
             Contract.Assert(elementType != null);
             Contract.Assert(property != null);
@@ -394,6 +396,60 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 else
                 {
                     throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForSingleProperty, property.Name));
+                }
+            }
+
+            if (computeClause != null)
+            {
+                bool isCollection = property.Type.IsCollection();
+
+                if (isCollection)
+                {
+                    IEdmTypeReference edmElementType = (isCollection ? property.Type.AsCollection().ElementType() : property.Type);
+                    Type clrElementType = EdmLibHelpers.GetClrType(edmElementType, _model);
+                    if (clrElementType == null)
+                    {
+                        throw new ODataException(Error.Format(SRResources.MappingDoesNotContainResourceType,
+                            edmElementType.FullName()));
+                    }
+
+
+
+                    Expression filterSource =
+                        typeof(IQueryable).IsAssignableFrom(nullablePropertyValue.Type)
+                            ? nullablePropertyValue
+                            : Expression.Call(
+                                ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
+                                nullablePropertyValue)
+                            ;
+
+                    var query = QueryProvider.CreateQuery(filterSource);
+
+                    ODataQuerySettings querySettings = new ODataQuerySettings()
+                    {
+                        HandleNullPropagation = HandleNullPropagationOption.True,
+                    };
+
+                    var resolver = WebApiAssembliesResolver.Default;
+
+                    var applyBinder = new ComputeBinder(querySettings, resolver,clrElementType, _context.Model, computeClause.ComputedItems);
+
+                    query = applyBinder.Bind(query);
+
+                    nullablePropertyType = query.Expression.Type;
+                    if (_settings.HandleNullPropagation == HandleNullPropagationOption.True)
+                    {
+                        // create expression similar to: 'nullablePropertyValue == null ? null : filterResult'
+                        nullablePropertyValue = Expression.Condition(
+                            test: Expression.Equal(nullablePropertyValue, Expression.Constant(value: null)),
+                            ifTrue: Expression.Constant(value: null, type: nullablePropertyType),
+                            ifFalse: query.Expression);
+                    }
+                    else
+                    {
+                        nullablePropertyValue = query.Expression;
+                    }
+
                 }
             }
 
@@ -581,7 +637,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
                 Expression propertyName = CreatePropertyNameExpression(elementType, propertyToExpand, source);
                 Expression propertyValue = CreatePropertyValueExpressionWithClauses(elementType, propertyToExpand, source,
-                    expandItem.FilterOption, expandItem.ApplyOption);
+                    expandItem.FilterOption, expandItem.ApplyOption, expandItem.ComputeOption);
                 Expression nullCheck = GetNullCheckExpression(propertyToExpand, propertyValue, projection);
 
                 Expression countExpression = CreateTotalCountExpression(propertyValue, expandItem);
@@ -707,7 +763,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             Expression keysNullCheckExpression = null;
             foreach (var key in propertyToExpand.ToEntityType().Key())
             {
-                var propertyValueExpression = CreatePropertyValueExpressionWithClauses(propertyToExpand.ToEntityType(), key, propertyValue, null, null);
+                var propertyValueExpression = CreatePropertyValueExpressionWithClauses(propertyToExpand.ToEntityType(), key, propertyValue, null, null, null);
                 var keyExpression = Expression.Equal(
                     propertyValueExpression,
                     Expression.Constant(null, propertyValueExpression.Type));

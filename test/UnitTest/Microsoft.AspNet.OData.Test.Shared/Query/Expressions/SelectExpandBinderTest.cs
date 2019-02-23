@@ -582,7 +582,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
             // Act & Assert
             ExceptionAssert.Throws<ODataException>(
-                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Customer, ordersProperty, customer, filterCaluse, applyClause: null),
+                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Customer, ordersProperty, customer, filterCaluse, applyClause: null, computeClause: null),
                 "The provided mapping does not contain a resource for the resource type 'NS.Order'.");
 
             // NetFx and NetCore differ in the way Expression is converted to a string.
@@ -635,7 +635,8 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 ordersProperty,
                 customer,
                 filterCaluse,
-                applyClause: null);
+                applyClause: null,
+                computeClause: null);
 
             // Assert
             Assert.Equal(
@@ -672,7 +673,8 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 ordersProperty,
                 customer,
                 filterCaluse,
-                applyClause:null);
+                applyClause:null,
+                computeClause:null);
 
             // Assert
             Assert.Equal(
@@ -707,7 +709,8 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 ordersProperty,
                 customer,
                 filterClause: null,
-                applyClause: applyClause);
+                applyClause: applyClause,
+                computeClause: null);
 #if NETCORE
             var suffix = ", Object";
 #else
@@ -750,7 +753,8 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 ordersProperty,
                 customer,
                 filterClause,
-                applyClause);
+                applyClause,
+                computeClause: null);
 
 #if NETCORE
             var suffix = ", Object";
@@ -800,7 +804,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
             // Act & Assert
             ExceptionAssert.Throws<ODataException>(
-                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterClause: null, applyClause: applyClause),
+                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterClause: null, applyClause: applyClause, computeClause: null),
                 "$apply not supported for single property Customer");
         }
 
@@ -822,7 +826,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
             // Act & Assert
             ExceptionAssert.Throws<ODataException>(
-                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null),
+                () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null, computeClause: null),
                 "The provided mapping does not contain a resource for the resource type 'NS.Customer'.");
         }
 
@@ -850,7 +854,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act 
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null);
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null, computeClause: null);
 
             // Assert            
             var customer = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as Customer;
@@ -883,7 +887,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null);
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null, computeClause: null);
             
             // Assert
             Assert.Equal(
@@ -922,7 +926,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var filterCaluse = parser.ParseFilter();
 
             // Act
-            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause:null);
+            var filterInExpand = _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterCaluse, applyClause: null, computeClause: null);
 
             // Assert
             Assert.Equal(
