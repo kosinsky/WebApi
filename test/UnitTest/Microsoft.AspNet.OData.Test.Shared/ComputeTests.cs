@@ -154,6 +154,7 @@ namespace Microsoft.AspNet.OData.Test
         [Theory]
         [InlineData("$expand=Orders($select=ID, ID2;$compute=ID as ID2)")]
         [InlineData("$expand=Orders($select=ID, ID2;$compute=ID as ID2,ID as ID3)")]
+        [InlineData("$expand=Orders($select=ID, ID2;$compute=ID as ID2;$filter=ID2 eq 24)")]
         public async Task ComputeInExpand_Works(string clause)
         {
             // Arrange

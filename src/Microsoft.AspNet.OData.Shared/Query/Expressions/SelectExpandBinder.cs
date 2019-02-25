@@ -278,18 +278,14 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
 
-            //Expression propertyValue = ExpressionBinderBase.GetPropertyExpression(source, propertyName);
-
-
             Expression propertyValue = CreatePropertyAccessExpression(source, property, propertyName);
 
             Type nullablePropertyType = TypeHelper.ToNullable(propertyValue.Type);
             Expression nullablePropertyValue = ExpressionHelpers.ToNullable(propertyValue);
 
-            if (filterClause != null)
+            if (filterClause != null || applyClause != null || computeClause != null)
             {
                 bool isCollection = property.Type.IsCollection();
-
                 IEdmTypeReference edmElementType = (isCollection ? property.Type.AsCollection().ElementType() : property.Type);
                 Type clrElementType = EdmLibHelpers.GetClrType(edmElementType, _model);
                 if (clrElementType == null)
@@ -298,158 +294,133 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                         edmElementType.FullName()));
                 }
 
-                Expression filterResult = nullablePropertyValue;
-
                 ODataQuerySettings querySettings = new ODataQuerySettings()
                 {
                     HandleNullPropagation = HandleNullPropagationOption.True,
                 };
 
-                if (isCollection)
+                if (applyClause != null)
                 {
-                    Expression filterSource =
-                        typeof(IEnumerable).IsAssignableFrom(source.Type.GetProperty(propertyName).PropertyType)
-                            ? Expression.Call(
-                                ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
-                                nullablePropertyValue)
-                            : nullablePropertyValue;
-
-                    // TODO: Implement proper support for $select/$expand after $apply
-                    Expression filterPredicate = FilterBinder.Bind(null, filterClause, clrElementType, _context, querySettings);
-                    filterResult = Expression.Call(
-                        ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(clrElementType),
-                        filterSource,
-                        filterPredicate);
-
-                    nullablePropertyType = filterResult.Type;
-                }
-                else if (_settings.HandleReferenceNavigationPropertyExpandFilter)
-                {
-                    LambdaExpression filterLambdaExpression = FilterBinder.Bind(null, filterClause, clrElementType, _context, querySettings) as LambdaExpression;
-                    if (filterLambdaExpression == null)
+                    if (isCollection)
                     {
-                        throw new ODataException(Error.Format(SRResources.ExpandFilterExpressionNotLambdaExpression,
-                            property.Name, "LambdaExpression"));
+                        Expression filterSource =
+                            typeof(IQueryable).IsAssignableFrom(nullablePropertyValue.Type)
+                                ? nullablePropertyValue
+                                : Expression.Call(
+                                    ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
+                                    nullablePropertyValue)
+                                ;
+
+                        var query = QueryProvider.CreateQuery(filterSource);
+
+                        var applyBinder = new ApplyQueryOptionsBinder(_context, querySettings, clrElementType);
+
+                        query = applyBinder.Bind(query, applyClause);
+                        clrElementType = query.ElementType;
+
+                        nullablePropertyValue = query.Expression;
+                        nullablePropertyType = nullablePropertyValue.Type;
+
+                    }
+                    else
+                    {
+                        throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForSingleProperty, property.Name));
+                    }
+                }
+
+                if (computeClause != null)
+                {
+                    if (isCollection)
+                    {
+                        Expression filterSource =
+                            typeof(IQueryable).IsAssignableFrom(nullablePropertyValue.Type)
+                                ? nullablePropertyValue
+                                : Expression.Call(
+                                    ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
+                                    nullablePropertyValue)
+                                ;
+
+                        var query = QueryProvider.CreateQuery(filterSource);
+
+                        var resolver = WebApiAssembliesResolver.Default;
+
+                        var applyBinder = new ComputeBinder(querySettings, resolver, clrElementType, _context.Model, computeClause.ComputedItems);
+
+                        query = applyBinder.Bind(query);
+
+                        clrElementType = query.ElementType;
+
+                        nullablePropertyType = query.Expression.Type;
+                        if (_settings.HandleNullPropagation == HandleNullPropagationOption.True)
+                        {
+                            // create expression similar to: 'nullablePropertyValue == null ? null : filterResult'
+                            nullablePropertyValue = Expression.Condition(
+                                test: Expression.Equal(nullablePropertyValue, Expression.Constant(value: null)),
+                                ifTrue: Expression.Constant(value: null, type: nullablePropertyType),
+                                ifFalse: query.Expression);
+                        }
+                        else
+                        {
+                            nullablePropertyValue = query.Expression;
+                        }
+
+                    }
+                }
+
+                if (filterClause != null)
+                {
+                    Expression filterResult = nullablePropertyValue;
+
+                    if (isCollection)
+                    {
+                        Expression filterSource =
+                            typeof(IEnumerable).IsAssignableFrom(source.Type.GetProperty(propertyName).PropertyType)
+                                ? Expression.Call(
+                                    ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
+                                    nullablePropertyValue)
+                                : nullablePropertyValue;
+
+                        var query = QueryProvider.CreateQuery(filterSource);
+
+                        Expression filterPredicate = FilterBinder.Bind(query, filterClause, clrElementType, _context, querySettings);
+                        filterResult = Expression.Call(
+                            ExpressionHelperMethods.QueryableWhereGeneric.MakeGenericMethod(clrElementType),
+                            filterSource,
+                            filterPredicate);
+
+                        nullablePropertyType = filterResult.Type;
+                    }
+                    else if (_settings.HandleReferenceNavigationPropertyExpandFilter)
+                    {
+                        LambdaExpression filterLambdaExpression = FilterBinder.Bind(null, filterClause, clrElementType, _context, querySettings) as LambdaExpression;
+                        if (filterLambdaExpression == null)
+                        {
+                            throw new ODataException(Error.Format(SRResources.ExpandFilterExpressionNotLambdaExpression,
+                                property.Name, "LambdaExpression"));
+                        }
+
+                        ParameterExpression filterParameter = filterLambdaExpression.Parameters.First();
+                        Expression predicateExpression = new ReferenceNavigationPropertyExpandFilterVisitor(filterParameter, nullablePropertyValue).Visit(filterLambdaExpression.Body);
+
+                        // create expression similar to: 'predicateExpression == true ? nullablePropertyValue : null'
+                        filterResult = Expression.Condition(
+                            test: predicateExpression,
+                            ifTrue: nullablePropertyValue,
+                            ifFalse: Expression.Constant(value: null, type: nullablePropertyType));
                     }
 
-                    ParameterExpression filterParameter = filterLambdaExpression.Parameters.First();
-                    Expression predicateExpression = new ReferenceNavigationPropertyExpandFilterVisitor(filterParameter, nullablePropertyValue).Visit(filterLambdaExpression.Body);
-
-                    // create expression similar to: 'predicateExpression == true ? nullablePropertyValue : null'
-                    filterResult = Expression.Condition(
-                        test: predicateExpression,
-                        ifTrue: nullablePropertyValue,
-                        ifFalse: Expression.Constant(value: null, type: nullablePropertyType));
-                }
-
-                if (_settings.HandleNullPropagation == HandleNullPropagationOption.True)
-                {
-                    // create expression similar to: 'nullablePropertyValue == null ? null : filterResult'
-                    nullablePropertyValue = Expression.Condition(
-                        test: Expression.Equal(nullablePropertyValue, Expression.Constant(value: null)),
-                        ifTrue: Expression.Constant(value: null, type: nullablePropertyType),
-                        ifFalse: filterResult);
-                }
-                else
-                {
-                    nullablePropertyValue = filterResult;
-                }
-            }
-
-            if (applyClause != null)
-            {
-                bool isCollection = property.Type.IsCollection();
-
-                if (isCollection)
-                {
-                    IEdmTypeReference edmElementType = (isCollection ? property.Type.AsCollection().ElementType() : property.Type);
-                    Type clrElementType = EdmLibHelpers.GetClrType(edmElementType, _model);
-                    if (clrElementType == null)
-                    {
-                        throw new ODataException(Error.Format(SRResources.MappingDoesNotContainResourceType,
-                            edmElementType.FullName()));
-                    }
-
-                    Expression filterSource =
-                        typeof(IQueryable).IsAssignableFrom(nullablePropertyValue.Type)
-                            ? nullablePropertyValue
-                            : Expression.Call(
-                                ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
-                                nullablePropertyValue)
-                            ;
-
-                    var query = QueryProvider.CreateQuery(filterSource);
-
-                    ODataQuerySettings querySettings = new ODataQuerySettings()
-                    {
-                        HandleNullPropagation = HandleNullPropagationOption.True,
-                    };
-
-                    var applyBinder = new ApplyQueryOptionsBinder(_context, querySettings, clrElementType);
-
-                    query = applyBinder.Bind(query, applyClause);
-
-                    nullablePropertyValue = query.Expression;
-                    nullablePropertyType = nullablePropertyValue.Type;
-
-                }
-                else
-                {
-                    throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForSingleProperty, property.Name));
-                }
-            }
-
-            if (computeClause != null)
-            {
-                bool isCollection = property.Type.IsCollection();
-
-                if (isCollection)
-                {
-                    IEdmTypeReference edmElementType = (isCollection ? property.Type.AsCollection().ElementType() : property.Type);
-                    Type clrElementType = EdmLibHelpers.GetClrType(edmElementType, _model);
-                    if (clrElementType == null)
-                    {
-                        throw new ODataException(Error.Format(SRResources.MappingDoesNotContainResourceType,
-                            edmElementType.FullName()));
-                    }
-
-
-
-                    Expression filterSource =
-                        typeof(IQueryable).IsAssignableFrom(nullablePropertyValue.Type)
-                            ? nullablePropertyValue
-                            : Expression.Call(
-                                ExpressionHelperMethods.QueryableAsQueryable.MakeGenericMethod(clrElementType),
-                                nullablePropertyValue)
-                            ;
-
-                    var query = QueryProvider.CreateQuery(filterSource);
-
-                    ODataQuerySettings querySettings = new ODataQuerySettings()
-                    {
-                        HandleNullPropagation = HandleNullPropagationOption.True,
-                    };
-
-                    var resolver = WebApiAssembliesResolver.Default;
-
-                    var applyBinder = new ComputeBinder(querySettings, resolver,clrElementType, _context.Model, computeClause.ComputedItems);
-
-                    query = applyBinder.Bind(query);
-
-                    nullablePropertyType = query.Expression.Type;
                     if (_settings.HandleNullPropagation == HandleNullPropagationOption.True)
                     {
                         // create expression similar to: 'nullablePropertyValue == null ? null : filterResult'
                         nullablePropertyValue = Expression.Condition(
                             test: Expression.Equal(nullablePropertyValue, Expression.Constant(value: null)),
                             ifTrue: Expression.Constant(value: null, type: nullablePropertyType),
-                            ifFalse: query.Expression);
+                            ifFalse: filterResult);
                     }
                     else
                     {
-                        nullablePropertyValue = query.Expression;
+                        nullablePropertyValue = filterResult;
                     }
-
                 }
             }
 

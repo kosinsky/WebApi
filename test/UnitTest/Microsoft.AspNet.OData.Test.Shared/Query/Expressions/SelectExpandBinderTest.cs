@@ -730,8 +730,8 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         }
 
         [Theory]
-        [InlineData("aggregate($count as Count)", "ID eq 1")]
-        [InlineData("filter(ID eq 1)/aggregate($count as Count)", null)]
+        [InlineData("aggregate($count as Count)", "Count eq 2")] // $filter is execuded after $apply
+        //[InlineData("filter(ID eq 1)/aggregate($count as Count)", null)]
         public void CreatePropertyValueExpressionWithClauses_Collection_WorksWithApplyAndFilter(string apply, string filter)
         {
             // Arrange
@@ -757,23 +757,31 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 computeClause: null);
 
 #if NETCORE
-            var suffix = ", Object";
-#else
-            var suffix = "";
-#endif
-            // Assert
             Assert.Equal(
                 string.Format(
-                    "value({0}).Orders.AsQueryable().Where($it => ($it.ID == value(" +
-                    "Microsoft.AspNet.OData.Query.Expressions.LinqParameterContainer+TypedLinqParameterContainer`1[System.Int32]).TypedProperty))" +
+                    "value({0}).Orders.AsQueryable()" +
                     ".GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
-                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount(){1})}}}})",
-                    customer.Type,
-                    suffix),
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount(), Object)}}}}).AsQueryable()" +
+                    ".Where($it => (Convert(Convert($it.Container.Value, Int64), Nullable`1) == Convert(value(" +
+                    "Microsoft.AspNet.OData.Query.Expressions.LinqParameterContainer+TypedLinqParameterContainer`1[System.Int32]).TypedProperty, Nullable`1)))",
+                    customer.Type),
                 filterInExpand.ToString());
+#else
+            Assert.Equal(
+                string.Format(
+                    "value({0}).Orders.AsQueryable()" +
+                    ".GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert($it.AsQueryable().LongCount())}}}}).AsQueryable()" +
+                    ".Where($it => (Convert(Convert($it.Container.Value)) == Convert(value(" +
+                    "Microsoft.AspNet.OData.Query.Expressions.LinqParameterContainer+TypedLinqParameterContainer`1[System.Int32]).TypedProperty)))",
+                    customer.Type),
+                filterInExpand.ToString());
+#endif
+            // Assert
+
             var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<DynamicTypeWrapper>;
             Assert.Single(orders);
-            Assert.Equal(1L, orders.ToList()[0].Values["Count"]);
+            Assert.Equal(2L, orders.ToList()[0].Values["Count"]);
         }
 
 
