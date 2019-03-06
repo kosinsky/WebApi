@@ -339,7 +339,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             // Arrange
             string queryUrl =
                 string.Format(
-                    AggregationTestBaseUrl + "?$expand=Orders($filter=Price gt 25;$apply=aggregate(Price with sum as TotalPrice))",
+                    AggregationTestBaseUrl + "?$expand=Orders($filter=TotalPrice gt 100;$apply=aggregate(Price with sum as TotalPrice))",
                     BaseAddress);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
             request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
@@ -356,9 +356,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             Assert.Equal("Customer0", value[0]["Name"].ToObject<string>());
             Assert.Equal("Customer1", value[1]["Name"].ToObject<string>());
 
-            var customerZeroOrders = value[0]["Orders"];
-            var customerZeroPrice = customerZeroOrders.First["TotalPrice"].ToObject<int>();
-            Assert.Equal(75, customerZeroPrice);
+            Assert.Equal(0, ((JArray)value[0]["Orders"]).Count);
 
             var customerOneOrders = value[1]["Orders"];
             var customerOnePrice = customerOneOrders.First["TotalPrice"].ToObject<int>();
