@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNet.OData.Builder;
@@ -28,6 +29,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -75,6 +77,48 @@ namespace Microsoft.AspNet.OData.Test
 
             Assert.NotNull(result["value"][0]["ID"]);
             Assert.NotNull(result["value"][0]["DoubleID"]);
+        }
+
+        [Theory]
+        [InlineData("$filter=ID gt 42&$compute=ID add ID as DoubleID&$select=ID,DoubleID&$expand=PreviousCustomer($select=ID)")]
+        public async Task DollarCompute_WorksWithExtraExpand(string clause)
+        {
+            // Arrange
+            var uri = $"/odata/SelectExpandTestCustomers?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.NotNull(result["value"][0]["ID"]);
+            Assert.NotNull(result["value"][0]["DoubleID"]);
+            Assert.NotNull(result["value"][0]["PreviousCustomer"]);
+            Assert.NotNull(result["value"][0]["PreviousCustomer"]["ID"]);
+        }
+
+        [Theory]
+        [InlineData("$compute=ID add ID as DoubleID&$select=ID,DoubleID,TestField")]
+        public async Task DollarCompute_WorksWithCustomFields(string clause)
+        {
+            // Arrange
+            var uri = $"/odata/SelectExpandTestCustomerWithCustoms?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            var res = await response.Content.ReadAsStringAsync();
+            JObject result = JObject.Parse(res);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.NotNull(result["value"][0]["ID"]);
+            Assert.NotNull(result["value"][0]["DoubleID"]);
+            Assert.NotNull(result["value"][0]["TestField"]);
         }
 
         [Theory]
@@ -180,6 +224,7 @@ namespace Microsoft.AspNet.OData.Test
         {
             var controllers = new[] {
                 typeof(SelectExpandTestCustomersController),
+                typeof(SelectExpandTestCustomerWithCustomsController)
             };
 
             var server = TestServerFactory.Create(controllers, (config) =>
@@ -211,9 +256,28 @@ namespace Microsoft.AspNet.OData.Test
             ODataConventionModelBuilder builder = ODataConventionModelBuilderFactory.Create();
             builder.EntitySet<SelectExpandTestCustomer>("SelectExpandTestCustomers");
             builder.EntitySet<SelectExpandTestOrder>("SelectExpandTestOrders");
+            builder.EntitySet<SelectExpandTestCustomerWithCustom>("SelectExpandTestCustomerWithCustoms");
+
             builder.Ignore<SelectExpandTestSpecialCustomer>();
             builder.Ignore<SelectExpandTestSpecialOrder>();
-            return builder.GetEdmModel();
+            var model = builder.GetEdmModel();
+
+            var entityType = model.EntityContainer.EntitySets().First(e => e.Name == "SelectExpandTestCustomerWithCustoms").EntityType() as EdmEntityType;
+            var containerProperty = typeof(SelectExpandTestCustomerWithCustom).GetProperty(nameof(SelectExpandTestCustomerWithCustom.Custom));
+            var clrProperty = containerProperty.PropertyType.GetProperty(nameof(CustomFields.TestField));
+
+
+            var edmProperty = entityType.AddStructuralProperty("TestField", EdmPrimitiveTypeKind.String, true);
+            model.SetAnnotationValue(edmProperty, new ClrPropertyInfoAnnotation(clrProperty)
+            {
+                PropertiesPath = new List<PropertyInfo>()
+                        {
+                            containerProperty
+                        }
+            });
+
+
+            return model;
         }
     }
 }

@@ -229,10 +229,11 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         }
 
         private static IEnumerable<ODataProperty> CreateODataPropertiesFromDynamicType(EdmEntityType entityType, object graph,
-            Dictionary<IEdmProperty, object> dynamicTypeProperties, ODataSerializerContext writeContext)
+            Dictionary<IEdmProperty, object> dynamicTypeProperties, ODataSerializerContext writeContext, out bool expand)
         {
             Contract.Assert(dynamicTypeProperties != null);
             Dictionary<string, object> objectProperties = null;
+            expand = false;
             var properties = new List<ODataProperty>();
             var dynamicObject = graph as DynamicTypeWrapper;
             if (dynamicObject == null)
@@ -274,7 +275,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                             dynamicTypeProperties.Add(edmProperty, prop.Value);
                         }
                     }
-                    else
+                    else if (!(prop.Value is ISelectExpandWrapper))
                     {
                         var property = new ODataProperty
                         {
@@ -283,6 +284,10 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                         };
 
                         properties.Add(property);
+                    }
+                    else
+                    {
+                        expand = true;
                     }
                 }
             }
@@ -302,11 +307,17 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             {
                 var dynamicTypeProperties = new Dictionary<IEdmProperty, object>();
                 var entityType = expectedType.Definition as EdmEntityType;
+                bool expandAfter = false;
                 var resource = new ODataResource()
                 {
                     TypeName = expectedType.FullName(),
-                    Properties = CreateODataPropertiesFromDynamicType(entityType, graph, dynamicTypeProperties, writeContext)
+                    Properties = CreateODataPropertiesFromDynamicType(entityType, graph, dynamicTypeProperties, writeContext, out expandAfter)
                 };
+
+                if (expandAfter)
+                {
+                    return false;
+                }
 
                 resource.IsTransient = true;
                 writer.WriteStart(resource);
@@ -339,7 +350,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 }
 
                 writer.WriteEnd();
-                return true;
+                return !expandAfter;
             }
 
             return false;

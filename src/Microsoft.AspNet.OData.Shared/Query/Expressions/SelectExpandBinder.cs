@@ -247,8 +247,20 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
             propertyPath = propertyPath ?? propertyName;
 
-            return GetFlattenedPropertyExpression(propertyPath)
-                ?? ExpressionBinderBase.GetPropertyExpression(source, (this.HasInstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName);
+
+
+            var result = GetFlattenedPropertyExpression(propertyPath);
+            if (result != null)
+            {
+                return result;
+            }
+
+            propertyPath = propertyName;
+            if (this.HasInstancePropertyContainer && source.Type.GetProperty("Instance") != null)
+            {
+                propertyPath = $"Instance\\{propertyName}";
+            }
+            return ExpressionBinderBase.GetPropertyExpression(source, propertyPath);
 
         }
 
