@@ -409,7 +409,7 @@ namespace Microsoft.AspNet.OData.Query
                 result = orderBy.ApplyTo(result, querySettings);
             }
 
-           
+
 
             if (!IsAggregated(apply))
             {
@@ -766,6 +766,15 @@ namespace Microsoft.AspNet.OData.Query
                     Context.ElementType,
                     Context.NavigationSource,
                     queryParameters);
+                if (Apply != null)
+                {
+                    _queryOptionParser.ParseApply();
+                }
+                if (Compute != null)
+                {
+                    _queryOptionParser.ParseCompute();
+                }
+
                 var originalSelectExpand = SelectExpand;
                 SelectExpand = new SelectExpandQueryOption(
                     autoSelectRawValue,
@@ -847,6 +856,29 @@ namespace Microsoft.AspNet.OData.Query
 
                 if (!String.IsNullOrEmpty(autoSelectRawValue))
                 {
+                    // Add dynamic fields generated in $compute and $apply
+                    if (Compute != null)
+                    {
+                        string computeAliases = string.Join(",", Compute.ComputeClause.ComputedItems.Select(c => c.Alias));
+
+                        if (!String.IsNullOrEmpty(computeAliases))
+                        {
+                            autoSelectRawValue = String.Format(CultureInfo.InvariantCulture, "{0},{1}",
+                                autoSelectRawValue, computeAliases);
+                        }
+                    }
+
+                    if (Apply != null)
+                    {
+                        string computeAliases = string.Join(",", Apply.ApplyClause.Transformations.OfType<ComputeTransformationNode>().SelectMany(c=>c.Expressions).Select(c => c.Alias));
+
+                        if (!String.IsNullOrEmpty(computeAliases))
+                        {
+                            autoSelectRawValue = String.Format(CultureInfo.InvariantCulture, "{0},{1}",
+                                autoSelectRawValue, computeAliases);
+                        }
+                    }
+
                     if (!String.IsNullOrEmpty(selectRawValue))
                     {
                         selectRawValue = String.Format(CultureInfo.InvariantCulture, "{0},{1}",

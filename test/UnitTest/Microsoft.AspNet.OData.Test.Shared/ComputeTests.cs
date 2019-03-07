@@ -102,6 +102,10 @@ namespace Microsoft.AspNet.OData.Test
 
         [Theory]
         [InlineData("$compute=ID add ID as DoubleID&$select=ID,DoubleID,TestField")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)&$select=ID,DoubleID,TestField")]
+        [InlineData("$compute=ID add ID as DoubleID")]
+        [InlineData("$apply=compute(ID add ID as DoubleID)")]
+        //[InlineData("$apply=compute(ID add ID as DoubleID2)&$compute=DoubleID2 as DoubleID")] // TODO: Support $compute after $apply
         public async Task DollarCompute_WorksWithCustomFields(string clause)
         {
             // Arrange
@@ -275,6 +279,11 @@ namespace Microsoft.AspNet.OData.Test
                             containerProperty
                         }
             });
+
+            var modelBound = model.GetAnnotationValue<ModelBoundQuerySettings>(entityType) ?? new ModelBoundQuerySettings();
+            modelBound.DefaultSelectType = SelectExpandType.Automatic;
+            modelBound.MaxTop = null; // Ensure that system wide settings are respected
+            model.SetAnnotationValue(entityType, modelBound);
 
 
             return model;

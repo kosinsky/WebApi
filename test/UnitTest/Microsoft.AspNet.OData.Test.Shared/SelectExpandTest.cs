@@ -713,6 +713,7 @@ namespace Microsoft.AspNet.OData.Test
 
         public string Name { get; set; }
 
+        [IgnoreDataMember]
         public CustomFields Custom { get; set; }
     }
 
