@@ -1149,7 +1149,7 @@ namespace Microsoft.AspNet.OData.Test.Query
             IEnumerable<Customer> customers = CustomerApplyTestData;
 
             // Act & Assert
-            ExceptionAssert.Throws<ODataException>(() =>
+            ExceptionAssert.Throws<ODataErrorException>(() =>
             {
                 IQueryable queryable = options.ApplyTo(customers.AsQueryable(), new ODataQuerySettings { HandleNullPropagation = HandleNullPropagationOption.True });
             });
