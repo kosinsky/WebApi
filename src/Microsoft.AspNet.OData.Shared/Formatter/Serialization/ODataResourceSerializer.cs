@@ -228,41 +228,35 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             }
         }
 
+        private static Dictionary<string, object> ExtractObjectProperties(object graph, ODataSerializerContext writeContext)
+        {
+            switch (graph)
+            {
+                case DynamicTypeWrapper dynamicObject:
+                    var computeObject = dynamicObject as IEdmStructuredObject;
+                    if (computeObject != null)
+                    {
+                        computeObject.SetModel(writeContext.Model);
+                    }
+                    return dynamicObject.Values;
+                case IEnumerable<DynamicTypeWrapper> dynamicEnumerable:
+                    return ExtractObjectProperties(dynamicEnumerable.SingleOrDefault(), writeContext);
+                case SelectExpandWrapper dynamicSelectWrapper:
+                    return dynamicSelectWrapper.Container.ToDictionary(new IdentityPropertyMapper());
+                default:
+                    return null;
+            }
+        }
+
         private static IEnumerable<ODataProperty> CreateODataPropertiesFromDynamicType(EdmEntityType entityType, object graph,
-            Dictionary<IEdmProperty, object> dynamicTypeProperties, ODataSerializerContext writeContext, out bool expand)
+            Dictionary<IEdmProperty, object> dynamicTypeProperties, ODataSerializerContext writeContext)
         {
             Contract.Assert(dynamicTypeProperties != null);
-            Dictionary<string, object> objectProperties = null;
-            expand = false;
+            Dictionary<string, object> objectProperties = ExtractObjectProperties(graph, writeContext);
             var properties = new List<ODataProperty>();
-            var dynamicObject = graph as DynamicTypeWrapper;
-            if (dynamicObject == null)
-            {
-                var dynamicEnumerable = (graph as IEnumerable<DynamicTypeWrapper>);
-                if (dynamicEnumerable != null)
-                {
-                    dynamicObject = dynamicEnumerable.SingleOrDefault();
-                }
-                var dynamicSelectWrapper = graph as SelectExpandWrapper;
-                if (dynamicSelectWrapper != null)
-                {
-                    objectProperties = dynamicSelectWrapper.Container.ToDictionary(new IdentityPropertyMapper());
-                }
-            }
-
-            if (dynamicObject != null)
-            {
-                var computeObject = dynamicObject as IEdmStructuredObject;
-                if (computeObject != null)
-                {
-                    computeObject.SetModel(writeContext.Model);
-                }
-
-                objectProperties = dynamicObject.Values;
-            }
 
             if (objectProperties != null)
-            { 
+            {
                 foreach (var prop in objectProperties)
                 {
                     if (prop.Value != null
@@ -275,7 +269,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                             dynamicTypeProperties.Add(edmProperty, prop.Value);
                         }
                     }
-                    else if (!(prop.Value is ISelectExpandWrapper))
+                    else
                     {
                         var property = new ODataProperty
                         {
@@ -285,75 +279,54 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
 
                         properties.Add(property);
                     }
-                    else
-                    {
-                        expand = true;
-                    }
                 }
             }
 
             return properties;
         }
 
-        private bool TryWriteDynamicTypeResource(object graph, ODataWriter writer, IEdmTypeReference expectedType,
+        private void WriteDynamicTypeResource(object graph, ODataWriter writer, IEdmTypeReference expectedType,
             ODataSerializerContext writeContext)
         {
-            var type = graph.GetType();
-            Type underType = null;
-
-            if (EdmLibHelpers.IsDynamicTypeWrapper(type) && !EdmLibHelpers.IsComputeWrapper(type, out underType)
-                || EdmLibHelpers.IsComputeWrapper(type, out underType) && EdmLibHelpers.IsDynamicTypeWrapper(underType)
-                || EdmLibHelpers.IsSelectExpandWrapper(type, out underType) && EdmLibHelpers.IsDynamicTypeWrapper(underType))
+            var dynamicTypeProperties = new Dictionary<IEdmProperty, object>();
+            var entityType = expectedType.Definition as EdmEntityType;
+            var resource = new ODataResource()
             {
-                var dynamicTypeProperties = new Dictionary<IEdmProperty, object>();
-                var entityType = expectedType.Definition as EdmEntityType;
-                bool expandAfter = false;
-                var resource = new ODataResource()
-                {
-                    TypeName = expectedType.FullName(),
-                    Properties = CreateODataPropertiesFromDynamicType(entityType, graph, dynamicTypeProperties, writeContext, out expandAfter)
-                };
+                TypeName = expectedType.FullName(),
+                Properties = CreateODataPropertiesFromDynamicType(entityType, graph, dynamicTypeProperties, writeContext)
+            };
 
-                if (expandAfter)
+            resource.IsTransient = true;
+            writer.WriteStart(resource);
+            foreach (var property in dynamicTypeProperties.Keys)
+            {
+                var resourceContext = new ResourceContext(writeContext, expectedType.AsEntity(), graph);
+                if (entityType.NavigationProperties().Any(p => p.Type.Equals(property.Type)) && !(property.Type is EdmCollectionTypeReference))
                 {
-                    return false;
-                }
-
-                resource.IsTransient = true;
-                writer.WriteStart(resource);
-                foreach (var property in dynamicTypeProperties.Keys)
-                {
-                    var resourceContext = new ResourceContext(writeContext, expectedType.AsEntity(), graph);
-                    if (entityType.NavigationProperties().Any(p => p.Type.Equals(property.Type)) && !(property.Type is EdmCollectionTypeReference))
+                    var navigationProperty = entityType.NavigationProperties().FirstOrDefault(p => p.Type.Equals(property.Type));
+                    var navigationLink = CreateNavigationLink(navigationProperty, resourceContext);
+                    if (navigationLink != null)
                     {
-                        var navigationProperty = entityType.NavigationProperties().FirstOrDefault(p => p.Type.Equals(property.Type));
-                        var navigationLink = CreateNavigationLink(navigationProperty, resourceContext);
-                        if (navigationLink != null)
-                        {
-                            writer.WriteStart(navigationLink);
-                            TryWriteDynamicTypeResource(dynamicTypeProperties[property], writer, property.Type, writeContext);
-                            writer.WriteEnd();
-                        }
-                    }
-                    else
-                    {
-                        ODataNestedResourceInfo nestedResourceInfo = new ODataNestedResourceInfo
-                        {
-                            IsCollection = property.Type.IsCollection(),
-                            Name = property.Name
-                        };
-
-                        writer.WriteStart(nestedResourceInfo);
-                        WriteDynamicComplexProperty(dynamicTypeProperties[property], property.Type, resourceContext, writer);
+                        writer.WriteStart(navigationLink);
+                        WriteDynamicTypeResource(dynamicTypeProperties[property], writer, property.Type, writeContext);
                         writer.WriteEnd();
                     }
                 }
+                else
+                {
+                    ODataNestedResourceInfo nestedResourceInfo = new ODataNestedResourceInfo
+                    {
+                        IsCollection = property.Type.IsCollection(),
+                        Name = property.Name
+                    };
 
-                writer.WriteEnd();
-                return !expandAfter;
+                    writer.WriteStart(nestedResourceInfo);
+                    WriteDynamicComplexProperty(dynamicTypeProperties[property], property.Type, resourceContext, writer);
+                    writer.WriteEnd();
+                }
             }
 
-            return false;
+            writer.WriteEnd();
         }
 
         private void WriteResource(object graph, ODataWriter writer, ODataSerializerContext writeContext,
@@ -361,8 +334,9 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         {
             Contract.Assert(writeContext != null);
 
-            if (TryWriteDynamicTypeResource(graph, writer, expectedType, writeContext) /*&& !typeof(ISelectExpandWrapper).IsAssignableFrom(graph.GetType())*/)
+            if (EdmLibHelpers.IsAggregatedTypeWrapper(graph.GetType()))
             {
+                WriteDynamicTypeResource(graph, writer, expectedType, writeContext);
                 return;
             }
 
@@ -370,7 +344,6 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             ResourceContext resourceContext = new ResourceContext(writeContext, structuredType, graph);
 
             SelectExpandNode selectExpandNode = CreateSelectExpandNode(resourceContext);
-            
             if (selectExpandNode != null)
             {
                 ODataResource resource = CreateResource(selectExpandNode, resourceContext);
