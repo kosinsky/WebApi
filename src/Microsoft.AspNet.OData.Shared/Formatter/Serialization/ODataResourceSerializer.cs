@@ -504,7 +504,9 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             Contract.Assert(selectExpandNode != null);
             Contract.Assert(resourceContext != null);
 
-            if (//!resourceContext.StructuredType.IsOpen || // non-open type
+            IEdmStructuredObject structuredObject = resourceContext.EdmObject;
+            bool isDynamicType = EdmLibHelpers.HasDynamicTypeWrapper(structuredObject?.GetType());
+            if (!resourceContext.StructuredType.IsOpen && !isDynamicType || // non-open type and not dynamicaly generated
                 (!selectExpandNode.SelectAllDynamicProperties && !selectExpandNode.SelectedDynamicProperties.Any()))
             {
                 return;
@@ -521,7 +523,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             }
 
             IEdmStructuredType structuredType = resourceContext.StructuredType;
-            IEdmStructuredObject structuredObject = resourceContext.EdmObject;
+            
             object value;
             IDelta delta = structuredObject as IDelta;
             if (delta == null)
@@ -531,9 +533,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 if (dynamicPropertyInfo == null || structuredObject == null ||
                     !structuredObject.TryGetPropertyValue(dynamicPropertyInfo.Name, out value) || value == null)
                 {
-                    var type = structuredObject.GetType();
-
-                    if (EdmLibHelpers.IsDynamicTypeWrapper(type) || type.IsGenericType && EdmLibHelpers.IsDynamicTypeWrapper(type.GetGenericArguments()[0]))
+                    if (isDynamicType)
                     {
                         value = (structuredObject as ISelectExpandWrapper)?.ToDictionary();
                     }
@@ -582,9 +582,16 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
 
                 if (declaredPropertyNameSet.Contains(dynamicProperty.Key))
                 {
-                    continue;
-                    //throw Error.InvalidOperation(SRResources.DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName,
-                    //    dynamicProperty.Key, structuredType.FullTypeName());
+                    if (isDynamicType)
+                    {
+                        // $compute followed by $select, we have mix of declared and generated properties as a result we should ignore duplicates
+                        continue;
+                    }
+                    else
+                    {
+                        throw Error.InvalidOperation(SRResources.DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName,
+                            dynamicProperty.Key, structuredType.FullTypeName());
+                    }
                 }
 
                 IEdmTypeReference edmTypeReference = resourceContext.SerializerContext.GetEdmType(dynamicProperty.Value,

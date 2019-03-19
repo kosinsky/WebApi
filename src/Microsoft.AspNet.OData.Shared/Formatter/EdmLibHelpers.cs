@@ -856,6 +856,11 @@ namespace Microsoft.AspNet.OData.Formatter
             return (type != null && typeof(DynamicTypeWrapper).IsAssignableFrom(type));
         }
 
+        public static bool HasDynamicTypeWrapper(Type type)
+        {
+            return type != null && (EdmLibHelpers.IsDynamicTypeWrapper(type) || type.IsGenericType && EdmLibHelpers.IsDynamicTypeWrapper(type.GetGenericArguments()[0]));
+        }
+
         public static bool IsAggregatedTypeWrapper(Type type)
         {
             Type underType;
@@ -1029,7 +1034,7 @@ namespace Microsoft.AspNet.OData.Formatter
 
         private static bool IsSelectExpandWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(SelectExpandWrapper<>), type, out entityType);
 
-        private static bool IsComputeWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(ComputeWrapper<>), type, out entityType);
+        internal static bool IsComputeWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(ComputeWrapper<>), type, out entityType);
 
         private static bool IsTypeWrapper(Type wrappedType, Type type, out Type entityType)
         {
