@@ -697,7 +697,6 @@ namespace Microsoft.AspNet.OData.Test
         public int Rank { get; set; }
 
         [DataMember(Name = "SpecialOrdersAlias")]
-
         public SelectExpandTestSpecialOrderWithAlias[] SpecialOrders { get; set; }
     }
 

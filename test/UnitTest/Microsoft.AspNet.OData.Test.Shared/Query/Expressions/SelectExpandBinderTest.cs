@@ -731,7 +731,6 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
         [Theory]
         [InlineData("aggregate($count as Count)", "Count eq 2")] // $filter is execuded after $apply
-        //[InlineData("filter(ID eq 1)/aggregate($count as Count)", null)]
         public void CreatePropertyValueExpressionWithClauses_Collection_WorksWithApplyAndFilter(string apply, string filter)
         {
             // Arrange
