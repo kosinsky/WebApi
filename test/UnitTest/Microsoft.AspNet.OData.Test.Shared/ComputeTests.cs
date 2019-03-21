@@ -16,8 +16,10 @@ using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Test.Abstraction;
 using Microsoft.AspNet.OData.Test.Common;
+using Microsoft.AspNet.OData.Test.Query.Validators;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -38,6 +40,8 @@ using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Test.Abstraction;
 using Microsoft.AspNet.OData.Test.Common;
+using Microsoft.AspNet.OData.Test.Query.Validators;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -223,6 +227,20 @@ namespace Microsoft.AspNet.OData.Test
             Assert.Null(orders[0]["ID3"]);
         }
 
+        [Fact]
+        public void CanTurnOffValidationForFilter()
+        {
+            ODataValidationSettings settings = new ODataValidationSettings() { AllowedFunctions = AllowedFunctions.AllDateTimeFunctions };
+            ODataQueryContext context = ValidationTestHelper.CreateCustomerContext();
+            ComputeQueryOption option = new ComputeQueryOption("substring(Name,8,1) as NewProp", context);
+
+            ExceptionAssert.Throws<ODataException>(() =>
+                option.Validate(settings),
+                "Function 'substring' is not allowed. To allow it, set the 'AllowedFunctions' property on EnableQueryAttribute or QueryValidationSettings.");
+
+            option.Validator = null;
+            ExceptionAssert.DoesNotThrow(() => option.Validate(settings));
+        }
 
         private Task<HttpResponseMessage> GetResponse(string uri, string acceptHeader)
         {

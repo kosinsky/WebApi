@@ -72,6 +72,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>PropertyContainer.generated.tt</DependentUpon>
     </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ComputeQueryValidator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ExpressionQueryValidator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RequestMethod.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Interfaces\IWebApiActionDescriptor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Interfaces\IWebApiActionMap.cs" />

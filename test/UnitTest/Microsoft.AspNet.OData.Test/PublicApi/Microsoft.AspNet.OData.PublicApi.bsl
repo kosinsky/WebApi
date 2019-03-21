@@ -2276,6 +2276,7 @@ public class Microsoft.AspNet.OData.Query.ComputeQueryOption {
 	Microsoft.OData.UriParser.ComputeClause ComputeClause  { public get; }
 	ODataQueryContext Context  { public get; }
 	string RawValue  { public get; }
+	ComputeQueryValidator Validator  { public get; public set; }
 }
 
 public class Microsoft.AspNet.OData.Query.CountQueryOption {
@@ -3323,18 +3324,15 @@ public class Microsoft.AspNet.OData.Query.Expressions.FilterBinder : ExpressionB
 	public virtual System.Linq.Expressions.Expression BindUnaryOperatorNode (Microsoft.OData.UriParser.UnaryOperatorNode unaryOperatorNode)
 }
 
-public class Microsoft.AspNet.OData.Query.Validators.CountQueryValidator {
-	public CountQueryValidator (DefaultQuerySettings defaultQuerySettings)
+public abstract class Microsoft.AspNet.OData.Query.Validators.ExpressionQueryValidator {
+	protected ExpressionQueryValidator (DefaultQuerySettings defaultQuerySettings)
 
-	public virtual void Validate (CountQueryOption countQueryOption, ODataValidationSettings validationSettings)
-}
+	int CurrentAnyAllExpressionDepth  { protected get; protected set; }
+	int CurrentNodeCount  { protected get; protected set; }
+	Microsoft.OData.Edm.IEdmModel Model  { protected get; protected set; }
+	Microsoft.OData.Edm.IEdmProperty Property  { protected get; protected set; }
+	Microsoft.OData.Edm.IEdmStructuredType StructuredType  { protected get; protected set; }
 
-public class Microsoft.AspNet.OData.Query.Validators.FilterQueryValidator {
-	public FilterQueryValidator (DefaultQuerySettings defaultQuerySettings)
-
-	public virtual void Validate (FilterQueryOption filterQueryOption, ODataValidationSettings settings)
-	public virtual void Validate (Microsoft.OData.UriParser.FilterClause filterClause, ODataValidationSettings settings, Microsoft.OData.Edm.IEdmModel model)
-	internal virtual void Validate (Microsoft.OData.Edm.IEdmProperty property, Microsoft.OData.Edm.IEdmStructuredType structuredType, Microsoft.OData.UriParser.FilterClause filterClause, ODataValidationSettings settings, Microsoft.OData.Edm.IEdmModel model)
 	public virtual void ValidateAllNode (Microsoft.OData.UriParser.AllNode allNode, ODataValidationSettings settings)
 	public virtual void ValidateAnyNode (Microsoft.OData.UriParser.AnyNode anyNode, ODataValidationSettings settings)
 	public virtual void ValidateArithmeticOperator (Microsoft.OData.UriParser.BinaryOperatorNode binaryNode, ODataValidationSettings settings)
@@ -3354,6 +3352,27 @@ public class Microsoft.AspNet.OData.Query.Validators.FilterQueryValidator {
 	public virtual void ValidateSingleValueFunctionCallNode (Microsoft.OData.UriParser.SingleValueFunctionCallNode node, ODataValidationSettings settings)
 	public virtual void ValidateSingleValuePropertyAccessNode (Microsoft.OData.UriParser.SingleValuePropertyAccessNode propertyAccessNode, ODataValidationSettings settings)
 	public virtual void ValidateUnaryOperatorNode (Microsoft.OData.UriParser.UnaryOperatorNode unaryOperatorNode, ODataValidationSettings settings)
+}
+
+public class Microsoft.AspNet.OData.Query.Validators.ComputeQueryValidator : ExpressionQueryValidator {
+	public ComputeQueryValidator (DefaultQuerySettings defaultQuerySettings)
+
+	public virtual void Validate (ComputeQueryOption computeQueryOption, ODataValidationSettings settings)
+	public virtual void Validate (Microsoft.OData.UriParser.ComputeClause computeClause, ODataValidationSettings settings, Microsoft.OData.Edm.IEdmModel model)
+}
+
+public class Microsoft.AspNet.OData.Query.Validators.CountQueryValidator {
+	public CountQueryValidator (DefaultQuerySettings defaultQuerySettings)
+
+	public virtual void Validate (CountQueryOption countQueryOption, ODataValidationSettings validationSettings)
+}
+
+public class Microsoft.AspNet.OData.Query.Validators.FilterQueryValidator : ExpressionQueryValidator {
+	public FilterQueryValidator (DefaultQuerySettings defaultQuerySettings)
+
+	public virtual void Validate (FilterQueryOption filterQueryOption, ODataValidationSettings settings)
+	public virtual void Validate (Microsoft.OData.UriParser.FilterClause filterClause, ODataValidationSettings settings, Microsoft.OData.Edm.IEdmModel model)
+	internal virtual void Validate (Microsoft.OData.Edm.IEdmProperty property, Microsoft.OData.Edm.IEdmStructuredType structuredType, Microsoft.OData.UriParser.FilterClause filterClause, ODataValidationSettings settings, Microsoft.OData.Edm.IEdmModel model)
 }
 
 public class Microsoft.AspNet.OData.Query.Validators.ODataQueryValidator {

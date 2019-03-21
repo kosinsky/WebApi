@@ -9,6 +9,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNet.OData.Query.Validators;
 
 namespace Microsoft.AspNet.OData.Query
 {
@@ -23,7 +24,8 @@ namespace Microsoft.AspNet.OData.Query
 
         /// <summary>
         /// Initialize a new instance of <see cref="ComputeQueryOption"/> based on the raw $compute value and
-        /// an EdmModel from <see cref="ODataQueryContext"/>.        /// </summary>
+        /// an EdmModel from <see cref="ODataQueryContext"/>.        
+        /// </summary>
         /// <param name="rawValue"></param>
         /// <param name="context"></param>
         /// <param name="queryOptionParser"></param>
@@ -46,6 +48,7 @@ namespace Microsoft.AspNet.OData.Query
 
             Context = context;
             RawValue = rawValue;
+            Validator = ComputeQueryValidator.GetComputeQueryValidator(context);
             _queryOptionParser = queryOptionParser;
 
             // The IWebApiAssembliesResolver service is internal and can only be injected by WebApi.
@@ -53,6 +56,29 @@ namespace Microsoft.AspNet.OData.Query
             // and the service container is available but may not contain an instance of IWebApiAssembliesResolver.
             _assembliesResolver = Context.RequestContainer?.GetService<IWebApiAssembliesResolver>() ?? WebApiAssembliesResolver.Default;
 
+        }
+
+        // This constructor is intended for unit testing only.
+        internal ComputeQueryOption(string rawValue, ODataQueryContext context)
+        {
+            if (context == null)
+            {
+                throw Error.ArgumentNull("context");
+            }
+
+            if (String.IsNullOrEmpty(rawValue))
+            {
+                throw Error.ArgumentNullOrEmpty("rawValue");
+            }
+
+            Context = context;
+            RawValue = rawValue;
+            Validator = ComputeQueryValidator.GetComputeQueryValidator(context);
+            _queryOptionParser = new ODataQueryOptionParser(
+                context.Model,
+                context.ElementType,
+                context.NavigationSource,
+                new Dictionary<string, string> { { "$compute", rawValue } });
         }
 
         /// <summary>
@@ -65,10 +91,10 @@ namespace Microsoft.AspNet.OData.Query
         /// </summary>
         public string RawValue { get; private set; }
 
-        ///// <summary>
-        ///// Gets or sets the OrderBy Query Validator.
-        ///// </summary>
-        //public OrderByQueryValidator Validator { get; set; }
+        /// <summary>
+        /// Gets or sets the Compute Query Validator.
+        /// </summary>
+        public ComputeQueryValidator Validator { get; set; }
 
         /// <summary>
         /// Gets the parsed <see cref="ComputeClause"/> for this query option.
@@ -108,7 +134,6 @@ namespace Microsoft.AspNet.OData.Query
 
             var binder = new ComputeBinder(updatedSettings, _assembliesResolver, Context.ElementClrType, Context.Model, computeClause.ComputedItems);
             query = binder.Bind(query);
-            //this.ResultClrType = binder.ResultClrType;
 
             return query;
 
@@ -124,7 +149,11 @@ namespace Microsoft.AspNet.OData.Query
             {
                 throw Error.ArgumentNull("ComputeClause");
             }
-            // TODO: Add real validation logic here
+
+            if (Validator != null)
+            {
+                Validator.Validate(this, validationSettings);
+            }
         }
     }
 }
