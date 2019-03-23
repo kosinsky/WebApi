@@ -20,17 +20,20 @@ namespace Microsoft.AspNet.OData.Query.Expressions
     {
         private const string GroupByContainerProperty = "GroupByContainer";
 
-        private ComputeTransformationNode _transformation;
+        private IEnumerable<ComputeExpression> _expressions;
+
+        internal ComputeBinder(ODataQuerySettings settings, IWebApiAssembliesResolver assembliesResolver, Type elementType,
+            IEdmModel model, IEnumerable<ComputeExpression> expressions)
+            : base(settings, assembliesResolver, elementType, model)
+        {
+            _expressions = expressions;
+            this.ResultClrType = typeof(ComputeWrapper<>).MakeGenericType(this._elementType);
+        }
 
         internal ComputeBinder(ODataQuerySettings settings, IWebApiAssembliesResolver assembliesResolver, Type elementType,
             IEdmModel model, ComputeTransformationNode transformation)
-            : base(settings, assembliesResolver, elementType, model)
+            : this(settings, assembliesResolver, elementType, model, transformation.Expressions)
         {
-            Contract.Assert(transformation != null);
-            
-            _transformation = transformation;
-
-            this.ResultClrType = typeof(ComputeWrapper<>).MakeGenericType(this._elementType);
         }
 
         public IQueryable Bind(IQueryable query)
@@ -55,7 +58,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             var wrapperProperty = this.ResultClrType.GetProperty("Instance");
             wrapperTypeMemberAssignments.Add(Expression.Bind(wrapperProperty, this._lambdaParameter));
             var properties = new List<NamedPropertyExpression>();
-            foreach (var computeExpression in this._transformation.Expressions)
+            foreach (var computeExpression in this._expressions)
             {
                 properties.Add(new NamedPropertyExpression(Expression.Constant(computeExpression.Alias), CreateComputeExpression(computeExpression)));
             }

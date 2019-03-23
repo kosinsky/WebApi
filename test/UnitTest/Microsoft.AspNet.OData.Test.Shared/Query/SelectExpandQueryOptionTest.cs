@@ -268,7 +268,7 @@ namespace Microsoft.AspNet.OData.Test.Query
             context.RequestContainer = new MockContainer();
             var selectExpand = new SelectExpandQueryOption(
                 select: null,
-                expand: "Parent($filter=ID gt 1;$apply=aggregate($count as Cnt))",
+                expand: "Parent($filter=Cnt gt 1;$apply=aggregate($count as Cnt))",
                 context: context);
             selectExpand.LevelsMaxLiteralExpansionDepth = 1;
 

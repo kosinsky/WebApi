@@ -38,6 +38,12 @@ namespace Microsoft.AspNet.OData.Query.Validators
                 }
             }
 
+            if (options.Compute != null)
+            {
+                ValidateQueryOptionAllowed(AllowedQueryOptions.Compute, validationSettings.AllowedQueryOptions);
+                options.Compute.Validate(validationSettings);
+            }
+
             if (options.Skip != null)
             {
                 ValidateQueryOptionAllowed(AllowedQueryOptions.Skip, validationSettings.AllowedQueryOptions);

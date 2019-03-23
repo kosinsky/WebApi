@@ -144,6 +144,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Common\Types\UIntEnum.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\Types\UShortEnum.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\VersionTestHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ComputeTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\HttpContentExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\IHeaderDictionaryExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\RoutingConfigurationExtensions.cs" />
@@ -234,6 +235,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandBinderTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapperTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\UriFunctionBinderTests.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ComputeQueryValidatorTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\CountQueryValidatorTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\FilterQueryValidatorTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ODataQueryValidatorTest.cs" />

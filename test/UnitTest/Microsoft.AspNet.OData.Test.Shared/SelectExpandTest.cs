@@ -469,12 +469,12 @@ namespace Microsoft.AspNet.OData.Test
                 config.MapODataServiceRoute("odata-autoselect", "odata-autoselect", GetModelWithAutoSelect());
                 config.MapODataServiceRoute("odata-expandfilter", "odata-expandfilter", GetModelWithReferenceNavigationPropertyFilter());
 #if NETCORE
-                config.MapRoute("api", "api/{controller}", new { controller = "NonODataSelectExpandTestCustomers", action="Get" });
+                config.MapRoute("api", "api/{controller}", new { controller = "NonODataSelectExpandTestCustomers", action = "Get" });
 #else
                 config.Routes.MapHttpRoute("api", "api/{controller}", new { controller = "NonODataSelectExpandTestCustomers" });
 #endif
                 config.EnableDependencyInjection();
-                });
+            });
 
             HttpClient client = TestServerFactory.CreateClient(server);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost" + uri);
@@ -700,6 +700,27 @@ namespace Microsoft.AspNet.OData.Test
         public SelectExpandTestSpecialOrderWithAlias[] SpecialOrders { get; set; }
     }
 
+    public class SelectExpandTestCustomerWithCustom
+    {
+        public static IList<SelectExpandTestCustomerWithCustom> Customers = new List<SelectExpandTestCustomerWithCustom>()
+        {
+            new SelectExpandTestCustomerWithCustom { ID = 42, Name = "Name", Custom = new CustomFields { TestField = "Test1" } }
+        };
+
+
+        public int ID { get; set; }
+
+        public string Name { get; set; }
+
+        [IgnoreDataMember]
+        public CustomFields Custom { get; set; }
+    }
+
+    public class CustomFields
+    {
+        public string TestField { get; set; }
+    }
+
     public class SelectExpandTestOrder
     {
         public int ID { get; set; }
@@ -796,6 +817,15 @@ namespace Microsoft.AspNet.OData.Test
         public SelectExpandTestCustomerWithAlias GetSelectExpandTestCustomer([FromODataUri]int key)
         {
             return SelectExpandTestCustomerWithAlias.Customers[0];
+        }
+    }
+
+    public class SelectExpandTestCustomerWithCustomsController : ODataController
+    {
+        [EnableQuery]
+        public IEnumerable<SelectExpandTestCustomerWithCustom> Get()
+        {
+            return SelectExpandTestCustomerWithCustom.Customers;
         }
     }
 

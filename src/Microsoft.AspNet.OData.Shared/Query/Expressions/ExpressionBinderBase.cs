@@ -701,31 +701,27 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 this.HasInstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType
                     && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
 
-                this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? this.GetFlattenedProperties(source);
+                this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? GetFlattenedProperties(BaseQuery, this.HasInstancePropertyContainer, source);
             }
         }
 
-        internal IDictionary<string, Expression> GetFlattenedProperties(ParameterExpression source)
+        internal static IDictionary<string, Expression> GetFlattenedProperties(IQueryable baseQuery, bool hasInstancePropertyContainer, ParameterExpression source)
         {
-            if (this.BaseQuery == null)
+            if (baseQuery == null)
             {
                 return null;
             }
 
-            if (!typeof(GroupByWrapper).IsAssignableFrom(BaseQuery.ElementType))
+            if (!typeof(GroupByWrapper).IsAssignableFrom(baseQuery.ElementType))
             {
                 return null;
             }
 
-            var expression = BaseQuery.Expression as MethodCallExpression;
+            var expression = SkipWrappers(baseQuery.Expression) as MethodCallExpression;
             if (expression == null)
             {
                 return null;
             }
-
-            // After $apply we could have other clauses, like $filter, $orderby etc.
-            // Skip of filter expressions
-            expression = SkipFilters(expression);
 
             if (expression == null)
             {
@@ -733,17 +729,16 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
 
             var result = new Dictionary<string, Expression>();
-            CollectContainerAssugments(source, expression, result);
-            if (this.HasInstancePropertyContainer)
+            CollectContainerAssigments(source, expression, result);
+            if (hasInstancePropertyContainer)
             {
                 var instanceProperty = Expression.Property(source, "Instance");
                 if (typeof(DynamicTypeWrapper).IsAssignableFrom(instanceProperty.Type))
                 {
-                    var computeExpression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
-                    computeExpression = SkipFilters(computeExpression);
+                    var computeExpression = SkipWrappers(expression.Arguments.FirstOrDefault()) as MethodCallExpression;
                     if (computeExpression != null)
                     {
-                        CollectContainerAssugments(instanceProperty, computeExpression, result);
+                        CollectContainerAssigments(instanceProperty, computeExpression, result);
                     }
                 }
             }
@@ -751,17 +746,25 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             return result;
         }
 
-        private static MethodCallExpression SkipFilters(MethodCallExpression expression)
+        private static Expression SkipWrappers(Expression expression)
         {
-            while (expression.Method.Name == "Where")
+            var methodExpression = expression as MethodCallExpression;
+            if (methodExpression != null 
+                && (methodExpression.Method.Name == "AsQueryable" || methodExpression.Method.Name == "Where"))
             {
-                expression = expression.Arguments.FirstOrDefault() as MethodCallExpression;
+                return SkipWrappers(methodExpression.Arguments.FirstOrDefault());
+            }
+
+            var condExpression = expression as ConditionalExpression;
+            if (condExpression != null)
+            {
+                return condExpression.IfFalse;
             }
 
             return expression;
         }
 
-        private static void CollectContainerAssugments(Expression source, MethodCallExpression expression, Dictionary<string, Expression> result)
+        private static void CollectContainerAssigments(Expression source, MethodCallExpression expression, Dictionary<string, Expression> result)
         {
             CollectAssigments(result, Expression.Property(source, "GroupByContainer"), ExtractContainerExpression(expression.Arguments.FirstOrDefault() as MethodCallExpression, "GroupByContainer"));
             CollectAssigments(result, Expression.Property(source, "Container"), ExtractContainerExpression(expression, "Container"));

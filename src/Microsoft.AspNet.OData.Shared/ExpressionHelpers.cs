@@ -169,6 +169,8 @@ namespace Microsoft.AspNet.OData
         {
             Type returnType = orderByLambda.Body.Type;
 
+            type = query?.ElementType ?? type;
+
             MethodInfo orderByMethod = null;
             IOrderedQueryable orderedQuery = null;
 
@@ -270,6 +272,21 @@ namespace Microsoft.AspNet.OData
             ParameterExpression odataItParameter = Expression.Parameter(type, "$it");
             MemberExpression propertyAccess = Expression.Property(odataItParameter, propertyName);
             return Expression.Lambda(propertyAccess, odataItParameter);
+        }
+
+        public static bool HasGroupBy(Expression expression)
+        {
+            MethodCallExpression methodCall = expression as MethodCallExpression;
+            if (methodCall != null)
+            {
+                if (methodCall.Method.Name == "GroupBy")
+                {
+                    return true;
+                }
+                return HasGroupBy(methodCall.Arguments.First());
+
+            }
+            return false;
         }
     }
 }

@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Common;
+using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Query.Expressions;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
@@ -227,29 +228,36 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             }
         }
 
+        private static Dictionary<string, object> ExtractObjectProperties(object graph, ODataSerializerContext writeContext)
+        {
+            switch (graph)
+            {
+                case DynamicTypeWrapper dynamicObject:
+                    var computeObject = dynamicObject as IEdmStructuredObject;
+                    if (computeObject != null)
+                    {
+                        computeObject.SetModel(writeContext.Model);
+                    }
+                    return dynamicObject.Values;
+                case IEnumerable<DynamicTypeWrapper> dynamicEnumerable:
+                    return ExtractObjectProperties(dynamicEnumerable.SingleOrDefault(), writeContext);
+                case SelectExpandWrapper dynamicSelectWrapper:
+                    return dynamicSelectWrapper.Container.ToDictionary(new IdentityPropertyMapper());
+                default:
+                    return null;
+            }
+        }
+
         private static IEnumerable<ODataProperty> CreateODataPropertiesFromDynamicType(EdmEntityType entityType, object graph,
             Dictionary<IEdmProperty, object> dynamicTypeProperties, ODataSerializerContext writeContext)
         {
             Contract.Assert(dynamicTypeProperties != null);
-
+            Dictionary<string, object> objectProperties = ExtractObjectProperties(graph, writeContext);
             var properties = new List<ODataProperty>();
-            var dynamicObject = graph as DynamicTypeWrapper;
-            if (dynamicObject == null)
+
+            if (objectProperties != null)
             {
-                var dynamicEnumerable = (graph as IEnumerable<DynamicTypeWrapper>);
-                if (dynamicEnumerable != null)
-                {
-                    dynamicObject = dynamicEnumerable.SingleOrDefault();
-                }
-            }
-            if (dynamicObject != null)
-            {
-                var computeObject = dynamicObject as IEdmStructuredObject;
-                if (computeObject != null)
-                {
-                    computeObject.SetModel(writeContext.Model);
-                }
-                foreach (var prop in dynamicObject.Values)
+                foreach (var prop in objectProperties)
                 {
                     if (prop.Value != null
                         && (prop.Value is DynamicTypeWrapper || (prop.Value is IEnumerable<DynamicTypeWrapper>)))
@@ -326,7 +334,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         {
             Contract.Assert(writeContext != null);
 
-            if (EdmLibHelpers.IsDynamicTypeWrapper(graph.GetType()))
+            if (EdmLibHelpers.IsAggregatedTypeWrapper(graph.GetType()))
             {
                 WriteDynamicTypeResource(graph, writer, expectedType, writeContext);
                 return;
@@ -496,7 +504,9 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             Contract.Assert(selectExpandNode != null);
             Contract.Assert(resourceContext != null);
 
-            if (!resourceContext.StructuredType.IsOpen || // non-open type
+            IEdmStructuredObject structuredObject = resourceContext.EdmObject;
+            bool isDynamicType = EdmLibHelpers.HasDynamicTypeWrapper(structuredObject?.GetType());
+            if (!resourceContext.StructuredType.IsOpen && !isDynamicType || // non-open type and not dynamicaly generated
                 (!selectExpandNode.SelectAllDynamicProperties && !selectExpandNode.SelectedDynamicProperties.Any()))
             {
                 return;
@@ -513,7 +523,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             }
 
             IEdmStructuredType structuredType = resourceContext.StructuredType;
-            IEdmStructuredObject structuredObject = resourceContext.EdmObject;
+            
             object value;
             IDelta delta = structuredObject as IDelta;
             if (delta == null)
@@ -523,7 +533,14 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 if (dynamicPropertyInfo == null || structuredObject == null ||
                     !structuredObject.TryGetPropertyValue(dynamicPropertyInfo.Name, out value) || value == null)
                 {
-                    return;
+                    if (isDynamicType)
+                    {
+                        value = (structuredObject as ISelectExpandWrapper)?.ToDictionary();
+                    }
+                    else
+                    {
+                        return;
+                    }
                 }
             }
             else
@@ -565,8 +582,16 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
 
                 if (declaredPropertyNameSet.Contains(dynamicProperty.Key))
                 {
-                    throw Error.InvalidOperation(SRResources.DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName,
-                        dynamicProperty.Key, structuredType.FullTypeName());
+                    if (isDynamicType)
+                    {
+                        // $compute followed by $select, we have mix of declared and generated properties as a result we should ignore duplicates
+                        continue;
+                    }
+                    else
+                    {
+                        throw Error.InvalidOperation(SRResources.DynamicPropertyNameAlreadyUsedAsDeclaredPropertyName,
+                            dynamicProperty.Key, structuredType.FullTypeName());
+                    }
                 }
 
                 IEdmTypeReference edmTypeReference = resourceContext.SerializerContext.GetEdmType(dynamicProperty.Value,

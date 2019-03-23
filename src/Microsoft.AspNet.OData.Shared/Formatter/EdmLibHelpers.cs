@@ -128,6 +128,7 @@ namespace Microsoft.AspNet.OData.Formatter
             }
             else
             {
+                Type entityType;
                 if (testCollections)
                 {
                     Type enumerableOfT = ExtractGenericInterface(clrType, typeof(IEnumerable<>));
@@ -136,8 +137,12 @@ namespace Microsoft.AspNet.OData.Formatter
                         Type elementClrType = enumerableOfT.GetGenericArguments()[0];
 
                         // IEnumerable<SelectExpandWrapper<T>> is a collection of T.
-                        Type entityType;
                         if (IsSelectExpandWrapper(elementClrType, out entityType))
+                        {
+                            elementClrType = entityType;
+                        }
+
+                        if (IsComputeWrapper(elementClrType, out entityType))
                         {
                             elementClrType = entityType;
                         }
@@ -148,6 +153,11 @@ namespace Microsoft.AspNet.OData.Formatter
                             return new EdmCollectionType(elementType.ToEdmTypeReference(IsNullable(elementClrType)));
                         }
                     }
+                }
+
+                if (IsComputeWrapper(clrType, out entityType))
+                {
+                    clrType = entityType;
                 }
 
                 Type underlyingType = TypeHelper.GetUnderlyingTypeOrSelf(clrType);
@@ -846,6 +856,27 @@ namespace Microsoft.AspNet.OData.Formatter
             return (type != null && typeof(DynamicTypeWrapper).IsAssignableFrom(type));
         }
 
+        public static bool HasDynamicTypeWrapper(Type type)
+        {
+            return type != null && (EdmLibHelpers.IsDynamicTypeWrapper(type) || type.IsGenericType && EdmLibHelpers.IsDynamicTypeWrapper(type.GetGenericArguments()[0]));
+        }
+
+        public static bool IsAggregatedTypeWrapper(Type type)
+        {
+            Type underType;
+            if (IsSelectExpandWrapper(type, out underType))
+            {
+                return IsAggregatedTypeWrapper(underType);
+            }
+            if (IsComputeWrapper(type, out underType))
+            {
+                return IsAggregatedTypeWrapper(underType);
+            }
+
+            return IsDynamicTypeWrapper(type);
+        }
+        
+
         public static bool IsNullable(Type type)
         {
             return !TypeHelper.IsValueType(type) || Nullable.GetUnderlyingType(type) != null;
@@ -1001,7 +1032,11 @@ namespace Microsoft.AspNet.OData.Formatter
             return _coreModel.GetPrimitiveType(primitiveKind);
         }
 
-        private static bool IsSelectExpandWrapper(Type type, out Type entityType)
+        private static bool IsSelectExpandWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(SelectExpandWrapper<>), type, out entityType);
+
+        internal static bool IsComputeWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(ComputeWrapper<>), type, out entityType);
+
+        private static bool IsTypeWrapper(Type wrappedType, Type type, out Type entityType)
         {
             if (type == null)
             {
@@ -1009,14 +1044,15 @@ namespace Microsoft.AspNet.OData.Formatter
                 return false;
             }
 
-            if (TypeHelper.IsGenericType(type) && type.GetGenericTypeDefinition() == typeof(SelectExpandWrapper<>))
+            if (TypeHelper.IsGenericType(type) && type.GetGenericTypeDefinition() == wrappedType)
             {
                 entityType = type.GetGenericArguments()[0];
                 return true;
             }
 
-            return IsSelectExpandWrapper(TypeHelper.GetBaseType(type), out entityType);
+            return IsTypeWrapper(wrappedType, TypeHelper.GetBaseType(type), out entityType);
         }
+
 
         private static Type ExtractGenericInterface(Type queryType, Type interfaceType)
         {
