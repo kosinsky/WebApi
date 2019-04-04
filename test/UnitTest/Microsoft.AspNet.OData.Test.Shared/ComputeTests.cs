@@ -49,7 +49,17 @@ using Xunit;
 #endif
 namespace Microsoft.AspNet.OData.Test
 {
-    public class ComputeTests
+    public class ComputeTest : ComputeTests<SelectExpandTestCustomersController, SelectExpandTestCustomerWithCustomsController>
+    {
+
+    }
+
+    public class ComputeTestWithPaging : ComputeTests<SelectExpandTestCustomersWithPagingController, SelectExpandTestCustomerWithCustomsWithPagingController>
+    {
+
+    }
+
+    public abstract class ComputeTests<T, TC>
     {
         private const string AcceptJsonFullMetadata = "application/json;odata.metadata=full";
         private const string AcceptJson = "application/json";
@@ -60,12 +70,17 @@ namespace Microsoft.AspNet.OData.Test
         [InlineData("$compute=ID add ID as DoubleID&$filter=ID gt 0")]
         [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0")]
         [InlineData("$compute=ID add ID as DoubleID&$orderby=ID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=ID&$top=10")]
         [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID&$top=10")]
         [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID, ID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID, ID&$top=10")]
         [InlineData("$compute=ID add ID as DoubleID&$orderby=ID, DoubleID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=ID, DoubleID&$top=10")]
         [InlineData("$compute=ID add ID as DoubleID&$orderby=DoubleID desc, ID desc")]
         [InlineData("$compute=ID add ID as DoubleID&$orderby=ID desc, DoubleID desc")]
         [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0&$orderby=DoubleID")]
+        [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0&$orderby=DoubleID&$top=10")]
         public async Task DollarCompute_Works(string clause)
         {
             // Arrange
@@ -108,6 +123,8 @@ namespace Microsoft.AspNet.OData.Test
         [InlineData("$compute=ID add ID as DoubleID&$select=ID,DoubleID,TestField")]
         [InlineData("$apply=compute(ID add ID as DoubleID)&$select=ID,DoubleID,TestField")]
         [InlineData("$compute=ID add ID as DoubleID")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=Name")]
+        [InlineData("$compute=ID add ID as DoubleID&$orderby=Name desc")]
         [InlineData("$apply=compute(ID add ID as DoubleID)")]
         //[InlineData("$apply=compute(ID add ID as DoubleID2)&$compute=DoubleID2 as DoubleID")] // TODO: Support $compute after $apply
         public async Task DollarCompute_WorksWithCustomFields(string clause)
@@ -245,8 +262,8 @@ namespace Microsoft.AspNet.OData.Test
         private Task<HttpResponseMessage> GetResponse(string uri, string acceptHeader)
         {
             var controllers = new[] {
-                typeof(SelectExpandTestCustomersController),
-                typeof(SelectExpandTestCustomerWithCustomsController)
+                typeof(T),
+                typeof(TC)
             };
 
             var server = TestServerFactory.Create(controllers, (config) =>

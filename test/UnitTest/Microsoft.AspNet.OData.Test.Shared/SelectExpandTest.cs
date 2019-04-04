@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Query;
+using Microsoft.AspNet.OData.Routing;
 using Microsoft.AspNet.OData.Test.Abstraction;
 using Microsoft.AspNet.OData.Test.Common;
 using Microsoft.AspNetCore.Builder;
@@ -34,6 +35,7 @@ using System.Web.Http;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Query;
+using Microsoft.AspNet.OData.Routing;
 using Microsoft.AspNet.OData.Test.Abstraction;
 using Microsoft.AspNet.OData.Test.Common;
 using Microsoft.OData.Edm;
@@ -599,7 +601,7 @@ namespace Microsoft.AspNet.OData.Test
         {
             get
             {
-                SelectExpandTestCustomer customer = new SelectExpandTestCustomer { ID = 42, Name = "Name" };
+                SelectExpandTestCustomer customer = new SelectExpandTestCustomer { ID = 42, Name = "Name", Orders = new SelectExpandTestOrder[]{ } };
                 SelectExpandTestOrder order = new SelectExpandTestOrder { ID = 24, Amount = 100, Customer = customer };
                 SelectExpandTestOrder anotherOrder = new SelectExpandTestSpecialOrder
                 {
@@ -614,7 +616,8 @@ namespace Microsoft.AspNet.OData.Test
                     ID = 43,
                     Name = "Name",
                     Rank = 100,
-                    PreviousCustomer = customer
+                    PreviousCustomer = customer,
+                    Orders = new SelectExpandTestOrder[] { }
                 };
                 SelectExpandTestSpecialOrder specialOrder = new SelectExpandTestSpecialOrder
                 {
@@ -805,6 +808,17 @@ namespace Microsoft.AspNet.OData.Test
         }
     }
 
+
+    public class SelectExpandTestCustomersWithPagingController : ODataController
+    {
+        [EnableQuery(PageSize = 10000)]
+        [ODataRoute("SelectExpandTestCustomers")]
+        public IEnumerable<SelectExpandTestCustomer> Get()
+        {
+            return SelectExpandTestCustomer.Customers;
+        }
+    }
+
     public class SelectExpandTestCustomersAliasController : ODataController
     {
         [EnableQuery]
@@ -823,6 +837,16 @@ namespace Microsoft.AspNet.OData.Test
     public class SelectExpandTestCustomerWithCustomsController : ODataController
     {
         [EnableQuery]
+        public IEnumerable<SelectExpandTestCustomerWithCustom> Get()
+        {
+            return SelectExpandTestCustomerWithCustom.Customers;
+        }
+    }
+
+    public class SelectExpandTestCustomerWithCustomsWithPagingController : ODataController
+    {
+        [EnableQuery(PageSize = 10000)]
+        [ODataRoute("SelectExpandTestCustomerWithCustoms")]
         public IEnumerable<SelectExpandTestCustomerWithCustom> Get()
         {
             return SelectExpandTestCustomerWithCustom.Customers;

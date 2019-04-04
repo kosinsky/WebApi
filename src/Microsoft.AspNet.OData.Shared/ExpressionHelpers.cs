@@ -161,7 +161,16 @@ namespace Microsoft.AspNet.OData
         {
             // property aliasing
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, model);
-            LambdaExpression orderByLambda = GetPropertyAccessLambda(type, propertyName);
+            Type elementType = query.ElementType;
+            LambdaExpression orderByLambda;
+            if (EdmLibHelpers.IsComputeWrapper(elementType, out Type underType))
+            {
+                orderByLambda = GetInstancePropertyAccessLambda(elementType, propertyName);
+            }
+            else
+            {
+                orderByLambda = GetPropertyAccessLambda(type, propertyName);
+            }
             return OrderBy(query, orderByLambda, direction, type, alreadyOrdered);
         }
 
@@ -271,6 +280,14 @@ namespace Microsoft.AspNet.OData
         {
             ParameterExpression odataItParameter = Expression.Parameter(type, "$it");
             MemberExpression propertyAccess = Expression.Property(odataItParameter, propertyName);
+            return Expression.Lambda(propertyAccess, odataItParameter);
+        }
+
+        public static LambdaExpression GetInstancePropertyAccessLambda(Type type, string propertyName)
+        {
+            ParameterExpression odataItParameter = Expression.Parameter(type, "$it");
+            MemberExpression propertyAccess = Expression.Property(odataItParameter, "Instance");
+            propertyAccess = Expression.Property(propertyAccess, propertyName);
             return Expression.Lambda(propertyAccess, odataItParameter);
         }
 
