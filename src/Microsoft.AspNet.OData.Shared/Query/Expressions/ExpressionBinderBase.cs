@@ -746,11 +746,20 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             return result;
         }
 
+        private static HashSet<string> _skippableMethods = new HashSet<string>()
+        {
+            nameof(Queryable.AsQueryable),
+            nameof(Queryable.Where),
+            nameof(Queryable.OrderBy),
+            nameof(Queryable.OrderByDescending),
+            nameof(Queryable.ThenBy),
+            nameof(Queryable.ThenByDescending),
+        };
+
         private static Expression SkipWrappers(Expression expression)
         {
             var methodExpression = expression as MethodCallExpression;
-            if (methodExpression != null 
-                && (methodExpression.Method.Name == "AsQueryable" || methodExpression.Method.Name == "Where"))
+            if (methodExpression != null && _skippableMethods.Contains(methodExpression.Method.Name))
             {
                 return SkipWrappers(methodExpression.Arguments.FirstOrDefault());
             }
