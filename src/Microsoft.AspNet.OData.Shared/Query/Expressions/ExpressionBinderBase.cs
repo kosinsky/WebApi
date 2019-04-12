@@ -1024,9 +1024,13 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
         }
 
-        // Extract the constant that would have been encapsulated into LinqParameterContainer if this
-        // expression represents it else return null.
-        internal static object ExtractParameterizedConstant(Expression expression)
+        /// <summary>
+        /// Extract the constant that would have been encapsulated into LinqParameterContainer if this
+        /// expression represents it else return null.
+        /// </summary>
+        /// <param name="expression"></param>
+        /// <returns>Real value</returns>
+        public static object ExtractParameterizedConstant(Expression expression)
         {
             if (expression.NodeType == ExpressionType.MemberAccess)
             {
