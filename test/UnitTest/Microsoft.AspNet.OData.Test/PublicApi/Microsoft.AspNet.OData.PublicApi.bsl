@@ -3300,6 +3300,12 @@ public abstract class Microsoft.AspNet.OData.Query.Expressions.ExpressionBinderB
 	protected System.Linq.Expressions.Expression GetFlattenedPropertyExpression (string propertyPath)
 }
 
+public sealed class Microsoft.AspNet.OData.Query.Expressions.UriFunctionsBinder {
+	public static void BindUriFunctionName (string functionName, System.Reflection.MethodInfo methodInfo)
+	public static bool TryGetMethodInfo (string functionName, System.Collections.Generic.IEnumerable`1[[System.Type]] methodArgumentsType, out System.Reflection.MethodInfo& methodInfo)
+	public static bool UnbindUriFunctionName (string functionName, System.Reflection.MethodInfo methodInfo)
+}
+
 public class Microsoft.AspNet.OData.Query.Expressions.FilterBinder : ExpressionBinderBase {
 	public FilterBinder (System.IServiceProvider requestContainer)
 

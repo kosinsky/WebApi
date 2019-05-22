@@ -107,6 +107,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     return BindConstantNode(node as ConstantNode);
                 case QueryNodeKind.CollectionNavigationNode:
                     return baseElement ?? this._lambdaParameter;
+                case QueryNodeKind.CollectionResourceFunctionCall:
+                    return BindCustomMethodExpressionOrNull(node as CollectionResourceFunctionCallNode);
                 default:
                     throw Error.NotSupported(SRResources.QueryNodeBindingNotSupported, node.Kind,
                         typeof(AggregationBinder).Name);

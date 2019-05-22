@@ -1985,7 +1985,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
         }
 
-        private Expression BindCustomMethodExpressionOrNull(SingleValueFunctionCallNode node)
+        internal Expression BindCustomMethodExpressionOrNull<T>(T node) where T : QueryNode, IFunctionCallNode
         {
             Expression[] arguments = BindArguments(node.Parameters);
             IEnumerable<Type> methodArgumentsType = arguments.Select(argument => argument.Type);
@@ -1995,6 +1995,22 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             if (UriFunctionsBinder.TryGetMethodInfo(node.Name, methodArgumentsType, out methodInfo))
             {
                 return MakeFunctionCall(methodInfo, false, arguments);
+            }
+
+            if (node.Source != null)
+            {
+                // Search for custom instance method. $it should be first parameter
+                var newParameters = new List<QueryNode> { node.Source }.Concat(node.Parameters.OfType<NamedFunctionParameterNode>().Select(p => p.Value));
+                arguments = BindArguments(newParameters);
+                if (typeof(ISelectExpandWrapper).IsAssignableFrom(arguments[0].Type))
+                {
+                    arguments[0] = Expression.Property(arguments[0], "Instance");
+                }
+                methodArgumentsType = arguments.Select(argument => argument.Type);
+                if (UriFunctionsBinder.TryGetMethodInfo(node.Name, methodArgumentsType, out methodInfo))
+                {
+                    return MakeFunctionCall(methodInfo, false, arguments);
+                }
             }
 
             return null;

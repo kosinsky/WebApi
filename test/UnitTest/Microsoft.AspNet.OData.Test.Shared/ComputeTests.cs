@@ -1,68 +1,121 @@
 ﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
+using Microsoft.AspNet.OData.Builder;
+using Microsoft.AspNet.OData.Extensions;
+using Microsoft.AspNet.OData.Query;
+using Microsoft.AspNet.OData.Formatter;
+using Microsoft.AspNet.OData.Query.Expressions;
+using Microsoft.AspNet.OData.Test.Abstraction;
+using Microsoft.AspNet.OData.Test.Common;
+using Microsoft.AspNet.OData.Test.Query.Validators;
+using Microsoft.OData;
+using Microsoft.OData.Edm;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Xunit;
+using Microsoft.OData.UriParser;
+using Xunit.Abstractions;
+
 #if NETCORE
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
-using Microsoft.AspNet.OData.Builder;
-using Microsoft.AspNet.OData.Extensions;
-using Microsoft.AspNet.OData.Query;
-using Microsoft.AspNet.OData.Test.Abstraction;
-using Microsoft.AspNet.OData.Test.Common;
-using Microsoft.AspNet.OData.Test.Query.Validators;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc.ActionConstraints;
-using Microsoft.OData;
-using Microsoft.OData.Edm;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Xunit;
 #else
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using System.Web.Http;
-using Microsoft.AspNet.OData.Builder;
-using Microsoft.AspNet.OData.Extensions;
-using Microsoft.AspNet.OData.Query;
-using Microsoft.AspNet.OData.Test.Abstraction;
-using Microsoft.AspNet.OData.Test.Common;
-using Microsoft.AspNet.OData.Test.Query.Validators;
-using Microsoft.OData;
-using Microsoft.OData.Edm;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Xunit;
+
 #endif
+
 namespace Microsoft.AspNet.OData.Test
 {
+    public static class BoundFunctions
+    {
+        private static object locker = new object();
+        private static bool registred = false;
+
+        public static void RegisterFunctions(IEdmTypeReference enumRef)
+        {
+            if (!registred)
+            {
+                lock (locker)
+                {
+                    if (!registred)
+                    {
+                        RegisterFunction(typeof(BoundFunctions), nameof(BoundFunctions.GetBestOrders));
+                        RegisterFunction(typeof(SelectExpandTestCustomerWithCustom), nameof(SelectExpandTestCustomerWithCustom.GetInstanceBestOrders));
+                        RegisterFunction(typeof(SelectExpandTestCustomerWithCustom), nameof(SelectExpandTestCustomerWithCustom.GetInt));
+                        RegisterFunction(typeof(SelectExpandTestCustomerWithCustom), nameof(SelectExpandTestCustomerWithCustom.ConvertEnum));
+
+                        var s = new FunctionSignatureWithReturnType(EdmLibHelpers.GetEdmPrimitiveTypeReferenceOrNull(typeof(double?)), enumRef);
+                        ODataUriFunctions.AddCustomUriFunction("convert_enum", s, typeof(BoundFunctions).GetMethods().Where(m => m.Name == nameof(BoundFunctions.ConvertEnum)).First());
+
+                        registred = true;
+                    }
+                }
+            }
+        }
+
+        private static void RegisterFunction(Type type, string methodName)
+        {
+            var best = type.GetMethods().Where(m => m.Name == methodName).First();
+            UriFunctionsBinder.BindUriFunctionName($"Default.{methodName}", best);
+        }
+
+        public static IQueryable<SelectExpandTestOrder> GetBestOrders()
+        {
+            return Enumerable.Range(1, 1).Select(i => new SelectExpandTestOrder()
+            {
+                ID = i
+            }).AsQueryable();
+        }
+
+        public static int ConvertEnum(TestEnum e)
+        {
+            return (int)e;
+        }
+    }
+
     public class ComputeTest : ComputeTests<SelectExpandTestCustomersController, SelectExpandTestCustomerWithCustomsController>
     {
-
     }
 
     public class ComputeTestWithPaging : ComputeTests<SelectExpandTestCustomersWithPagingController, SelectExpandTestCustomerWithCustomsWithPagingController>
     {
-
     }
 
     public abstract class ComputeTests<T, TC>
     {
         private const string AcceptJsonFullMetadata = "application/json;odata.metadata=full";
         private const string AcceptJson = "application/json";
+
+        // TODO: Support expression on top of bound functions
+
+        [Theory]
+        [InlineData("SelectExpandTestCustomers", "$compute=Default.GetBestOrders() as Best")]
+        [InlineData("SelectExpandTestCustomerWithCustoms", "$compute=Default.GetInstanceBestOrders() as Best")]
+        public async Task DollarCompute_SuppportsBoundFunctions(string entitySet, string clause)
+        {
+            // Arrange
+            var uri = $"/odata/{entitySet}?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("1", result["value"][0]["Best"][0]["ID"]);
+        }
+
 
         [Theory]
         [InlineData("$compute=ID add ID as DoubleID&$select=ID,DoubleID")]
@@ -127,6 +180,10 @@ namespace Microsoft.AspNet.OData.Test
         [InlineData("$compute=ID add ID as DoubleID&$orderby=Name desc")]
         [InlineData("$apply=compute(ID add ID as DoubleID)")]
         //[InlineData("$apply=compute(ID add ID as DoubleID2)&$compute=DoubleID2 as DoubleID")] // TODO: Support $compute after $apply
+        [InlineData("$compute=Default.GetInt(p=2) as DoubleID")]
+        [InlineData("$compute=convert_enum('One') as DoubleID")]
+        [InlineData("$compute=Default.ConvertEnum(p='One') as DoubleID")]
+        [InlineData("$compute=Default.ConvertEnum(p='One') as DoubleID&$filter=Default.ConvertEnum(p='One') ge 0")]
         public async Task DollarCompute_WorksWithCustomFields(string clause)
         {
             // Arrange
@@ -263,7 +320,8 @@ namespace Microsoft.AspNet.OData.Test
         {
             var controllers = new[] {
                 typeof(T),
-                typeof(TC)
+                typeof(TC),
+                typeof(TestEnum)
             };
 
             var server = TestServerFactory.Create(controllers, (config) =>
@@ -293,12 +351,19 @@ namespace Microsoft.AspNet.OData.Test
         private IEdmModel GetModel()
         {
             ODataConventionModelBuilder builder = ODataConventionModelBuilderFactory.Create();
-            builder.EntitySet<SelectExpandTestCustomer>("SelectExpandTestCustomers");
+            var set = builder.EntitySet<SelectExpandTestCustomer>("SelectExpandTestCustomers");
             builder.EntitySet<SelectExpandTestOrder>("SelectExpandTestOrders");
-            builder.EntitySet<SelectExpandTestCustomerWithCustom>("SelectExpandTestCustomerWithCustoms");
+            var set2 = builder.EntitySet<SelectExpandTestCustomerWithCustom>("SelectExpandTestCustomerWithCustoms");
 
             builder.Ignore<SelectExpandTestSpecialCustomer>();
             builder.Ignore<SelectExpandTestSpecialOrder>();
+
+            set.EntityType.Function("GetBestOrders").ReturnsCollectionFromEntitySet<SelectExpandTestOrder>("SelectExpandTestOrders");
+            set2.EntityType.Function("GetInstanceBestOrders").ReturnsCollectionFromEntitySet<SelectExpandTestOrder>("SelectExpandTestOrders");
+            set2.EntityType.Function("GetInt").Returns<int>().Parameter<int>("p");
+            set2.EntityType.Function("ConvertEnum").Returns<int>().Parameter<TestEnum>("p");
+            builder.EnumType<TestEnum>();
+
             var model = builder.GetEdmModel();
 
             var entityType = model.EntityContainer.EntitySets().First(e => e.Name == "SelectExpandTestCustomerWithCustoms").EntityType() as EdmEntityType;
@@ -320,6 +385,7 @@ namespace Microsoft.AspNet.OData.Test
             modelBound.MaxTop = null; // Ensure that system wide settings are respected
             model.SetAnnotationValue(entityType, modelBound);
 
+            BoundFunctions.RegisterFunctions(model.SchemaElements.OfType<EdmEnumType>().First(e => e.Name == "TestEnum").ToEdmTypeReference(false));
 
             return model;
         }

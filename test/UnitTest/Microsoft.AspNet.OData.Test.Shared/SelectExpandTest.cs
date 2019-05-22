@@ -717,6 +717,30 @@ namespace Microsoft.AspNet.OData.Test
 
         [IgnoreDataMember]
         public CustomFields Custom { get; set; }
+
+        public IQueryable<SelectExpandTestOrder> GetInstanceBestOrders()
+        {
+            return Enumerable.Range(1, 2).Select(i => new SelectExpandTestOrder()
+            {
+                ID = i
+            }).AsQueryable();
+        }
+
+        public int GetInt(int p)
+        {
+            return p;
+        }
+
+        public int ConvertEnum(TestEnum e)
+        {
+            return (int)e;
+        }
+    }
+
+    public enum TestEnum
+    {
+        One,
+        Two
     }
 
     public class CustomFields
@@ -807,6 +831,8 @@ namespace Microsoft.AspNet.OData.Test
             return SelectExpandTestCustomer.Customers[0];
         }
     }
+
+
 
 
     public class SelectExpandTestCustomersWithPagingController : ODataController

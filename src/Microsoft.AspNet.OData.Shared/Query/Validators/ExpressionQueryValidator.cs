@@ -702,8 +702,11 @@ namespace Microsoft.AspNet.OData.Query.Validators
                     ValidateCollectionResourceCastNode(node as CollectionResourceCastNode, settings);
                     break;
 
-                case QueryNodeKind.CollectionFunctionCall:
                 case QueryNodeKind.CollectionResourceFunctionCall:
+                    // Do nothing here for now
+                    break;
+
+                case QueryNodeKind.CollectionFunctionCall:
                 case QueryNodeKind.CollectionOpenPropertyAccess:
                 // Unused or have unknown uses.
                 default:

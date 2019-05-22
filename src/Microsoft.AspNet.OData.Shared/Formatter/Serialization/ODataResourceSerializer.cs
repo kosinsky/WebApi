@@ -760,6 +760,20 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             // Create the serializer context for the nested and expanded item.
             ODataSerializerContext nestedWriteContext = new ODataSerializerContext(resourceContext, null, null);
 
+            if (edmType.IsCollection())
+            {
+                var elementType = edmType.AsCollection().ElementType();
+                if (elementType.IsEntity())
+                {
+                    var entitySet = resourceContext.EdmModel.EntityContainer.EntitySets()
+                                                                            .FirstOrDefault(e => e.EntityType() == edmType.AsCollection().ElementType().AsEntity().Definition);
+                    if (entitySet != null)
+                    {
+                        nestedWriteContext.NavigationSource = entitySet;
+                    }
+                }
+            }
+
             // Write object.
             ODataEdmTypeSerializer serializer = SerializerProvider.GetEdmTypeSerializer(edmType);
             if (serializer == null)
