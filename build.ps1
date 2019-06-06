@@ -63,7 +63,7 @@ $LOGDIR = $ENLISTMENT_ROOT + "\bin"
 # Default to use Visual Studio 2015
 $VS14MSBUILD=$PROGRAMFILESX86 + "\MSBuild\14.0\Bin\MSBuild.exe"
 # $VSTEST = $PROGRAMFILESX86 + "\Microsoft Visual Studio 14.0\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
-$VSTEST = $PROGRAMFILESX86 + "\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
+$VSTEST = $PROGRAMFILESX86 + "\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
 $SN = $PROGRAMFILESX86 + "\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.7.2 Tools\sn.exe"
 $SNx64 = $PROGRAMFILESX86 + "\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.7.2 Tools\x64\sn.exe"
 
@@ -73,13 +73,13 @@ $VS15VERSIONS = "Enterprise", "Professional", "Community"
 $VS15MSBUILD = $null
 ForEach ($version in $VS15VERSIONS)
 {
-    $tempMSBuildPath = ($PROGRAMFILESX86 + "\Microsoft Visual Studio\2017\{0}\MSBuild\15.0\Bin\MSBuild.exe") -f $version
+    $tempMSBuildPath = ($PROGRAMFILESX86 + "\Microsoft Visual Studio\2019\{0}\MSBuild\Current\Bin\MSBuild.exe") -f $version
     if([System.IO.File]::Exists($tempMSBuildPath))
     {
         $VS15MSBUILD = $tempMSBuildPath
         break
     }
-    $tempMSBuildPath = ($PROGRAMFILESX86 + "\Microsoft Visual Studio\Preview\{0}\MSBuild\15.0\Bin\MSBuild.exe") -f $version
+    $tempMSBuildPath = ($PROGRAMFILESX86 + "\Microsoft Visual Studio\Preview\{0}\MSBuild\Current\Bin\MSBuild.exe") -f $version
     if([System.IO.File]::Exists($tempMSBuildPath))
     {
         $VS15MSBUILD = $tempMSBuildPath
