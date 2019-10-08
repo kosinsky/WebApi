@@ -301,6 +301,30 @@ namespace Microsoft.AspNet.OData.Test
             Assert.Null(orders[0]["ID3"]);
         }
 
+        [Theory]
+        [InlineData("$expand=Orders($select=ID, ID2;$compute=ID as ID2)")]
+        [InlineData("$expand=Orders($select=ID, ID2;$compute=ID as ID2,ID as ID3)")]
+        [InlineData("$expand=Orders($select=ID, ID2;$compute='x' as ID2;$filter=ID2 ne null)")]
+        public async Task ComputeInExpand_Works_WithCustom(string clause)
+        {
+            // Arrange
+            var uri = $"/odata/SelectExpandTestCustomerWithCustoms?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            JObject result = JObject.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.NotNull(result["value"][0]["ID"]);
+            var orders = result["value"][0]["Orders"];
+            Assert.NotNull(orders[0]["ID"]);
+            Assert.NotNull(orders[0]["ID2"]);
+            Assert.Null(orders[0]["ID3"]);
+        }
+
         [Fact]
         public void CanTurnOffValidationForFilter()
         {

@@ -735,6 +735,11 @@ namespace Microsoft.AspNet.OData.Test
         {
             return (int)e;
         }
+
+        public SelectExpandTestOrder[] Orders { get; set; } = new SelectExpandTestOrder[]
+        {
+            new SelectExpandTestOrder() {}
+        };
     }
 
     public enum TestEnum
