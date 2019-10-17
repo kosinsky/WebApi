@@ -698,11 +698,15 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         {
             if (this.BaseQuery != null)
             {
-                this.HasInstancePropertyContainer = this.BaseQuery.ElementType.IsGenericType
-                    && this.BaseQuery.ElementType.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
+                this.HasInstancePropertyContainer = TypeHasInstancePropertyContainer(this.BaseQuery.ElementType);
 
                 this.FlattenedPropertyContainer = this.FlattenedPropertyContainer ?? GetFlattenedProperties(BaseQuery, this.HasInstancePropertyContainer, source);
             }
+        }
+
+        private static bool TypeHasInstancePropertyContainer(Type source)
+        {
+            return source.IsGenericType && source.GetGenericTypeDefinition() == typeof(ComputeWrapper<>);
         }
 
         internal static IDictionary<string, Expression> GetFlattenedProperties(IQueryable baseQuery, bool hasInstancePropertyContainer, ParameterExpression source)
@@ -1187,7 +1191,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             {
                 Expression cleanSource = RemoveInnerNullPropagation(source);
                 Expression propertyAccessExpression = null;
-                propertyAccessExpression = GetFlattenedPropertyExpression(propertyPath) ?? Expression.Property(cleanSource, propertyName);
+                propertyAccessExpression = GetFlattenedPropertyExpression(propertyPath) ?? ExpressionBinderBase.GetPropertyExpression(cleanSource, propertyName, propertyPath);
+                
 
                 // source.property => source == null ? null : [CastToNullable]RemoveInnerNullPropagation(source).property
                 // Notice that we are checking if source is null already. so we can safely remove any null checks when doing source.Property
@@ -1201,9 +1206,22 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
             else
             {
-                return GetFlattenedPropertyExpression(propertyPath)
-                    ?? ConvertNonStandardPrimitives(ExpressionBinderBase.GetPropertyExpression(source, (this.HasInstancePropertyContainer && !propertyPath.Contains("\\") ? "Instance\\" : String.Empty) + propertyName));
+                return GetFlattenedPropertyExpression(propertyPath) ?? ConvertNonStandardPrimitives(GetPropertyExpression(source, propertyName, propertyPath));
             }
+        }
+
+        internal static Expression GetPropertyExpression(Expression source, string propertyName, string propertyPath)
+        {
+
+            if (TypeHasInstancePropertyContainer(source.Type) && (propertyPath == null || !propertyPath.Contains("Instance\\")))
+            {
+                propertyPath = $"Instance\\{propertyName}";
+            }
+            else
+            {
+                propertyPath = propertyName;
+            }
+            return GetPropertyExpression(source, propertyPath);
         }
 
         internal static Expression GetPropertyExpression(Expression source, string propertyPath)

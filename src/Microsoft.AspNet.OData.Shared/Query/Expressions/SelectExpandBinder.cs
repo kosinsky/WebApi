@@ -247,21 +247,13 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
             propertyPath = propertyPath ?? propertyName;
 
-
-
             var result = GetFlattenedPropertyExpression(propertyPath);
             if (result != null)
             {
                 return result;
             }
 
-            propertyPath = propertyName;
-            if (this.HasInstancePropertyContainer && source.Type.GetProperty("Instance") != null)
-            {
-                propertyPath = $"Instance\\{propertyName}";
-            }
-            return ExpressionBinderBase.GetPropertyExpression(source, propertyPath);
-
+            return ExpressionBinderBase.GetPropertyExpression(source, propertyName, propertyPath);
         }
 
         [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Class coupling acceptable")]

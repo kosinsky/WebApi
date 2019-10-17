@@ -134,6 +134,7 @@ namespace Microsoft.AspNet.OData.Test
         [InlineData("$compute=ID add ID as DoubleID&$orderby=ID desc, DoubleID desc")]
         [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0&$orderby=DoubleID")]
         [InlineData("$compute=ID add ID as DoubleID&$filter=DoubleID gt 0&$orderby=DoubleID&$top=10")]
+        [InlineData("$compute=ID add ID as DoubleID&$select=ID,DoubleID&$filter=Orders/any(o:o/Amount gt 0)")]
         public async Task DollarCompute_Works(string clause)
         {
             // Arrange
