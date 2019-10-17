@@ -375,7 +375,10 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                         {
                             nullablePropertyValue = query.Expression;
                         }
-
+                    }
+                    else
+                    {
+                        throw new ODataException(Error.Format(SRResources.AggregationNotSupportedForSingleProperty, property.Name));
                     }
                 }
 

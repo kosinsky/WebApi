@@ -812,7 +812,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             // Act & Assert
             ExceptionAssert.Throws<ODataException>(
                 () => _binder.CreatePropertyValueExpressionWithClauses(_model.Order, customerProperty, order, filterClause: null, applyClause: applyClause, computeClause: null),
-                "$apply not supported for single property Customer");
+                "$apply/$compute not supported for single property Customer");
         }
 
         [Fact]

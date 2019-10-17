@@ -302,6 +302,24 @@ namespace Microsoft.AspNet.OData.Test
         }
 
         [Theory]
+        [InlineData("$expand=PreviousCustomer($select=ID, ID2;$compute=ID as ID2)")]
+        public async Task ComputeInSingleExpand_Throws(string clause)
+        {
+            // Arrange
+            var uri = $"/odata/SelectExpandTestCustomers?{clause}";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(uri, AcceptJsonFullMetadata);
+
+            // Assert
+            Assert.NotNull(response);
+            string result = await response.Content.ReadAsStringAsync();
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+            Assert.Contains("$apply/$compute not supported for single property PreviousCustomer", result);
+        }
+
+        [Theory]
         [InlineData("$expand=Orders($select=ID, ID2;$compute=ID as ID2)")]
         [InlineData("$expand=Orders($select=ID, ID2;$compute=ID as ID2,ID as ID3)")]
         [InlineData("$expand=Orders($select=ID, ID2;$compute='x' as ID2;$filter=ID2 ne null)")]

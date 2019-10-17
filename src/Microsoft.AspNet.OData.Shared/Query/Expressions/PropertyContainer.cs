@@ -128,7 +128,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             for (int i = 0; i < expressions.Count; i++)
             {
-                memberBindings.Add(Expression.Bind(namedPropertyType.GetProperty("Next" + i), expressions[i]));
+                memberBindings.Add(Expression.Bind(namedPropertyType.GetProperty($"Next{i}"), expressions[i]));
             }
 
             if (property.NullCheck != null)

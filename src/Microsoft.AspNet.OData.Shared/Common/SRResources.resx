@@ -889,6 +889,6 @@
     <value>{0} type of aggregation is not supported.</value>
   </data>
   <data name="AggregationNotSupportedForSingleProperty" xml:space="preserve">
-    <value>$apply not supported for single property {0}</value>
+    <value>$apply/$compute not supported for single property {0}</value>
   </data>
 </root>
