@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -72,6 +73,27 @@ namespace Microsoft.AspNet.OData.Query
                 if (_applyClause == null)
                 {
                     _applyClause = _queryOptionParser.ParseApply();
+                    if (_queryOptionParser.ParameterAliasNodes.Any())
+                    {
+                        List<TransformationNode> transformations = new List<TransformationNode>();
+                        foreach (var transformation in _applyClause.Transformations)
+                        {
+                            if (transformation is FilterTransformationNode filterTransformation)
+                            {
+                                var filterClause = filterTransformation.FilterClause;
+                                SingleValueNode filterExpression = filterClause.Expression.Accept(
+                                    new ParameterAliasNodeTranslator(_queryOptionParser.ParameterAliasNodes)) as SingleValueNode;
+                                filterExpression = filterExpression ?? new ConstantNode(null);
+                                filterClause = new FilterClause(filterExpression, filterClause.RangeVariable);
+                                transformations.Add(new FilterTransformationNode(filterClause));
+                            }
+                            else
+                            {
+                                transformations.Add(transformation);
+                            }
+                        }
+                        _applyClause = new ApplyClause(transformations);
+                    }
                 }
 
                 return _applyClause;

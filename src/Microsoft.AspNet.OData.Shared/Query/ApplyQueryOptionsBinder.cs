@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.AspNet.OData.Adapters;
@@ -23,7 +24,6 @@ namespace Microsoft.AspNet.OData.Query
         ODataQueryContext _context;
         ODataQuerySettings _settings;
         IWebApiAssembliesResolver _assembliesResolver;
-        
 
         public ApplyQueryOptionsBinder(ODataQueryContext context, ODataQuerySettings settings, Type clrType)
         {

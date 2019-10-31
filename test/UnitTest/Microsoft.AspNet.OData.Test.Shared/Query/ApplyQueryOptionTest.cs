@@ -650,6 +650,20 @@ namespace Microsoft.AspNet.OData.Test.Query
                             new Dictionary<string, object> {{"Name", "Highest" },  {"TotalId", 2}, { "AvgPrice", 2.5M},},
                         }
                     },
+                    {
+                        "$apply=filter(Address/City eq @city)/groupby((Address/City))&@city='redmond'",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> {{"Address/City", "redmond"}},
+                        }
+                    },
+                    {
+                        "$apply=groupby((Address/City))&$filter=Address/City eq @city&@city='redmond'",
+                        new List<Dictionary<string, object>>
+                        {
+                            new Dictionary<string, object> {{"Address/City", "redmond"}},
+                        }
+                    },
                     //{
                     //    "$apply=groupby((Name))&$top=1",
                     //    new List<Dictionary<string, object>>
