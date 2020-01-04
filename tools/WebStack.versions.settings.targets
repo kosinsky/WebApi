@@ -4,8 +4,8 @@
   <!-- Set the version number: major, minor, build and release (i.e. alpha, beta or blank for RTM)-->
   <PropertyGroup>
     <VersionMajor Condition="'$(VersionMajor)' == ''">7</VersionMajor>
-    <VersionMinor Condition="'$(VersionMinor)' == ''">0</VersionMinor>
-    <VersionBuild Condition="'$(VersionBuild)' == ''">22</VersionBuild>
+    <VersionMinor Condition="'$(VersionMinor)' == ''">3</VersionMinor>
+    <VersionBuild Condition="'$(VersionBuild)' == ''">0</VersionBuild>
     <VersionRelease Condition="'$(VersionRelease)' == ''"></VersionRelease>
   </PropertyGroup>
 
@@ -15,7 +15,8 @@
     <AspNetCorePackageDependency>[2.0.0, 3.0.0)</AspNetCorePackageDependency>
     <DependencyInjection1PackageDependency>1.0.0</DependencyInjection1PackageDependency>
     <DependencyInjection2PackageDependency>2.0.0</DependencyInjection2PackageDependency>
-    <ODataLibPackageDependency>[7.5.0, 8.0.0)</ODataLibPackageDependency>
+    <ODataLibPackageDependency>[7.6.1, 8.0.0)</ODataLibPackageDependency>
+    <NewtonsoftJsonPackageDependency>10.0.3</NewtonsoftJsonPackageDependency>
   </PropertyGroup>
 
   <!--
@@ -24,7 +25,7 @@
   -->
   <PropertyGroup>
     <VersionStartYear Condition="'$(VersionStartYear)' == ''">2017</VersionStartYear>
-    <VersionDateCode>$([System.Convert]::ToInt16('$([MSBuild]::Add(1, $([MSBuild]::Subtract($([System.DateTime]::Now.Year), $(VersionStartYear)))))$([System.DateTime]::Now.ToString("MMdd"))'))</VersionDateCode>
+    <VersionDateCode>$([System.Convert]::ToInt32('$([MSBuild]::Add(1, $([MSBuild]::Subtract($([System.DateTime]::Now.Year), $(VersionStartYear)))))$([System.DateTime]::Now.ToString("MMdd"))'))</VersionDateCode>
     <VersionRevision Condition="'$(VersionRevision)' == '' OR '$(VersionRevision)' == '0'">$([System.Convert]::ToString($(VersionDateCode)))</VersionRevision>
   </PropertyGroup>
 
@@ -61,7 +62,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <AssemblyVersion>$(VersionMajor).$(VersionMinor).$(VersionBuild).$(VersionRevision)</AssemblyVersion>
+    <AssemblyVersion>$(VersionMajor).$(VersionMinor).$(VersionBuild)</AssemblyVersion>
     <AssemblyFileVersion>$(VersionMajor).$(VersionMinor).$(VersionBuild).$(VersionRevision)</AssemblyFileVersion>
     <AssemblyInfoVersion>$(AssemblyFileVersion)</AssemblyInfoVersion>
     <AssemblyVersionFile>$(IntermediateOutputPath)$(MSBuildProjectName).version.cs</AssemblyVersionFile>
@@ -116,7 +117,7 @@
       <VersionMajor>$([System.Convert]::ToInt16('$(VersionMajor)'))</VersionMajor>
       <VersionMinor>$([System.Convert]::ToInt16('$(VersionMinor)'))</VersionMinor>
       <VersionBuild>$([System.Convert]::ToUInt16('$(VersionBuild)'))</VersionBuild>
-      <VersionRevision>$([System.Convert]::ToInt16('$(VersionRevision)'))</VersionRevision>
+      <VersionRevision>$([System.Convert]::ToInt32('$(VersionRevision)'))</VersionRevision>
     </PropertyGroup>
   </Target>
 

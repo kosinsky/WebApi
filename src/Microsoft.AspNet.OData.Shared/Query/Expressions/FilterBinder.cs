@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
+using Microsoft.AspNet.OData.Formatter.Deserialization;
 using Microsoft.AspNet.OData.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData;
@@ -207,6 +208,43 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
         }
 
+        private Expression BindCountNode(CountNode node)
+        {
+            Expression source = Bind(node.Source);
+            Expression countExpression = Expression.Constant(null, typeof(long?));
+            Type elementType;
+            if (!TypeHelper.IsCollection(source.Type, out elementType))
+            {
+                return countExpression;
+            }
+
+            MethodInfo countMethod;
+            if (typeof(IQueryable).IsAssignableFrom(source.Type))
+            {
+                countMethod = ExpressionHelperMethods.QueryableCountGeneric.MakeGenericMethod(elementType);
+            }
+            else
+            {
+                countMethod = ExpressionHelperMethods.EnumerableCountGeneric.MakeGenericMethod(elementType);
+            }
+
+            // call Count() method. 
+            countExpression = Expression.Call(null, countMethod, new[] { source });
+
+            if (QuerySettings.HandleNullPropagation == HandleNullPropagationOption.True)
+            {
+                // source == null ? null : countExpression 
+                return Expression.Condition(
+                       test: Expression.Equal(source, Expression.Constant(null)),
+                       ifTrue: Expression.Constant(null, typeof(long?)),
+                       ifFalse: ExpressionHelpers.ToNullable(countExpression));
+            }
+            else
+            {
+                return countExpression;
+            }
+        }
+
         /// <summary>
         /// Binds a <see cref="SingleValueOpenPropertyAccessNode"/> to create a LINQ <see cref="Expression"/> that
         /// represents the semantics of the <see cref="SingleValueOpenPropertyAccessNode"/>.
@@ -366,7 +404,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             // so using a foreach loop and doing an implicit cast from object to the CLR type of ItemType.
             foreach (ConstantNode item in node.Collection)
             {
-                castedList.Add(item.Value);
+                object member = constantType.IsEnum ? (EnumDeserializationHelpers.ConvertEnumValue(item.Value, constantType)) : item.Value;
+                castedList.Add(member);
             }
 
             return Expression.Constant(castedList);
@@ -762,6 +801,9 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
                 case QueryNodeKind.In:
                     return BindInNode(node as InNode);
+
+                case QueryNodeKind.Count:
+                    return BindCountNode(node as CountNode);
 
                 case QueryNodeKind.NamedFunctionParameter:
                 case QueryNodeKind.ParameterAlias:

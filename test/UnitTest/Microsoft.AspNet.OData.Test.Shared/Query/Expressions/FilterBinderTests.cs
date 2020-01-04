@@ -17,6 +17,7 @@ using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Query.Expressions;
 using Microsoft.AspNet.OData.Test.Abstraction;
 using Microsoft.AspNet.OData.Test.Common;
+using Microsoft.AspNet.OData.Test.Common.Types;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -595,6 +596,18 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                     }
                 },
             new { WithNullPropagation = false, WithoutNullPropagation = false });
+        }
+
+        [Theory]
+        [InlineData("Category/QueryableProducts/any(P: false)", "$it => False")]
+        [InlineData("Category/QueryableProducts/any(P: false and P/ProductName eq 'Snacks')", "$it => $it.Category.QueryableProducts.Any(P => (False AndAlso (P.ProductName == \"Snacks\")))")]
+        [InlineData("Category/QueryableProducts/any(P: true)", "$it => $it.Category.QueryableProducts.Any()")]
+        public void AnyOnNavigation_Contradiction(string filter, string expression)
+        {
+            var filters = VerifyQueryDeserialization(
+               filter,
+               expression,
+               NotTesting);
         }
 
         [Fact]
@@ -1650,6 +1663,20 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 "LongProp lt -987654321L and LongProp gt -123456789l",
                 "$it => (($it.LongProp < -987654321) AndAlso ($it.LongProp > -123456789))");
         }
+        
+        [Fact]
+        public void EnumInExpression()
+        {
+            var result = VerifyQueryDeserialization<DataTypes>(
+                "SimpleEnumProp in ('First', 'Second')",
+                "$it => System.Collections.Generic.List`1[Microsoft.AspNet.OData.Test.Common.Types.SimpleEnum].Contains($it.SimpleEnumProp)");
+            Expression<Func<DataTypes, bool>> expression = result.WithNullPropagation;
+
+            // expression tree is guaranteed by expression string above
+            var values = (IList<SimpleEnum>)((ConstantExpression)((MethodCallExpression) expression.Body).Arguments[0]).Value;
+            Assert.Equal(new[] {SimpleEnum.First, SimpleEnum.Second}, values);
+        }
+        
 
         [Fact]
         public void RealLiteralSuffixes()
@@ -2276,7 +2303,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         {
             // Arrange
             var expectedMessage = string.Format(
-                "Instance property '{0}' is not defined for type '{1}'",
+                "No property named {0} is defined in {1} or its base types.",
                 propertyName,
                 typeof(object).FullName);
 
@@ -2292,7 +2319,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         {
             // Arrange
             var expectedMessage =
-                "Instance property 'DerivedCategoryName' is not defined for type 'System.Object'";
+                "No property named DerivedCategoryName is defined in System.Object or its base types.";
 
             // Act & Assert
             // System.Linq provides more information in the exception on NetCore than NetFx, search for partial match.
@@ -2325,8 +2352,13 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         public void Isof_WithNullTypeName_ThrowsArgumentNullException(string filter)
         {
             // Arrange & Act & Assert
+#if NETCOREAPP3_1
+            ExceptionAssert.Throws<ArgumentNullException>(() => Bind<Product>(filter),
+                "Value cannot be null. (Parameter 'qualifiedName')");
+#else
             ExceptionAssert.Throws<ArgumentNullException>(() => Bind<Product>(filter),
                 "Value cannot be null.\r\nParameter name: qualifiedName");
+#endif
         }
 
         [Theory]

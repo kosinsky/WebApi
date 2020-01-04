@@ -1265,6 +1265,16 @@ namespace Microsoft.AspNet.OData.Test.Query
                 {
                     new Order { OrderId = 13, Customer = c },
                 };
+                c.Company = new Company()
+                {
+                    CompanyName = "company2",
+                    CEO = new Employee()
+                    {
+                        EmployeeName = "john",
+                        BaseSalary = 20,
+                        HomeAddress = new Address { City = "hobart" }
+                    }
+                };
                 customerList.Add(c);
 
                 c = new Customer
@@ -1273,6 +1283,15 @@ namespace Microsoft.AspNet.OData.Test.Query
                     Name = "Lowest",
                     Aliases = new List<string> { "alias34", "alias4" },
                     StartDate = new DateTimeOffset(new DateTime(2016, 05, 07, 2, 3, 4))
+                };
+                c.Company = new Company()
+                {
+                    CompanyName = "company3",
+                    CEO = new Employee()
+                    {
+                        EmployeeName = "alex",
+                        HomeAddress = new Address { City = "redmond", State = "WA" }
+                    }
                 };
                 c.Company = new Company()
                 {
@@ -1315,7 +1334,6 @@ namespace Microsoft.AspNet.OData.Test.Query
                     "$apply=groupby((Company/CEO/EmployeeName))/groupby((Company/CEO/BaseSalary))",
                     "$apply=groupby((Company/CEO/EmployeeName))/filter(Company/CEO/BaseSalary eq 20)",
                     "$apply=groupby((Company/CEO/EmployeeName))&$filter=Company/CEO/BaseSalary eq 20",
-                    "$apply=groupby((Company/CEO/EmployeeName))/groupby((Company/CEO/BaseSalary))"
                 };
             }
         }

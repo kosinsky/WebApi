@@ -292,7 +292,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             Assert.Equal("Customer0", value[2]["Name"].ToObject<string>());
 
             var customerZeroOrders = (JArray)value[0]["Orders"];
-            Assert.Equal(1, customerZeroOrders.Count);
+            Assert.Single(customerZeroOrders);
             Assert.Equal(75, customerZeroOrders[0]["Price"].ToObject<int>());
 
             var customerOneOrders = (JArray)value[1]["Orders"];
@@ -356,7 +356,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             Assert.Equal("Customer0", value[0]["Name"].ToObject<string>());
             Assert.Equal("Customer1", value[1]["Name"].ToObject<string>());
 
-            Assert.Equal(0, ((JArray)value[0]["Orders"]).Count);
+            Assert.Single(((JArray)value[0]["Orders"]));
 
             var customerOneOrders = value[1]["Orders"];
             var customerOnePrice = customerOneOrders.First["TotalPrice"].ToObject<int>();

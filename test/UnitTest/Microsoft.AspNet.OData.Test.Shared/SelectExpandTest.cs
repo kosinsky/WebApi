@@ -420,6 +420,22 @@ namespace Microsoft.AspNet.OData.Test
             Assert.Equal(5, result["value"].Count());
         }
 
+        [Fact]
+        public async Task SelectExpand_Works_ForSelectCaseSensitivityProperties()
+        {
+            // Arrange
+            const string URI = "/odata2/Players?$select=Title,TITLE";
+
+            // Act
+            HttpResponseMessage response = await GetResponse(URI, AcceptJsonFullMetadata);
+            string responseString = await response.Content.ReadAsStringAsync();
+
+            // Assert
+            Assert.True(response.IsSuccessStatusCode);
+            JObject result = JObject.Parse(responseString);
+            Assert.Equal(5, result["value"].Count());
+        }
+
         [Theory]
         [InlineData("Default.Container.*")]
         [InlineData("Container.*")]
@@ -962,7 +978,9 @@ namespace Microsoft.AspNet.OData.Test
                         Id = i,
                         Name = "PayerName " + i,
                         Category = "Category " + i,
-                        Address = "Address " + i
+                        Address = "Address " + i,
+                        Title = "Title" + i,
+                        TITLE = "TITLE" + i
                     }).ToList();
 
         [EnableQuery]
@@ -978,5 +996,7 @@ namespace Microsoft.AspNet.OData.Test
         public string Name { get; set; }
         public string Category { get; set; }
         public string Address { get; set; }
+        public string Title { get; set; }
+        public string TITLE { get; set; }
     }
 }

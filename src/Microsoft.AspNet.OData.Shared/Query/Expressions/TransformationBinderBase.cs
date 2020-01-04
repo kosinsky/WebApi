@@ -25,8 +25,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         }
 
         protected Type _elementType;
-        private bool _linqToObjectMode = false;
         protected ParameterExpression _lambdaParameter;
+        protected bool _classicEF = false;
 
         /// <summary>
         /// Gets CLR type returned from the query.
@@ -36,20 +36,35 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             get; protected set;
         }
 
+        /// <summary>
+        /// Checks IQueryable provider for need of EF6 oprimization
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns>True if EF6 optimization are needed.</returns>
+        internal virtual bool IsClassicEF(IQueryable query)
+        {
+            var providerNS = query.Provider.GetType().Namespace;
+            return (providerNS == HandleNullPropagationOptionHelper.ObjectContextQueryProviderNamespaceEF6
+                || providerNS == HandleNullPropagationOptionHelper.EntityFrameworkQueryProviderNamespace);
+        }
+
         protected void PreprocessQuery(IQueryable query)
         {
             Contract.Assert(query != null);
 
-            this._linqToObjectMode = query.Provider.GetType().Namespace == HandleNullPropagationOptionHelper.Linq2ObjectsQueryProviderNamespace;
+            this._classicEF = IsClassicEF(query);
             this.BaseQuery = query;
             EnsureFlattenedPropertyContainer(this._lambdaParameter);
         }
 
         protected Expression WrapConvert(Expression expression)
         {
-            return this._linqToObjectMode
-                ? Expression.Convert(expression, typeof(object))
-                : expression;
+            // Expression that we are generating looks like Value = $it.PropertyName where Value is defined as object and PropertyName can be value 
+            // Proper .NET expression must look like as Value = (object) $it.PropertyName for proper boxing or AccessViolationException will be thrown
+            // Cast to object isn't translatable by EF6 as a result skipping (object) in that case
+            return (this._classicEF || !expression.Type.IsValueType)
+                ? expression
+                : Expression.Convert(expression, typeof(object));
         }
 
         public override Expression Bind(QueryNode node, Expression baseElement = null)

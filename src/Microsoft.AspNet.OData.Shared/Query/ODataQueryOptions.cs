@@ -31,7 +31,8 @@ namespace Microsoft.AspNet.OData.Query
     [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Relies on many ODataLib classes.")]
     public partial class ODataQueryOptions
     {
-        private static readonly MethodInfo _limitResultsGenericMethod = typeof(ODataQueryOptions).GetMethod("LimitResults");
+        private static readonly MethodInfo _limitResultsGenericMethod = typeof(ODataQueryOptions).GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Single(mi => mi.Name == "LimitResults" && mi.ContainsGenericParameters && mi.GetParameters().Length == 4);
 
         private ODataQueryOptionParser _queryOptionParser;
 
@@ -46,6 +47,8 @@ namespace Microsoft.AspNet.OData.Query
         private bool _etagIfNoneMatchChecked;
 
         private bool _enableNoDollarSignQueryOptions = false;
+
+        private OrderByQueryOption _stableOrderBy;
 
         private static readonly Func<TransformationNode, bool> _aggregateTransformPredicate = t => t.Kind == TransformationNodeKind.Aggregate || t.Kind == TransformationNodeKind.GroupBy;
 
@@ -124,6 +127,11 @@ namespace Microsoft.AspNet.OData.Query
         /// Gets the <see cref="SkipQueryOption"/>.
         /// </summary>
         public SkipQueryOption Skip { get; private set; }
+
+        /// <summary>
+        /// Gets the <see cref="SkipTokenQueryOption"/>.
+        /// </summary>
+        public SkipTokenQueryOption SkipToken { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="TopQueryOption"/>.
@@ -330,8 +338,6 @@ namespace Microsoft.AspNet.OData.Query
 
             // First apply $apply
             // Section 3.15 of the spec http://docs.oasis-open.org/odata/odata-data-aggregation-ext/v4.0/cs01/odata-data-aggregation-ext-v4.0-cs01.html#_Toc378326311
-            ApplyClause apply = null;
-
             if (IsAvailableODataQueryOption(Apply, AllowedQueryOptions.Apply))
             {
                 result = Apply.ApplyTo(result, querySettings);
@@ -339,10 +345,9 @@ namespace Microsoft.AspNet.OData.Query
                 if (Apply.SelectExpandClause != null)
                 {
                     // In case of just expand in $apply falling back to $expand serialization
-                    InternalRequest.Context.SelectExpandClause = Apply.SelectExpandClause;
+                    InternalRequest.Context.ProcessedSelectExpandClause = Apply.SelectExpandClause;
                 }
                 this.Context.ElementClrType = Apply.ResultClrType;
-                apply = Apply.ApplyClause;
             }
 
             // Apply compute
@@ -386,22 +391,13 @@ namespace Microsoft.AspNet.OData.Query
                  IsAvailableODataQueryOption(Top, AllowedQueryOptions.Top) ||
                  querySettings.PageSize.HasValue))
             {
-                // If we have only aggregate() transformation result will be single record
-                // in that case we don't need to force any sorting
-                if (!IsAggregatedToSingleResult(apply))
-                {
-                    // If there is no OrderBy present, we manufacture a default.
-                    // If an OrderBy is already present, we add any missing
-                    // properties necessary to make a stable sort.
-                    // Instead of failing early here if we cannot generate the OrderBy,
-                    // let the IQueryable backend fail (if it has to).
+                // If there is no OrderBy present, we manufacture a default.
+                // If an OrderBy is already present, we add any missing
+                // properties necessary to make a stable sort.
+                // Instead of failing early here if we cannot generate the OrderBy,
+                // let the IQueryable backend fail (if it has to).
 
-                    List<string> applySortOptions = GetApplySortOptions(apply);
-
-                    orderBy = orderBy == null
-                                ? GenerateDefaultOrderBy(Context, applySortOptions)
-                                : EnsureStableSortOrderBy(orderBy, Context, applySortOptions);
-                }
+                orderBy = GenerateStableOrder();
             }
 
             if (IsAvailableODataQueryOption(orderBy, AllowedQueryOptions.OrderBy))
@@ -409,9 +405,13 @@ namespace Microsoft.AspNet.OData.Query
                 result = orderBy.ApplyTo(result, querySettings);
             }
 
+            if (IsAvailableODataQueryOption(SkipToken, AllowedQueryOptions.SkipToken))
+            {
+                result = SkipToken.ApplyTo(result, querySettings, this);
+            }
 
 
-            if (!IsAggregated(apply))
+            if (!IsAggregated(Apply?.ApplyClause))
             {
                 AddAutoSelectExpandProperties();
             }
@@ -434,6 +434,14 @@ namespace Microsoft.AspNet.OData.Query
             {
                 result = Top.ApplyTo(result, querySettings);
             }
+
+            result = ApplyPaging(result, querySettings);
+
+            return result;
+        }
+
+        internal IQueryable ApplyPaging(IQueryable result, ODataQuerySettings querySettings)
+        {
             if (!querySettings.PostponePaging)
             {
                 int pageSize = -1;
@@ -446,20 +454,55 @@ namespace Microsoft.AspNet.OData.Query
                     pageSize = querySettings.ModelBoundPageSize.Value;
                 }
 
+                int preferredPageSize = -1;
+                if (RequestPreferenceHelpers.RequestPrefersMaxPageSize(InternalRequest.Headers, out preferredPageSize))
+                {
+                    pageSize = Math.Min(pageSize, preferredPageSize);
+                }
+
                 if (pageSize > 0)
                 {
                     bool resultsLimited;
-                    result = LimitResults(result, pageSize, out resultsLimited);
-                    if (resultsLimited && InternalRequest.RequestUri != null && InternalRequest.RequestUri.IsAbsoluteUri &&
+                    result = LimitResults(result, pageSize, querySettings.EnableConstantParameterization, out resultsLimited);
+                    if (resultsLimited && InternalRequest.RequestUri != null &&
                         InternalRequest.Context.NextLink == null)
                     {
-                        Uri nextPageLink = InternalRequest.GetNextPageLink(pageSize);
-                        InternalRequest.Context.NextLink = nextPageLink;
+                        InternalRequest.Context.PageSize = pageSize;
                     }
                 }
             }
+            InternalRequest.Context.QueryOptions = this;
 
             return result;
+        }
+
+        /// <summary>
+        /// Generates the Stable OrderBy query option based on the existing OrderBy and other query options. 
+        /// </summary>
+        /// <returns>An order by query option that ensures stable ordering of the results.</returns>
+        public virtual OrderByQueryOption GenerateStableOrder()
+        {
+            if (_stableOrderBy != null)
+            {
+                return _stableOrderBy;
+            }
+
+
+            ApplyClause apply = Apply != null ? Apply.ApplyClause : null;
+            // If we have only aggregate() transformation result will be single record
+            // in that case we don't need to force any sorting
+            if (!IsAggregatedToSingleResult(apply))
+            {
+                List<string> applySortOptions = GetApplySortOptions(apply);
+
+                _stableOrderBy = OrderBy == null
+                    ? GenerateDefaultOrderBy(Context, applySortOptions)
+                    : EnsureStableSortOrderBy(OrderBy, Context, applySortOptions);
+
+                return _stableOrderBy;
+            }
+
+            return null;
         }
 
         private static bool IsAggregated(ApplyClause apply)
@@ -612,13 +655,10 @@ namespace Microsoft.AspNet.OData.Query
                     ? entityType.Key()
                     : entityType
                         .StructuralProperties()
-                        .Where(property => property.Type.IsPrimitive() && !property.Type.IsStream());
+                        .Where(property => property.Type.IsPrimitive() && !property.Type.IsStream())
+                        .OrderBy(p => p.Name);
 
-            return properties.OrderBy(o =>
-            {
-                var value = o.DeclaringType as PrimitivePropertyConfiguration;
-                return value == null ? 0 : value.Order;
-            }).ThenBy(o => o.Name).ToList();
+            return properties.ToList();
         }
 
         // Generates the OrderByQueryOption to use by default for $skip or $top
@@ -706,12 +746,12 @@ namespace Microsoft.AspNet.OData.Query
             return orderBy;
         }
 
-        internal static IQueryable LimitResults(IQueryable queryable, int limit, out bool resultsLimited)
+        internal static IQueryable LimitResults(IQueryable queryable, int limit, bool parameterize, out bool resultsLimited)
         {
             MethodInfo genericMethod = _limitResultsGenericMethod.MakeGenericMethod(queryable.ElementType);
-            object[] args = new object[] { queryable, limit, null };
+            object[] args = new object[] { queryable, limit, parameterize, null };
             IQueryable results = genericMethod.Invoke(null, args) as IQueryable;
-            resultsLimited = (bool)args[2];
+            resultsLimited = (bool)args[3];
             return results;
         }
 
@@ -726,7 +766,22 @@ namespace Microsoft.AspNet.OData.Query
         [SuppressMessage("Microsoft.Design", "CA1021:AvoidOutParameters", Justification = "Not intended for public use, only public to enable invocation without security issues.")]
         public static IQueryable<T> LimitResults<T>(IQueryable<T> queryable, int limit, out bool resultsLimited)
         {
-            TruncatedCollection<T> truncatedCollection = new TruncatedCollection<T>(queryable, limit);
+            return LimitResults<T>(queryable, limit, false, out resultsLimited);
+        }
+
+        /// <summary>
+        /// Limits the query results to a maximum number of results.
+        /// </summary>
+        /// <typeparam name="T">The entity CLR type</typeparam>
+        /// <param name="queryable">The queryable to limit.</param>
+        /// <param name="limit">The query result limit.</param>
+        /// <param name="parameterize">Flag indicating whether constants should be parameterized</param>
+        /// <param name="resultsLimited"><c>true</c> if the query results were limited; <c>false</c> otherwise</param>
+        /// <returns>The limited query results.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1021:AvoidOutParameters", Justification = "Not intended for public use, only public to enable invocation without security issues.")]
+        public static IQueryable<T> LimitResults<T>(IQueryable<T> queryable, int limit, bool parameterize, out bool resultsLimited)
+        {
+            TruncatedCollection<T> truncatedCollection = new TruncatedCollection<T>(queryable, limit, parameterize);
             resultsLimited = truncatedCollection.IsTruncated;
             return truncatedCollection.AsQueryable();
         }
@@ -765,7 +820,9 @@ namespace Microsoft.AspNet.OData.Query
                     Context.Model,
                     Context.ElementType,
                     Context.NavigationSource,
-                    queryParameters);
+                    queryParameters,
+                    Context.RequestContainer
+                    );
                 if (Apply != null)
                 {
                     _queryOptionParser.ParseApply();
@@ -871,7 +928,7 @@ namespace Microsoft.AspNet.OData.Query
 
                     if (Apply != null)
                     {
-                        string computeAliases = string.Join(",", Apply.ApplyClause.Transformations.OfType<ComputeTransformationNode>().SelectMany(c=>c.Expressions).Select(c => c.Alias));
+                        string computeAliases = string.Join(",", Apply.ApplyClause.Transformations.OfType<ComputeTransformationNode>().SelectMany(c => c.Expressions).Select(c => c.Alias));
 
                         if (!String.IsNullOrEmpty(computeAliases))
                         {
@@ -982,6 +1039,7 @@ namespace Microsoft.AspNet.OData.Query
                         break;
                     case "$skiptoken":
                         RawValues.SkipToken = kvp.Value;
+                        SkipToken = new SkipTokenQueryOption(kvp.Value, Context, _queryOptionParser);
                         break;
                     case "$deltatoken":
                         RawValues.DeltaToken = kvp.Value;
@@ -1017,7 +1075,8 @@ namespace Microsoft.AspNet.OData.Query
                         Context.Model,
                         Context.ElementType,
                         Context.NavigationSource,
-                        new Dictionary<string, string> { { "$count", "true" } }));
+                        new Dictionary<string, string> { { "$count", "true" } },
+                        Context.RequestContainer));
             }
         }
 
@@ -1042,14 +1101,15 @@ namespace Microsoft.AspNet.OData.Query
                         SelectExpand.Context);
                 }
 
-                SelectExpandClause processedClause = SelectExpand.ProcessLevels();
+                SelectExpandClause processedClause = SelectExpand.ProcessedSelectExpandClause;
                 SelectExpandQueryOption newSelectExpand = new SelectExpandQueryOption(
                     SelectExpand.RawSelect,
                     SelectExpand.RawExpand,
                     SelectExpand.Context,
                     processedClause);
 
-                InternalRequest.Context.SelectExpandClause = processedClause;
+                InternalRequest.Context.ProcessedSelectExpandClause = processedClause;
+                InternalRequest.Context.QueryOptions = this;
 
                 var type = typeof(T);
                 if (type == typeof(IQueryable))

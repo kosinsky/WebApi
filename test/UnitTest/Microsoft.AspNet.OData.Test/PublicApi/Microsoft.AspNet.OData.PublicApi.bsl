@@ -1,3 +1,11 @@
+[
+FlagsAttribute(),
+]
+public enum Microsoft.AspNet.OData.CompatibilityOptions : int {
+	AllowNextLinkWithNonPositiveTopValue = 1
+	None = 0
+}
+
 public enum Microsoft.AspNet.OData.EdmDeltaEntityKind : int {
 	DeletedEntry = 1
 	DeletedLinkEntry = 2
@@ -196,6 +204,13 @@ public sealed class Microsoft.AspNet.OData.EdmTypeExtensions {
 public sealed class Microsoft.AspNet.OData.ODataUriFunctions {
 	public static void AddCustomUriFunction (string functionName, Microsoft.OData.UriParser.FunctionSignatureWithReturnType functionSignature, System.Reflection.MethodInfo methodInfo)
 	public static bool RemoveCustomUriFunction (string functionName, Microsoft.OData.UriParser.FunctionSignatureWithReturnType functionSignature, System.Reflection.MethodInfo methodInfo)
+}
+
+public class Microsoft.AspNet.OData.ClrEnumMemberAnnotation {
+	public ClrEnumMemberAnnotation (System.Collections.Generic.IDictionary`2[[System.Enum],[Microsoft.OData.Edm.IEdmEnumMember]] map)
+
+	public System.Enum GetClrEnumMember (Microsoft.OData.Edm.IEdmEnumMember edmEnumMember)
+	public Microsoft.OData.Edm.IEdmEnumMember GetEdmEnumMember (System.Enum clrEnumMemberInfo)
 }
 
 public class Microsoft.AspNet.OData.ClrPropertyInfoAnnotation {
@@ -402,6 +417,7 @@ public class Microsoft.AspNet.OData.EnableQueryAttribute : System.Web.Http.Filte
 	string AllowedOrderByProperties  { public get; public set; }
 	AllowedQueryOptions AllowedQueryOptions  { public get; public set; }
 	bool EnableConstantParameterization  { public get; public set; }
+	bool EnableCorrelatedSubqueryBuffering  { public get; public set; }
 	bool EnsureStableOrdering  { public get; public set; }
 	HandleNullPropagationOption HandleNullPropagation  { public get; public set; }
 	bool HandleReferenceNavigationPropertyExpandFilter  { public get; public set; }
@@ -1156,8 +1172,12 @@ public abstract class Microsoft.AspNet.OData.Builder.StructuralTypeConfiguration
 	public NavigationPropertyConfiguration HasMany (Expression`1 navigationPropertyExpression)
 	public NavigationPropertyConfiguration HasOptional (Expression`1 navigationPropertyExpression)
 	public NavigationPropertyConfiguration HasOptional (Expression`1 navigationPropertyExpression, Expression`1 referentialConstraintExpression)
+	public NavigationPropertyConfiguration HasOptional (Expression`1 navigationPropertyExpression, Expression`1 referentialConstraintExpression, Expression`1 partnerExpression)
+	public NavigationPropertyConfiguration HasOptional (Expression`1 navigationPropertyExpression, Expression`1 referentialConstraintExpression, Expression`1 partnerExpression)
 	public NavigationPropertyConfiguration HasRequired (Expression`1 navigationPropertyExpression)
 	public NavigationPropertyConfiguration HasRequired (Expression`1 navigationPropertyExpression, Expression`1 referentialConstraintExpression)
+	public NavigationPropertyConfiguration HasRequired (Expression`1 navigationPropertyExpression, Expression`1 referentialConstraintExpression, Expression`1 partnerExpression)
+	public NavigationPropertyConfiguration HasRequired (Expression`1 navigationPropertyExpression, Expression`1 referentialConstraintExpression, Expression`1 partnerExpression)
 	public virtual void Ignore (Expression`1 propertyExpression)
 	public StructuralTypeConfiguration`1 OrderBy ()
 	public StructuralTypeConfiguration`1 OrderBy (QueryOptionSetting setting)
@@ -1165,16 +1185,16 @@ public abstract class Microsoft.AspNet.OData.Builder.StructuralTypeConfiguration
 	public StructuralTypeConfiguration`1 OrderBy (QueryOptionSetting setting, string[] properties)
 	public StructuralTypeConfiguration`1 Page ()
 	public StructuralTypeConfiguration`1 Page (System.Nullable`1[[System.Int32]] maxTopValue, System.Nullable`1[[System.Int32]] pageSizeValue)
-	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
-	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public LengthPropertyConfiguration Property (Expression`1 propertyExpression)
+	public DecimalPropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
 	public LengthPropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
-	public DecimalPropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
+	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
 	public DecimalPropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrecisionPropertyConfiguration Property (Expression`1 propertyExpression)
-	public LengthPropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
 	public PrimitivePropertyConfiguration Property (Expression`1 propertyExpression)
@@ -1432,6 +1452,7 @@ public class Microsoft.AspNet.OData.Builder.EnumMemberConfiguration {
 public class Microsoft.AspNet.OData.Builder.EnumPropertyConfiguration : StructuralPropertyConfiguration {
 	public EnumPropertyConfiguration (System.Reflection.PropertyInfo property, StructuralTypeConfiguration declaringType)
 
+	string DefaultValueString  { public get; public set; }
 	PropertyKind Kind  { public virtual get; }
 	System.Type RelatedClrType  { public virtual get; }
 
@@ -1534,6 +1555,7 @@ public class Microsoft.AspNet.OData.Builder.NavigationPropertyConfiguration : Pr
 	PropertyKind Kind  { public virtual get; }
 	Microsoft.OData.Edm.EdmMultiplicity Multiplicity  { public get; }
 	Microsoft.OData.Edm.EdmOnDeleteAction OnDeleteAction  { public get; public set; }
+	NavigationPropertyConfiguration Partner  { public get; }
 	System.Collections.Generic.IEnumerable`1[[System.Reflection.PropertyInfo]] PrincipalProperties  { public get; }
 	System.Type RelatedClrType  { public virtual get; }
 
@@ -1643,6 +1665,7 @@ public class Microsoft.AspNet.OData.Builder.PrecisionPropertyConfiguration : Pri
 public class Microsoft.AspNet.OData.Builder.PrimitivePropertyConfiguration : StructuralPropertyConfiguration {
 	public PrimitivePropertyConfiguration (System.Reflection.PropertyInfo property, StructuralTypeConfiguration declaringType)
 
+	string DefaultValueString  { public get; public set; }
 	PropertyKind Kind  { public virtual get; }
 	System.Type RelatedClrType  { public virtual get; }
 	System.Nullable`1[[Microsoft.OData.Edm.EdmPrimitiveTypeKind]] TargetEdmTypeKind  { public get; }
@@ -1871,6 +1894,11 @@ public sealed class Microsoft.AspNet.OData.Extensions.HttpConfigurationExtension
 	[
 	ExtensionAttribute(),
 	]
+	public static void SetCompatibilityOptions (System.Web.Http.HttpConfiguration configuration, CompatibilityOptions options)
+
+	[
+	ExtensionAttribute(),
+	]
 	public static void SetDefaultQuerySettings (System.Web.Http.HttpConfiguration configuration, DefaultQuerySettings defaultQuerySettings)
 
 	[
@@ -1892,6 +1920,16 @@ public sealed class Microsoft.AspNet.OData.Extensions.HttpConfigurationExtension
 	ExtensionAttribute(),
 	]
 	public static void SetUrlKeyDelimiter (System.Web.Http.HttpConfiguration configuration, Microsoft.OData.ODataUrlKeyDelimiter urlKeyDelimiter)
+
+	[
+	ExtensionAttribute(),
+	]
+	public static System.Web.Http.HttpConfiguration SkipToken (System.Web.Http.HttpConfiguration configuration)
+
+	[
+	ExtensionAttribute(),
+	]
+	public static System.Web.Http.HttpConfiguration SkipToken (System.Web.Http.HttpConfiguration configuration, QueryOptionSetting setting)
 
 	[
 	ExtensionAttribute(),
@@ -1954,6 +1992,11 @@ public sealed class Microsoft.AspNet.OData.Extensions.HttpRequestMessageExtensio
 	ExtensionAttribute(),
 	]
 	public static System.Uri GetNextPageLink (System.Net.Http.HttpRequestMessage request, int pageSize)
+
+	[
+	ExtensionAttribute(),
+	]
+	public static System.Uri GetNextPageLink (System.Net.Http.HttpRequestMessage request, int pageSize, object instance, System.Func`2[[System.Object],[System.String]] objToSkipTokenValue)
 
 	[
 	ExtensionAttribute(),
@@ -2215,7 +2258,7 @@ public enum Microsoft.AspNet.OData.Query.AllowedQueryOptions : int {
 	Select = 4
 	Skip = 32
 	SkipToken = 256
-	Supported = 3327
+	Supported = 3583
 	Top = 16
 }
 
@@ -2259,6 +2302,14 @@ public abstract class Microsoft.AspNet.OData.Query.OrderByNode {
 	public static System.Collections.Generic.IList`1[[Microsoft.AspNet.OData.Query.OrderByNode]] CreateCollection (Microsoft.OData.UriParser.OrderByClause orderByClause)
 }
 
+public abstract class Microsoft.AspNet.OData.Query.SkipTokenHandler {
+	protected SkipTokenHandler ()
+
+	public abstract IQueryable`1 ApplyTo (IQueryable`1 query, SkipTokenQueryOption skipTokenQueryOption)
+	public abstract System.Linq.IQueryable ApplyTo (System.Linq.IQueryable query, SkipTokenQueryOption skipTokenQueryOption)
+	public abstract System.Uri GenerateNextPageLink (System.Uri baseUri, int pageSize, object instance, ODataSerializerContext context)
+}
+
 public class Microsoft.AspNet.OData.Query.ApplyQueryOption {
 	public ApplyQueryOption (string rawValue, ODataQueryContext context, Microsoft.OData.UriParser.ODataQueryOptionParser queryOptionParser)
 
@@ -2299,7 +2350,16 @@ public class Microsoft.AspNet.OData.Query.DefaultQuerySettings {
 	bool EnableFilter  { public get; public set; }
 	bool EnableOrderBy  { public get; public set; }
 	bool EnableSelect  { public get; public set; }
+	bool EnableSkipToken  { public get; public set; }
 	System.Nullable`1[[System.Int32]] MaxTop  { public get; public set; }
+}
+
+public class Microsoft.AspNet.OData.Query.DefaultSkipTokenHandler : SkipTokenHandler {
+	public DefaultSkipTokenHandler ()
+
+	public virtual IQueryable`1 ApplyTo (IQueryable`1 query, SkipTokenQueryOption skipTokenQueryOption)
+	public virtual System.Linq.IQueryable ApplyTo (System.Linq.IQueryable query, SkipTokenQueryOption skipTokenQueryOption)
+	public virtual System.Uri GenerateNextPageLink (System.Uri baseUri, int pageSize, object instance, ODataSerializerContext context)
 }
 
 public class Microsoft.AspNet.OData.Query.ExpandConfiguration {
@@ -2357,6 +2417,7 @@ public class Microsoft.AspNet.OData.Query.ODataQueryOptions {
 	System.Net.Http.HttpRequestMessage Request  { public get; }
 	SelectExpandQueryOption SelectExpand  { public get; }
 	SkipQueryOption Skip  { public get; }
+	SkipTokenQueryOption SkipToken  { public get; }
 	TopQueryOption Top  { public get; }
 	ODataQueryValidator Validator  { public get; public set; }
 
@@ -2366,11 +2427,13 @@ public class Microsoft.AspNet.OData.Query.ODataQueryOptions {
 	public virtual object ApplyTo (object entity, ODataQuerySettings querySettings)
 	public virtual System.Linq.IQueryable ApplyTo (System.Linq.IQueryable query, ODataQuerySettings querySettings, AllowedQueryOptions ignoreQueryOptions)
 	public virtual object ApplyTo (object entity, ODataQuerySettings querySettings, AllowedQueryOptions ignoreQueryOptions)
+	public virtual OrderByQueryOption GenerateStableOrder ()
 	internal virtual ETag GetETag (System.Net.Http.Headers.EntityTagHeaderValue etagHeaderValue)
 	public bool IsSupportedQueryOption (string queryOptionName)
 	public static bool IsSystemQueryOption (string queryOptionName)
 	public static bool IsSystemQueryOption (string queryOptionName, bool isDollarSignOptional)
 	public static IQueryable`1 LimitResults (IQueryable`1 queryable, int limit, out System.Boolean& resultsLimited)
+	public static IQueryable`1 LimitResults (IQueryable`1 queryable, int limit, bool parameterize, out System.Boolean& resultsLimited)
 	public virtual void Validate (ODataValidationSettings validationSettings)
 }
 
@@ -2392,6 +2455,7 @@ public class Microsoft.AspNet.OData.Query.ODataQuerySettings {
 	public ODataQuerySettings ()
 
 	bool EnableConstantParameterization  { public get; public set; }
+	bool EnableCorrelatedSubqueryBuffering  { public get; public set; }
 	bool EnsureStableOrdering  { public get; public set; }
 	HandleNullPropagationOption HandleNullPropagation  { public get; public set; }
 	bool HandleReferenceNavigationPropertyExpandFilter  { public get; public set; }
@@ -2430,6 +2494,12 @@ public class Microsoft.AspNet.OData.Query.ODataValidationSettings {
 	int MaxOrderByNodeCount  { public get; public set; }
 	System.Nullable`1[[System.Int32]] MaxSkip  { public get; public set; }
 	System.Nullable`1[[System.Int32]] MaxTop  { public get; public set; }
+}
+
+public class Microsoft.AspNet.OData.Query.OrderByCountNode : OrderByNode {
+	public OrderByCountNode (Microsoft.OData.UriParser.OrderByClause orderByClause)
+
+	Microsoft.OData.UriParser.OrderByClause OrderByClause  { public get; }
 }
 
 public class Microsoft.AspNet.OData.Query.OrderByItNode : OrderByNode {
@@ -2483,6 +2553,7 @@ public class Microsoft.AspNet.OData.Query.ParameterAliasNodeTranslator : Microso
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CollectionResourceFunctionCallNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.ConstantNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.ConvertNode nodeIn)
+	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.CountNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.InNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.NamedFunctionParameterNode nodeIn)
 	public virtual Microsoft.OData.UriParser.QueryNode Visit (Microsoft.OData.UriParser.NonResourceRangeVariableReferenceNode nodeIn)
@@ -2535,6 +2606,20 @@ public class Microsoft.AspNet.OData.Query.SkipQueryOption {
 	public void Validate (ODataValidationSettings validationSettings)
 }
 
+public class Microsoft.AspNet.OData.Query.SkipTokenQueryOption {
+	public SkipTokenQueryOption (string rawValue, ODataQueryContext context, Microsoft.OData.UriParser.ODataQueryOptionParser queryOptionParser)
+
+	ODataQueryContext Context  { public get; }
+	ODataQueryOptions QueryOptions  { public get; }
+	ODataQuerySettings QuerySettings  { public get; }
+	string RawValue  { public get; }
+	SkipTokenQueryValidator Validator  { public get; }
+
+	public virtual IQueryable`1 ApplyTo (IQueryable`1 query, ODataQuerySettings querySettings, ODataQueryOptions queryOptions)
+	public virtual System.Linq.IQueryable ApplyTo (System.Linq.IQueryable query, ODataQuerySettings querySettings, ODataQueryOptions queryOptions)
+	public void Validate (ODataValidationSettings validationSettings)
+}
+
 public class Microsoft.AspNet.OData.Query.TopQueryOption {
 	public TopQueryOption (string rawValue, ODataQueryContext context, Microsoft.OData.UriParser.ODataQueryOptionParser queryOptionParser)
 
@@ -2552,7 +2637,9 @@ public class Microsoft.AspNet.OData.Query.TruncatedCollection`1 : List`1, IColle
 	public TruncatedCollection`1 (IEnumerable`1 source, int pageSize)
 	public TruncatedCollection`1 (IQueryable`1 source, int pageSize)
 	public TruncatedCollection`1 (IEnumerable`1 source, int pageSize, System.Nullable`1[[System.Int64]] totalCount)
+	public TruncatedCollection`1 (IQueryable`1 source, int pageSize, bool parameterize)
 	public TruncatedCollection`1 (IQueryable`1 source, int pageSize, System.Nullable`1[[System.Int64]] totalCount)
+	public TruncatedCollection`1 (IQueryable`1 source, int pageSize, System.Nullable`1[[System.Int64]] totalCount, bool parameterize)
 
 	bool IsTruncated  { public virtual get; }
 	int PageSize  { public virtual get; }
@@ -3236,12 +3323,14 @@ public class Microsoft.AspNet.OData.Formatter.Serialization.ODataSerializerConte
 
 	Microsoft.OData.Edm.IEdmProperty EdmProperty  { public get; public set; }
 	ResourceContext ExpandedResource  { public get; public set; }
+	bool ExpandReference  { public get; public set; }
 	System.Collections.Generic.IDictionary`2[[System.Object],[System.Object]] Items  { public get; }
 	ODataMetadataLevel MetadataLevel  { public get; public set; }
 	Microsoft.OData.Edm.IEdmModel Model  { public get; public set; }
 	Microsoft.OData.Edm.IEdmNavigationProperty NavigationProperty  { public get; }
 	Microsoft.OData.Edm.IEdmNavigationSource NavigationSource  { public get; public set; }
 	ODataPath Path  { public get; public set; }
+	ODataQueryOptions QueryOptions  { public get; }
 	System.Net.Http.HttpRequestMessage Request  { public get; public set; }
 	System.Web.Http.Controllers.HttpRequestContext RequestContext  { public get; public set; }
 	string RootElementName  { public get; public set; }
@@ -3262,15 +3351,29 @@ public class Microsoft.AspNet.OData.Formatter.Serialization.SelectExpandNode {
 	public SelectExpandNode (Microsoft.OData.Edm.IEdmStructuredType structuredType, ODataSerializerContext writeContext)
 	public SelectExpandNode (Microsoft.OData.UriParser.SelectExpandClause selectExpandClause, Microsoft.OData.Edm.IEdmStructuredType structuredType, Microsoft.OData.Edm.IEdmModel model)
 
-	System.Collections.Generic.IDictionary`2[[Microsoft.OData.Edm.IEdmNavigationProperty],[Microsoft.OData.UriParser.SelectExpandClause]] ExpandedNavigationProperties  { public get; }
+	System.Collections.Generic.IDictionary`2[[Microsoft.OData.Edm.IEdmNavigationProperty],[Microsoft.OData.UriParser.ExpandedNavigationSelectItem]] ExpandedProperties  { public get; }
+	[
+	ObsoleteAttribute(),
+	]
+	System.Collections.Generic.ISet`1[[Microsoft.OData.Edm.IEdmNavigationProperty]] ReferencedNavigationProperties  { public get; }
+
+	System.Collections.Generic.IDictionary`2[[Microsoft.OData.Edm.IEdmNavigationProperty],[Microsoft.OData.UriParser.ExpandedReferenceSelectItem]] ReferencedProperties  { public get; }
 	bool SelectAllDynamicProperties  { public get; }
 	System.Collections.Generic.ISet`1[[Microsoft.OData.Edm.IEdmAction]] SelectedActions  { public get; }
+	[
+	ObsoleteAttribute(),
+	]
 	System.Collections.Generic.ISet`1[[Microsoft.OData.Edm.IEdmStructuralProperty]] SelectedComplexProperties  { public get; }
+
+	System.Collections.Generic.IDictionary`2[[Microsoft.OData.Edm.IEdmStructuralProperty],[Microsoft.OData.UriParser.PathSelectItem]] SelectedComplexTypeProperties  { public get; }
 	System.Collections.Generic.ISet`1[[System.String]] SelectedDynamicProperties  { public get; }
 	System.Collections.Generic.ISet`1[[Microsoft.OData.Edm.IEdmFunction]] SelectedFunctions  { public get; }
 	System.Collections.Generic.ISet`1[[Microsoft.OData.Edm.IEdmNavigationProperty]] SelectedNavigationProperties  { public get; }
 	System.Collections.Generic.ISet`1[[Microsoft.OData.Edm.IEdmStructuralProperty]] SelectedStructuralProperties  { public get; }
 
+	[
+	ObsoleteAttribute(),
+	]
 	public static void GetStructuralProperties (Microsoft.OData.Edm.IEdmStructuredType structuredType, System.Collections.Generic.HashSet`1[[Microsoft.OData.Edm.IEdmStructuralProperty]] structuralProperties, System.Collections.Generic.HashSet`1[[Microsoft.OData.Edm.IEdmStructuralProperty]] nestedStructuralProperties)
 }
 
@@ -3298,6 +3401,7 @@ public abstract class Microsoft.AspNet.OData.Query.Expressions.ExpressionBinderB
 	public static object ExtractParameterizedConstant (System.Linq.Expressions.Expression expression)
 	protected System.Reflection.PropertyInfo GetDynamicPropertyContainer (Microsoft.OData.UriParser.SingleValueOpenPropertyAccessNode openNode)
 	protected System.Linq.Expressions.Expression GetFlattenedPropertyExpression (string propertyPath)
+	public static int GuidCompare (System.Guid firstValue, System.Guid secondValue)
 }
 
 public sealed class Microsoft.AspNet.OData.Query.Expressions.UriFunctionsBinder {
@@ -3405,6 +3509,12 @@ public class Microsoft.AspNet.OData.Query.Validators.SkipQueryValidator {
 	public SkipQueryValidator ()
 
 	public virtual void Validate (SkipQueryOption skipQueryOption, ODataValidationSettings validationSettings)
+}
+
+public class Microsoft.AspNet.OData.Query.Validators.SkipTokenQueryValidator {
+	public SkipTokenQueryValidator ()
+
+	public virtual void Validate (SkipTokenQueryOption skipToken, ODataValidationSettings validationSettings)
 }
 
 public class Microsoft.AspNet.OData.Query.Validators.TopQueryValidator {

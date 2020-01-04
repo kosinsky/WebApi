@@ -20,6 +20,8 @@ namespace Microsoft.AspNet.OData.Query
     {
         private SelectExpandClause _selectExpandClause;
         private ODataQueryOptionParser _queryOptionParser;
+        private SelectExpandClause _processedSelectExpandClause;
+
         // Give _levelsMaxLiteralExpansionDepth a negative value meaning it is uninitialized, and it will be set to:
         // 1. LevelsMaxLiteralExpansionDepth or
         // 2. ODataValidationSettings.MaxExpansionDepth
@@ -50,10 +52,9 @@ namespace Microsoft.AspNet.OData.Query
                 throw Error.ArgumentNull("queryOptionParser");
             }
 
-            IEdmEntityType entityType = context.ElementType as IEdmEntityType;
-            if (entityType == null)
+            if (!(context.ElementType is IEdmStructuredType))
             {
-                throw Error.Argument("context", SRResources.SelectNonEntity, context.ElementType.ToTraceString());
+                throw Error.Argument(SRResources.SelectNonStructured, context.ElementType);
             }
 
             Context = context;
@@ -86,10 +87,9 @@ namespace Microsoft.AspNet.OData.Query
                 throw Error.Argument(SRResources.SelectExpandEmptyOrNull);
             }
 
-            IEdmEntityType entityType = context.ElementType as IEdmEntityType;
-            if (entityType == null)
+            if (!(context.ElementType is IEdmStructuredType))
             {
-                throw Error.Argument("context", SRResources.SelectNonEntity, context.ElementType.ToTraceString());
+                throw Error.Argument("context", SRResources.SelectNonStructured, context.ElementType.ToTraceString());
             }
 
             Context = context;
@@ -100,7 +100,8 @@ namespace Microsoft.AspNet.OData.Query
                 context.Model,
                 context.ElementType,
                 context.NavigationSource,
-                new Dictionary<string, string> { { "$select", select }, { "$expand", expand } });
+                new Dictionary<string, string> { { "$select", select }, { "$expand", expand } },
+                context.RequestContainer);
         }
 
         /// <summary>
@@ -136,6 +137,20 @@ namespace Microsoft.AspNet.OData.Query
                 }
 
                 return _selectExpandClause;
+            }
+        }
+
+        internal SelectExpandClause ProcessedSelectExpandClause
+        {
+            get
+            {
+                if (_processedSelectExpandClause != null)
+                {
+                    return _processedSelectExpandClause;
+                }
+
+                _processedSelectExpandClause = this.ProcessLevels();
+                return _processedSelectExpandClause;
             }
         }
 

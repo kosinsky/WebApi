@@ -8,6 +8,7 @@ using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OData;
 
 namespace Microsoft.AspNet.OData.Results
 {
@@ -36,6 +37,17 @@ namespace Microsoft.AspNet.OData.Results
             this._innerResult = entity;
         }
 
+        /// <summary>
+        /// Gets the entity that was created.
+        /// </summary>
+        public virtual T Entity
+        {
+            get
+            {
+                return _innerResult;
+            }
+        }
+
         /// <inheritdoc/>
         public async virtual Task ExecuteResultAsync(ActionContext context)
         {
@@ -48,7 +60,7 @@ namespace Microsoft.AspNet.OData.Results
             // before calling AddEntityId() to ensure the response code is set correctly.
             await result.ExecuteResultAsync(context);
             ResultHelpers.AddEntityId(response, () => GenerateEntityId(request));
-            ResultHelpers.AddServiceVersion(response, () => ResultHelpers.GetVersionString(request));
+            ResultHelpers.AddServiceVersion(response, () => ODataUtils.ODataVersionToString(ResultHelpers.GetODataResponseVersion(request)));
         }
 
         // internal just for unit test.

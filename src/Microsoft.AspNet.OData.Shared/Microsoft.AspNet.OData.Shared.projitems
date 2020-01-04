@@ -12,10 +12,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Batch\ODataBatchContent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Batch\ODataBatchHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\MaxLengthAttributeEdmPropertyConvention.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\DefaultValueAttributeEdmPropertyConvention.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\DecimalPropertyConfiguration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\LengthPropertyConfiguration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\PrecisionPropertyConfiguration.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ConcurrencyPropertiesAnnotation.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ClrEnumMemberAnnotation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\CollectionExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\ListWrapperCollection.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\PropertyHelper.cs" />
@@ -44,6 +45,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\DataContractAttributeEnumTypeConvention.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\MediaTypeAttributeConvention.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\BindingPathHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ConcurrencyPropertiesAnnotation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CustomAggregateMethodAnnotation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EdmDeltaComplexObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EnableQueryAttribute.cs" />
@@ -64,16 +66,23 @@
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Serialization\ODataSerializerProvider.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GetNextPageHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IPerRouteContainer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CompatibilityOptions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ODataNullValueMessageHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PerRouteContainerBase.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\ComputeQueryOption.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\DefaultSkipTokenHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\OrderByCountNode.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\SkipTokenHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\DynamicTypeWrapperConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ComputeQueryValidator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ExpressionQueryValidator.cs" />    
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>PropertyContainer.generated.tt</DependentUpon>
     </Compile>
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ComputeQueryValidator.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ExpressionQueryValidator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapperOfT.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\SkipTokenQueryOption.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\SkipTokenQueryValidator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RequestMethod.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Interfaces\IWebApiActionDescriptor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Interfaces\IWebApiActionMap.cs" />
@@ -90,10 +99,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)ODataQueryContextExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\CountAttribute.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\AggregationPropertyContainer.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\ComputeBinder.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\DynamicTypeWrapperConverter.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapperOfT.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\TransformationBinderBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\SelectAttribute.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\ExpandConfiguration.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\QueryOptionSetting.cs" />
@@ -162,8 +167,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Builder\OperationTitleAnnotation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\DynamicPropertyDictionaryAnnotation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\AggregationBinder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\ComputeBinder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\TransformationBinderBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\ApplyQueryOption.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Query\ApplyQueryOptionsBinder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\ComputeQueryOption.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\ApplyQueryOptionsBinder.cs" />    
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\DynamicTypeWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\ExpressionBinderBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ODataUriFunctions.cs" />
@@ -233,6 +241,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\NamedPropertyExpression.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandBinder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandPathExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandIncludedProperty.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapperConverter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\ITruncatedCollection.cs" />
@@ -433,12 +443,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\FilterBinder.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\PropertySelectorVisitor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)WebApiAssembliesResolver.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>PropertyContainer.generated.cs</LastGenOutput>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainer.generated.tt">

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Adapters;
 using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Common;
@@ -256,6 +257,38 @@ namespace Microsoft.AspNet.OData.Extensions
         }
 
         /// <summary>
+        /// Sets the EnableSkipToken to true of <see cref="DefaultQuerySettings"/> in route builder.
+        /// </summary>
+        public static IRouteBuilder SkipToken(this IRouteBuilder builder)
+        {
+            if (builder == null)
+            {
+                throw Error.ArgumentNull("builder");
+            }
+
+            DefaultQuerySettings defaultQuerySettings = builder.GetDefaultQuerySettings();
+            defaultQuerySettings.EnableSkipToken = true;
+
+            return builder;
+        }
+
+        /// <summary>
+        /// Sets the EnableSkipToken to true of <see cref="DefaultQuerySettings"/> in route builder.
+        /// </summary>
+        public static IRouteBuilder SkipToken(this IRouteBuilder builder, QueryOptionSetting setting)
+        {
+            if (builder == null)
+            {
+                throw Error.ArgumentNull("builder");
+            }
+
+            DefaultQuerySettings defaultQuerySettings = builder.GetDefaultQuerySettings();
+            defaultQuerySettings.EnableSkipToken = setting == QueryOptionSetting.Allowed;
+
+            return builder;
+        }
+
+        /// <summary>
         /// Sets the <see cref="DefaultQuerySettings"/> in route builder.
         /// </summary>
         /// <param name="builder">The <see cref="IRouteBuilder"/>.</param>
@@ -437,6 +470,23 @@ namespace Microsoft.AspNet.OData.Extensions
             }
 
             return TimeZoneInfoHelper.TimeZone;
+        }
+
+        /// <summary>
+        /// Set the CompatibilityOptions.
+        /// </summary>
+        /// <param name="builder">The <see cref="IRouteBuilder"/>.</param>
+        /// <param name="options">The <see cref="CompatibilityOptions"/></param>
+        public static IRouteBuilder SetCompatibilityOptions(this IRouteBuilder builder, CompatibilityOptions options)
+        {
+            if (builder == null)
+            {
+                throw Error.ArgumentNull("builder");
+            }
+
+            ODataOptions defaultOptions = builder.GetDefaultODataOptions();
+            defaultOptions.CompatibilityOptions = options;
+            return builder;
         }
 
         /// <summary>
