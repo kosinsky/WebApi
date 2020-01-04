@@ -48,9 +48,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mseng.OData.Core" Version="7.6.2-Nightly201912311107" />
-    <PackageReference Include="Mseng.OData.Edm" Version="7.6.2-Nightly201912311107" />
-    <PackageReference Include="Mseng.Spatial" Version="7.6.2-Nightly201912311107" />
+    <PackageReference Include="Mseng.OData.Core" Version="7.6.2-Nightly202001031623" />
+    <PackageReference Include="Mseng.OData.Edm" Version="7.6.2-Nightly202001031623" />
+    <PackageReference Include="Mseng.Spatial" Version="7.6.2-Nightly202001031623" />
   </ItemGroup>
 
   <ItemGroup>
