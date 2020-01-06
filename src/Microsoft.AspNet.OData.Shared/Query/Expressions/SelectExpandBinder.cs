@@ -380,7 +380,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                                     nullablePropertyValue)
                                 : nullablePropertyValue;
 
-                        var query = QueryProvider.CreateQuery(filterSource);
+                        var query = QueryProvider?.CreateQuery(filterSource);
 
                         Expression filterPredicate = FilterBinder.Bind(query, filterClause, clrElementType, _context, querySettings);
                         filterResult = Expression.Call(

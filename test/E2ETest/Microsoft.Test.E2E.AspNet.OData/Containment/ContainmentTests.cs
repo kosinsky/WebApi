@@ -195,7 +195,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Containment
             if (mime == "json" || mime.Contains("odata.metadata=minimal") || mime.Contains("odata.metadata=full"))
             {
                 var odataContext = (string)json["@odata.context"];
-                Assert.Equal(serviceRootUri + "/$metadata#Accounts(AccountID,PayinPIs(),PayoutPI())", odataContext);
+                Assert.Equal(serviceRootUri + "/$metadata#Accounts(AccountID,PayinPIs,PayoutPI)", odataContext);
                 var odataType = (string)results[1]["@odata.type"];
                 Assert.Equal("#Microsoft.Test.E2E.AspNet.OData.Containment.PremiumAccount", odataType);
             }
@@ -360,7 +360,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Containment
             if (mime == "json" || mime.Contains("odata.metadata=minimal") || mime.Contains("odata.metadata=full"))
             {
                 var odataContext = (string)json["@odata.context"]; // PreminumAccount
-                Assert.Equal(serviceRootUri + "/$metadata#Accounts/Microsoft.Test.E2E.AspNet.OData.Containment.PremiumAccount(PayinPIs(),PayoutPI(),GiftCard())", odataContext);
+                Assert.Equal(serviceRootUri + "/$metadata#Accounts/Microsoft.Test.E2E.AspNet.OData.Containment.PremiumAccount", odataContext);
             }
             if (mime.Contains("odata.metadata=full"))
             {
@@ -1033,7 +1033,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Containment
             if (mime == "json" || mime.Contains("odata.metadata=minimal") || mime.Contains("odata.metadata=full"))
             {
                 var odataContext = (string)json["@odata.context"]; // PreminumAccount
-                Assert.Equal(serviceRootUri + "/$metadata#AnonymousAccount(AccountID,PayinPIs(),PayoutPI())", odataContext);
+                Assert.Equal(serviceRootUri + "/$metadata#AnonymousAccount(AccountID,PayinPIs,PayoutPI)", odataContext);
             }
 
             if (mime.Contains("odata.metadata=full"))

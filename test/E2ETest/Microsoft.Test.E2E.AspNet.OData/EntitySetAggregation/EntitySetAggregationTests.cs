@@ -339,7 +339,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             // Arrange
             string queryUrl =
                 string.Format(
-                    AggregationTestBaseUrl + "?$expand=Orders($filter=TotalPrice gt 100;$apply=aggregate(Price with sum as TotalPrice))",
+                    AggregationTestBaseUrl + "?$expand=Orders($filter=TotalPrice gt 100;$apply=aggregate(Price with sum as TotalPrice))&$orderby=Id desc",
                     BaseAddress);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
             request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
