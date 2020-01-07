@@ -1581,19 +1581,24 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
                 filterClause: null,
                 applyClause: applyClause,
                 computeClause: null);
-#if NETCORE
-            var suffix = ", Object";
-#else
-            var suffix = "";
-#endif
+
             // Assert
+#if NETCORE
             Assert.Equal(
                 string.Format(
                     "value({0}).Orders.AsQueryable().GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
-                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert(Convert($it).LongCount(){1})}}}})",
-                    customer.Type,
-                    suffix),
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert(Convert($it, IEnumerable`1).LongCount(), Object)}}}})",
+                    customer.Type),
                 filterInExpand.ToString());
+#else
+            Assert.Equal(
+                string.Format(
+                    "value({0}).Orders.AsQueryable().GroupBy($it => new NoGroupByWrapper()).Select($it => new NoGroupByAggregationWrapper() " +
+                    "{{Container = new LastInChain() {{Name = \"Count\", Value = Convert(Convert($it).LongCount())}}}})",
+                    customer.Type),
+                filterInExpand.ToString());
+#endif
+
             var orders = Expression.Lambda(filterInExpand).Compile().DynamicInvoke() as IEnumerable<DynamicTypeWrapper>;
             Assert.Single(orders);
             Assert.Equal(2L, orders.ToList()[0].Values["Count"]);
