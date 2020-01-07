@@ -924,7 +924,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude,
                 out propertiesToExpand,
                 out autoSelectedProperties);
@@ -970,7 +970,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude,
                 out propertiesToExpand,
                 out autoSelectedProperties);
@@ -1005,7 +1005,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude,
                 out propertiesToExpand,
                 out autoSelectedProperties);
@@ -1052,7 +1052,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem > propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude, out propertiesToExpand, out autoSelectedProperties);
 
             // Assert
@@ -1087,7 +1087,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude,
                 out propertiesToExpand,
                 out autoSelectedProperties);
@@ -1121,7 +1121,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude,
                 out propertiesToExpand,
                 out autoSelectedProperties);
@@ -1174,7 +1174,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude,
                 out propertiesToExpand,
                 out autoSelectedProperties);
@@ -1215,7 +1215,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude;
             IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand;
             ISet<IEdmStructuralProperty> autoSelectedProperties;
-            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, inputCollapsed: false,
+            bool isContainDynamicProperty = SelectExpandBinder.GetSelectExpandProperties(_model, _customer, _customers, selectExpandClause, false,
                 out propertiesToInclude,
                 out propertiesToExpand,
                 out autoSelectedProperties);
