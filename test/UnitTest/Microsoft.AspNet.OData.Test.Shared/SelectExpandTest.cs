@@ -666,9 +666,17 @@ namespace Microsoft.AspNet.OData.Test
 
         public string Name { get; set; }
 
+        public Subscription Subscription { get; set; }
+
         public SelectExpandTestOrder[] Orders { get; set; }
 
         public SelectExpandTestCustomer PreviousCustomer { get; set; }
+    }
+
+    public enum Subscription
+    {
+        Basic,
+        Premium
     }
 
     public class SelectExpandTestSpecialCustomer : SelectExpandTestCustomer

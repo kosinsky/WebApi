@@ -155,7 +155,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     _typedEdmEntityObject = _typedEdmEntityObject ??
                         new TypedEdmEntityObject(Instance, edmType, GetModel());
 
-                    var props = edmType.DeclaredStructuralProperties().Where(p => p.Type.IsPrimitive() || p.Type.IsEnum()).Select(p => p.Name);
+                    var props = edmType.DeclaredStructuralProperties().Where(p => (p.Type.IsPrimitive() || p.Type.IsEnum())).Select(p => p.Name);
                     foreach (var propertyName in props)
                     {
                         object value;
