@@ -246,7 +246,7 @@ $NugetRestoreNetCoreProjects = $NetCoreProductPROJ, $NetCoreUnitTestPROJ, $NetCo
 
 # ASP.NET Classic OData output variables
 $ClassicProductDIR = $ENLISTMENT_ROOT + "\bin\$Configuration"
-$ClassicProductDlls = "Microsoft.AspNet.OData.dll"
+$ClassicProductDlls = "Microsoft.TeamFoundation.AspNet.OData.dll"
 $ClassicUnitTestDIR = $ENLISTMENT_ROOT + "\bin\$Configuration\UnitTest\AspNet"
 $ClassicUnitTestDlls = "Microsoft.AspNet.OData.Test.dll"
 $ClassicE2ETestDIR = $ENLISTMENT_ROOT + "\bin\$Configuration\E2ETest\AspNet"
