@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using Microsoft.AspNet.OData.Builder;
@@ -46,7 +47,7 @@ namespace Microsoft.AspNet.OData.Test.Query
         }
 
         [Fact]
-        public void Ctor_ThrowsArgument_IfContextIsNotForAnEntityType()
+        public void Ctor_ThrowsArgument_IfContextIsNotForStructuredType()
         {
             // Arrange
             ODataQueryContext context = new ODataQueryContext(_model.Model, typeof(int));
@@ -55,7 +56,7 @@ namespace Microsoft.AspNet.OData.Test.Query
             ExceptionAssert.ThrowsArgument(
                 () => new SelectExpandQueryOption(select: "Name", expand: "Name", context: context),
                 "context",
-                "The type 'Edm.Int32' is not an entity type. Only entity types support $select and $expand.");
+                "The type 'Edm.Int32' is not a structured type. Only structured types support $select and $expand.");
         }
 
         [Fact]
@@ -139,8 +140,10 @@ namespace Microsoft.AspNet.OData.Test.Query
             Assert.NotEmpty(selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>());
         }
 
-        [Fact]
-        public void SelectExpandClause_Property_ParsesWithEdmTypeAndNavigationSource()
+        [Theory]
+        [InlineData("ID,Name,SimpleEnum,Orders", "Orders")]
+        [InlineData("iD,NaMe,SiMpLeEnUm,OrDeRs", "OrDeRs")]
+        public void SelectExpandClause_Property_ParsesWithEdmTypeAndNavigationSource(string select, string expand)
         {
             // Arrange
             IEdmModel model = _model.Model;
@@ -148,14 +151,20 @@ namespace Microsoft.AspNet.OData.Test.Query
             ODataPath odataPath = new ODataPath(new EntitySetSegment(_model.Customers));
             ODataQueryContext context = new ODataQueryContext(model, _model.Customer, odataPath);
             context.RequestContainer = new MockContainer();
-            SelectExpandQueryOption option = new SelectExpandQueryOption("ID,Name,SimpleEnum,Orders", "Orders", context);
+            SelectExpandQueryOption option = new SelectExpandQueryOption(select, expand, context);
 
             // Act
             SelectExpandClause selectExpandClause = option.SelectExpandClause;
 
             // Assert
             Assert.NotEmpty(selectExpandClause.SelectedItems.OfType<PathSelectItem>());
-            Assert.NotEmpty(selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>());
+            IEnumerable<string> ids = selectExpandClause.SelectedItems.OfType<PathSelectItem>()
+                .Select(p => (p.SelectedPath.FirstSegment as PropertySegment)?.Identifier);
+            Assert.Equal(new []{"ID", "Name", "SimpleEnum"}, ids.OfType<string>().ToArray());
+
+            IEnumerable<ExpandedNavigationSelectItem> expands = selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>();
+            Assert.NotEmpty(expands);
+            Assert.Equal("Orders", expands.Single().NavigationSource.Name);
         }
 
         [Theory]
@@ -364,11 +373,17 @@ namespace Microsoft.AspNet.OData.Test.Query
                 item => item.SelectedPath.FirstSegment is PropertySegment));
             Assert.Equal("Name", ((PropertySegment)nameSelectItem.SelectedPath.FirstSegment).Property.Name);
 
+            // Before ODL 7.6, the expand navigation property will be added as a select item (PathSelectItem).
+            // After ODL 7.6 (include 7.6), the expand navigation property will not be added.
+            // Comment the following codes for visibility later.
+            /*
             var parentSelectItem = Assert.Single(clause.SelectedItems.OfType<PathSelectItem>().Where(
                 item => item.SelectedPath.FirstSegment is NavigationPropertySegment));
             Assert.Equal(
                 "Parent",
                 ((NavigationPropertySegment)parentSelectItem.SelectedPath.FirstSegment).NavigationProperty.Name);
+            */
+            //Assert.Empty(clause.SelectedItems.OfType<PathSelectItem>().Where(item => item.SelectedPath.FirstSegment is NavigationPropertySegment));
 
             var expandedItem = Assert.Single(clause.SelectedItems.OfType<ExpandedNavigationSelectItem>());
             Assert.Equal(
@@ -385,7 +400,7 @@ namespace Microsoft.AspNet.OData.Test.Query
                 item => item.SelectedPath.FirstSegment is PropertySegment));
             Assert.Equal("ID", ((PropertySegment)idSelectItem.SelectedPath.FirstSegment).Property.Name);
 
-            parentSelectItem = Assert.Single(clause.SelectedItems.OfType<PathSelectItem>().Where(
+            var parentSelectItem = Assert.Single(clause.SelectedItems.OfType<PathSelectItem>().Where(
                 item => item.SelectedPath.FirstSegment is NavigationPropertySegment));
             Assert.Equal(
                 "Parent",

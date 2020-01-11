@@ -210,7 +210,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             // Arrange
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedNavigationProperties =
+                SelectedNavigationProperties = new HashSet<IEdmNavigationProperty>
                 {
                     new Mock<IEdmNavigationProperty>().Object,
                     new Mock<IEdmNavigationProperty>().Object
@@ -237,7 +237,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             // Arrange
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedNavigationProperties =
+                SelectedNavigationProperties = new HashSet<IEdmNavigationProperty>
                 {
                     new Mock<IEdmNavigationProperty>().Object,
                     new Mock<IEdmNavigationProperty>().Object
@@ -275,7 +275,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             // Arrange
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                ExpandedNavigationProperties =
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>
                 {
                     { new Mock<IEdmNavigationProperty>().Object, null },
                     { new Mock<IEdmNavigationProperty>().Object, null }
@@ -284,10 +284,10 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             Mock<ODataWriter> writer = new Mock<ODataWriter>();
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(_serializerProvider);
             serializer.Setup(s => s.CreateSelectExpandNode(It.IsAny<ResourceContext>())).Returns(selectExpandNode);
-            var expandedNavigationProperties = selectExpandNode.ExpandedNavigationProperties.ToList();
+            var expandedNavigationProperties = selectExpandNode.ExpandedProperties.Keys;
 
-            serializer.Setup(s => s.CreateNavigationLink(expandedNavigationProperties[0].Key, It.IsAny<ResourceContext>())).Verifiable();
-            serializer.Setup(s => s.CreateNavigationLink(expandedNavigationProperties[1].Key, It.IsAny<ResourceContext>())).Verifiable();
+            serializer.Setup(s => s.CreateNavigationLink(expandedNavigationProperties.First(), It.IsAny<ResourceContext>())).Verifiable();
+            serializer.Setup(s => s.CreateNavigationLink(expandedNavigationProperties.Last(), It.IsAny<ResourceContext>())).Verifiable();
             serializer.CallBase = true;
 
             // Act
@@ -310,10 +310,10 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
 
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                ExpandedNavigationProperties =
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>
                 {
-                    { ordersProperty, selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single().SelectAndExpand }
-                }
+                    { ordersProperty, selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single() }
+                },
             };
             Mock<ODataWriter> writer = new Mock<ODataWriter>();
 
@@ -323,7 +323,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
                 .Callback((object o, IEdmTypeReference t, ODataWriter w, ODataSerializerContext context) =>
                     {
                         Assert.Same(context.NavigationSource.Name, "Orders");
-                        Assert.Same(context.SelectExpandClause, selectExpandNode.ExpandedNavigationProperties.Single().Value);
+                        Assert.Same(context.SelectExpandClause, selectExpandNode.ExpandedProperties.Single().Value.SelectAndExpand);
                     })
                 .Verifiable();
 
@@ -364,8 +364,11 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
                 new Dictionary<string, string> { { "$select", "Orders" }, { "$expand", "Orders" } });
             SelectExpandClause selectExpandClause = parser.ParseSelectAndExpand();
 
-            SelectExpandNode selectExpandNode = new SelectExpandNode();
-            selectExpandNode.ExpandedNavigationProperties[ordersProperty] = selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single().SelectAndExpand;
+            SelectExpandNode selectExpandNode = new SelectExpandNode
+            {
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>()
+            };
+            selectExpandNode.ExpandedProperties[ordersProperty] = selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single();
 
             Mock<ODataWriter> writer = new Mock<ODataWriter>();
 
@@ -402,9 +405,12 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
                 new Dictionary<string, string> { { "$select", "Orders" }, { "$expand", "Orders" } });
             SelectExpandClause selectExpandClause = parser.ParseSelectAndExpand();
 
-            SelectExpandNode selectExpandNode = new SelectExpandNode();
-            selectExpandNode.ExpandedNavigationProperties[ordersProperty] =
-                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single().SelectAndExpand;
+            SelectExpandNode selectExpandNode = new SelectExpandNode
+            {
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>()
+            };
+            selectExpandNode.ExpandedProperties[ordersProperty] =
+                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single();
 
             Mock<ODataWriter> writer = new Mock<ODataWriter>();
             writer.Setup(w => w.WriteStart(It.IsAny<ODataResourceSet>())).Callback(
@@ -447,9 +453,12 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
                 new Dictionary<string, string> { { "$select", "Customer" }, { "$expand", "Customer" } });
             SelectExpandClause selectExpandClause = parser.ParseSelectAndExpand();
 
-            SelectExpandNode selectExpandNode = new SelectExpandNode();
-            selectExpandNode.ExpandedNavigationProperties[customerProperty] =
-                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single().SelectAndExpand;
+            SelectExpandNode selectExpandNode = new SelectExpandNode
+            {
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>()
+            };
+            selectExpandNode.ExpandedProperties[customerProperty] =
+                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single();
 
             Mock<ODataWriter> writer = new Mock<ODataWriter>();
 
@@ -495,9 +504,12 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
                 });
             SelectExpandClause selectExpandClause = parser.ParseSelectAndExpand();
 
-            SelectExpandNode selectExpandNode = new SelectExpandNode();
-            selectExpandNode.ExpandedNavigationProperties[specialOrdersProperty] =
-                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single().SelectAndExpand;
+            SelectExpandNode selectExpandNode = new SelectExpandNode
+            {
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>()
+            };
+            selectExpandNode.ExpandedProperties[specialOrdersProperty] =
+                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single();
 
             Mock<ODataWriter> writer = new Mock<ODataWriter>();
             writer.Setup(w => w.WriteStart(It.IsAny<ODataResourceSet>())).Callback(
@@ -550,9 +562,12 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
                 });
             SelectExpandClause selectExpandClause = parser.ParseSelectAndExpand();
 
-            SelectExpandNode selectExpandNode = new SelectExpandNode();
-            selectExpandNode.ExpandedNavigationProperties[customerProperty] =
-                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single().SelectAndExpand;
+            SelectExpandNode selectExpandNode = new SelectExpandNode
+            {
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>()
+            };
+            selectExpandNode.ExpandedProperties[customerProperty] =
+                selectExpandClause.SelectedItems.OfType<ExpandedNavigationSelectItem>().Single();
 
             Mock<ODataWriter> writer = new Mock<ODataWriter>();
 
@@ -595,7 +610,10 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             // Arrange
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedStructuralProperties = { new Mock<IEdmStructuralProperty>().Object, new Mock<IEdmStructuralProperty>().Object }
+                SelectedStructuralProperties = new HashSet<IEdmStructuralProperty>
+                {
+                    new Mock<IEdmStructuralProperty>().Object, new Mock<IEdmStructuralProperty>().Object
+                }
             };
             ODataProperty[] properties = new ODataProperty[] { new ODataProperty(), new ODataProperty() };
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(_serializerProvider);
@@ -624,7 +642,10 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             // Arrange
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedStructuralProperties = { new Mock<IEdmStructuralProperty>().Object, new Mock<IEdmStructuralProperty>().Object }
+                SelectedStructuralProperties = new HashSet<IEdmStructuralProperty>
+                {
+                    new Mock<IEdmStructuralProperty>().Object, new Mock<IEdmStructuralProperty>().Object
+                }
             };
             ODataProperty[] properties = new[] { new ODataProperty(), new ODataProperty() };
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(_serializerProvider);
@@ -661,7 +682,10 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
 
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedStructuralProperties = { new Mock<IEdmStructuralProperty>().Object, new Mock<IEdmStructuralProperty>().Object }
+                SelectedStructuralProperties = new HashSet<IEdmStructuralProperty>
+                {
+                    new Mock<IEdmStructuralProperty>().Object, new Mock<IEdmStructuralProperty>().Object
+                }
             };
             ODataProperty[] properties = new[] { new ODataProperty(), new ODataProperty() };
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(_serializerProvider);
@@ -693,7 +717,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             mockConcurrencyProperty.SetupGet(s => s.Name).Returns("City");
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedStructuralProperties = { new Mock<IEdmStructuralProperty>().Object, mockConcurrencyProperty.Object }
+                SelectedStructuralProperties = new HashSet<IEdmStructuralProperty> { new Mock<IEdmStructuralProperty>().Object, mockConcurrencyProperty.Object }
             };
             ODataProperty[] properties = new[] { new ODataProperty(), new ODataProperty() };
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(_serializerProvider);
@@ -737,7 +761,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             // Arrange
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedStructuralProperties = { new Mock<IEdmStructuralProperty>().Object }
+                SelectedStructuralProperties = new HashSet<IEdmStructuralProperty> { new Mock<IEdmStructuralProperty>().Object }
             };
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(_serializerProvider);
             serializer.CallBase = true;
@@ -761,7 +785,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             ODataAction[] actions = new ODataAction[] { new ODataAction(), new ODataAction() };
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                SelectedActions = { new Mock<IEdmAction>().Object, new Mock<IEdmAction>().Object }
+                SelectedActions = new HashSet<IEdmAction> { new Mock<IEdmAction>().Object, new Mock<IEdmAction>().Object }
             };
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(_serializerProvider);
             serializer.CallBase = true;
@@ -820,14 +844,14 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
                 {
                     City = "a city",
                     Street = "a street",
-                    Properties = new Dictionary<string, object> { {"ArrayProperty", new[] { "15", "14", "13" } } }
+                    Properties = new Dictionary<string, object> { { "ArrayProperty", new[] { "15", "14", "13" } } }
                 },
                 CustomerProperties = new Dictionary<string, object>()
             };
             DateTime dateTime = new DateTime(2014, 10, 24, 0, 0, 0, DateTimeKind.Utc);
             customer.CustomerProperties.Add("EnumProperty", SimpleEnum.Fourth);
             customer.CustomerProperties.Add("GuidProperty", new Guid("181D3A20-B41A-489F-9F15-F91F0F6C9ECA"));
-            customer.CustomerProperties.Add("ListProperty", new List<int>{5,4,3,2,1});
+            customer.CustomerProperties.Add("ListProperty", new List<int> { 5, 4, 3, 2, 1 });
             customer.CustomerProperties.Add("DateTimeProperty", dateTime);
 
             ResourceContext resourceContext = new ResourceContext(writeContext,
@@ -861,7 +885,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
 
             ODataProperty listProperty = Assert.Single(resource.Properties.Where(p => p.Name == "ListProperty"));
             ODataCollectionValue collectionValue = Assert.IsType<ODataCollectionValue>(listProperty.Value);
-            Assert.Equal(new List<int>{5,4,3,2,1}, collectionValue.Items.OfType<int>().ToList());
+            Assert.Equal(new List<int> { 5, 4, 3, 2, 1 }, collectionValue.Items.OfType<int>().ToList());
             Assert.Equal("Collection(Edm.Int32)", collectionValue.TypeName);
 
             ODataProperty dateTimeProperty = Assert.Single(resource.Properties.Where(p => p.Name == "DateTimeProperty"));
@@ -1748,9 +1772,9 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
 
             SelectExpandNode selectExpandNode = new SelectExpandNode
             {
-                ExpandedNavigationProperties =
+                ExpandedProperties = new Dictionary<IEdmNavigationProperty, ExpandedNavigationSelectItem>
                 {
-                     { ordersProperty, new SelectExpandClause(new SelectItem[0], allSelected: true) }
+                    {ordersProperty, null }
                 }
             };
             Mock<ODataResourceSerializer> serializer = new Mock<ODataResourceSerializer>(serializerProvider.Object);
@@ -1872,7 +1896,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
 #if NETFX // Only AspNet version has Url property
                 Url = CreateMetadataLinkFactory(expectedMetadataPrefix)
 #endif
-        };
+            };
         }
 
         private static IEdmEntityType CreateEntityTypeWithName(string typeName)

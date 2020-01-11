@@ -292,7 +292,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             Assert.Equal("Customer0", value[2]["Name"].ToObject<string>());
 
             var customerZeroOrders = (JArray)value[0]["Orders"];
-            Assert.Equal(1, customerZeroOrders.Count);
+            Assert.Single(customerZeroOrders);
             Assert.Equal(75, customerZeroOrders[0]["Price"].ToObject<int>());
 
             var customerOneOrders = (JArray)value[1]["Orders"];
@@ -339,7 +339,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             // Arrange
             string queryUrl =
                 string.Format(
-                    AggregationTestBaseUrl + "?$expand=Orders($filter=TotalPrice gt 100;$apply=aggregate(Price with sum as TotalPrice))",
+                    AggregationTestBaseUrl + "?$expand=Orders($filter=TotalPrice gt 100;$apply=aggregate(Price with sum as TotalPrice))&$orderby=Id desc",
                     BaseAddress);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, queryUrl);
             request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json;odata.metadata=none"));
@@ -356,7 +356,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.EntitySetAggregation
             Assert.Equal("Customer0", value[0]["Name"].ToObject<string>());
             Assert.Equal("Customer1", value[1]["Name"].ToObject<string>());
 
-            Assert.Equal(0, ((JArray)value[0]["Orders"]).Count);
+            Assert.Single(((JArray)value[0]["Orders"]));
 
             var customerOneOrders = value[1]["Orders"];
             var customerOnePrice = customerOneOrders.First["TotalPrice"].ToObject<int>();

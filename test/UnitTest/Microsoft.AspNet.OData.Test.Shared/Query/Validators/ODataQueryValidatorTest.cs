@@ -41,6 +41,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Validators
                     { AllowedQueryOptions.Skip, "$skip=5", "Skip" },
                     { AllowedQueryOptions.Top, "$top=10", "Top" },
                     { AllowedQueryOptions.Apply, "$apply=groupby((Name))", "Apply" },
+                    { AllowedQueryOptions.SkipToken, "$skiptoken=__skip__", "SkipToken" },
                     { AllowedQueryOptions.Compute, "$compute=ID as ID2", "Compute" },
                 };
             }
@@ -52,7 +53,6 @@ namespace Microsoft.AspNet.OData.Test.Query.Validators
             {
                 return new TheoryDataSet<AllowedQueryOptions, string, string>
                 {
-                    { AllowedQueryOptions.SkipToken, "$skiptoken=__skip__", "SkipToken" },
                     { AllowedQueryOptions.DeltaToken, "$deltatoken=__delta__", "DeltaToken" },
                 };
             }
@@ -221,7 +221,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Validators
             };
 
             // Act & Assert
-            Assert.NotEqual(unused, settings.AllowedQueryOptions);
+            Assert.Equal(unused, settings.AllowedQueryOptions); //Equal because only Delta token is unsupported.
             Assert.NotNull(unusedName);
             ExceptionAssert.DoesNotThrow(() => _validator.Validate(option, settings));
         }

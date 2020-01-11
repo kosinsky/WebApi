@@ -85,14 +85,14 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.5.13.31203, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.OData.Core.7.5.13\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Core, Version=7.6.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Core.7.6.2\lib\net45\Microsoft.TeamFoundation.OData.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.5.13.31203, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.OData.Edm.7.5.13\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.OData.Edm, Version=7.6.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.OData.Edm.7.6.2\lib\net45\Microsoft.TeamFoundation.OData.Edm.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.5.13.31203, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\sln\packages\Mseng.Spatial.7.5.13\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
+    <Reference Include="Microsoft.TeamFoundation.Spatial, Version=7.6.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\sln\packages\Mseng.Spatial.7.6.2\lib\net45\Microsoft.TeamFoundation.Spatial.dll</HintPath>
     </Reference>
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Web.DynamicData" />

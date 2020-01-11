@@ -112,8 +112,9 @@ namespace Microsoft.AspNet.OData.Test.Routing.Conventions
             // Assert
             Assert.NotNull(selectedAction);
             Assert.Equal(prefix + "NameFromCustomer", selectedAction);
-            Assert.Single(SelectActionHelper.GetRouteData(request).Values);
+            Assert.Equal(2, SelectActionHelper.GetRouteData(request).Values.Count);
             Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["key"]);
+            Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["keyID"]);
         }
 
         [Theory]
@@ -134,8 +135,9 @@ namespace Microsoft.AspNet.OData.Test.Routing.Conventions
             // Assert
             Assert.NotNull(selectedAction);
             Assert.Equal(prefix + "AccountOfSpecialAccountFromCustomer", selectedAction);
-            Assert.Single(SelectActionHelper.GetRouteData(request).Values);
+            Assert.Equal(2, SelectActionHelper.GetRouteData(request).Values.Count);
             Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["key"]);
+            Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["keyID"]);
         }
 
         [Fact]
@@ -155,8 +157,9 @@ namespace Microsoft.AspNet.OData.Test.Routing.Conventions
             // Assert
             Assert.NotNull(selectedAction);
             Assert.Equal("GetEnumCollectionPropFromDollarCountEntity", selectedAction);
-            Assert.Single(SelectActionHelper.GetRouteData(request).Values);
+            Assert.Equal(2, SelectActionHelper.GetRouteData(request).Values.Count);
             Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["key"]);
+            Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["keyID"]);
         }
 
         [Theory]
@@ -234,6 +237,70 @@ namespace Microsoft.AspNet.OData.Test.Routing.Conventions
             // Assert
             Assert.Null(selectedAction);
             Assert.Empty(SelectActionHelper.GetRouteData(request).Values);
+        }
+
+        [Fact]
+        public void SelectAction_ReturnsNull_IfPostToNonCollectionProperty()
+        {
+            // Arrange
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+            ODataPath odataPath = new DefaultODataPathHandler().Parse(model.Model, _serviceRoot, "VipCustomer/Address");
+            var request = RequestFactory.Create(HttpMethod.Post, "http://localhost/");
+            var actionMap = SelectActionHelper.CreateActionMap("PostToAddress");
+
+            // Act
+            string selectedAction = SelectActionHelper.SelectAction(new PropertyRoutingConvention(), odataPath, request, actionMap);
+
+            // Assert
+            Assert.Null(selectedAction);
+            Assert.Empty(SelectActionHelper.GetRouteData(request).Values);
+        }
+
+        [Theory]
+        [InlineData("Get", "Get")]
+        [InlineData("Put", "PutTo")]
+        [InlineData("Delete", "DeleteTo")]
+        [InlineData("Post", "PostTo")]
+        public void SelectAction_OnComplexCollection_ReturnsTheActionName(string httpMethod, string prefix)
+        {
+            // Arrange
+            CustomersModelWithInheritance model = new CustomersModelWithInheritance();
+            ODataPath odataPath = new DefaultODataPathHandler().Parse(model.Model, _serviceRoot, "Customers(7)/OtherAccounts");
+            var request = RequestFactory.Create(new HttpMethod(httpMethod), "http://localhost/");
+            var actionMap = SelectActionHelper.CreateActionMap(prefix + "OtherAccountsFromCustomer");
+
+            // Act
+            string selectedAction = SelectActionHelper.SelectAction(new PropertyRoutingConvention(), odataPath, request, actionMap);
+
+            // Assert
+            Assert.NotNull(selectedAction);
+            Assert.Equal(prefix + "OtherAccountsFromCustomer", selectedAction);
+            Assert.Equal(2, SelectActionHelper.GetRouteData(request).Values.Count);
+            Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["key"]);
+            Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["keyID"]);
+        }
+
+        [Theory]
+        [InlineData("Get", "Get")]
+        [InlineData("Put", "PutTo")]
+        [InlineData("Post", "PostTo")]
+        public void SelectAction_OnEnumCollection_ReturnsTheActionName(string httpMethod, string prefix)
+        {
+            // Arrange
+            IEdmModel model = ODataCountTest.GetEdmModel();
+            ODataPath odataPath = new DefaultODataPathHandler().Parse(model, _serviceRoot, "DollarCountEntities(7)/EnumCollectionProp");
+            var request = RequestFactory.Create(new HttpMethod(httpMethod), "http://localhost/");
+            var actionMap = SelectActionHelper.CreateActionMap(prefix + "EnumCollectionProp");
+
+            // Act
+            string selectedAction = SelectActionHelper.SelectAction(new PropertyRoutingConvention(), odataPath, request, actionMap);
+
+            // Assert
+            Assert.NotNull(selectedAction);
+            Assert.Equal(prefix + "EnumCollectionProp", selectedAction);
+            Assert.Equal(2, SelectActionHelper.GetRouteData(request).Values.Count);
+            Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["key"]);
+            Assert.Equal(7, SelectActionHelper.GetRouteData(request).Values["keyID"]);
         }
     }
 }

@@ -440,6 +440,7 @@ namespace Microsoft.AspNet.OData.Builder
             // add annotation for properties
             Dictionary<PropertyInfo, IEdmProperty> edmProperties = edmTypeMap.EdmProperties;
             model.AddClrPropertyInfoAnnotations(edmProperties);
+            model.AddClrEnumMemberInfoAnnotations(edmTypeMap);
             model.AddPropertyRestrictionsAnnotations(edmTypeMap.EdmPropertiesRestrictions);
             model.AddPropertiesQuerySettings(edmTypeMap.EdmPropertiesQuerySettings);
             model.AddStructuredTypeQuerySettings(edmTypeMap.EdmStructuredTypeQuerySettings);
@@ -512,6 +513,21 @@ namespace Microsoft.AspNet.OData.Builder
                 {
                     model.SetAnnotationValue(edmProperty, new ClrPropertyInfoAnnotation(clrProperty));
                 }
+            }
+        }
+
+        private static void AddClrEnumMemberInfoAnnotations(this EdmModel model, EdmTypeMap edmTypeMap)
+        {
+            if (edmTypeMap.EnumMembers == null || !edmTypeMap.EnumMembers.Any())
+            {
+                return;
+            }
+
+            var enumGroupBy = edmTypeMap.EnumMembers.GroupBy(e => e.Key.GetType(), e => e);
+            foreach (var enumGroup in enumGroupBy)
+            {
+                IEdmType edmType = edmTypeMap.EdmTypes[enumGroup.Key];
+                model.SetAnnotationValue(edmType, new ClrEnumMemberAnnotation(enumGroup.ToDictionary(e => e.Key, e => e.Value)));
             }
         }
 
@@ -872,8 +888,9 @@ namespace Microsoft.AspNet.OData.Builder
                 }
                 else if (configuration.Kind == EdmTypeKind.Primitive)
                 {
-                    PrimitiveTypeConfiguration primitiveTypeConfiguration = configuration as PrimitiveTypeConfiguration;
-                    return new EdmPrimitiveTypeReference(primitiveTypeConfiguration.EdmPrimitiveType, nullable);
+                    PrimitiveTypeConfiguration primitiveTypeConfiguration = (PrimitiveTypeConfiguration)configuration;
+                    EdmPrimitiveTypeKind typeKind = EdmTypeBuilder.GetTypeKind(primitiveTypeConfiguration.ClrType);
+                    return EdmCoreModel.Instance.GetPrimitive(typeKind, nullable);
                 }
                 else
                 {

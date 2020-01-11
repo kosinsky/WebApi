@@ -72,6 +72,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             var selectLambda = Expression.Lambda(initilizedMember, this._lambdaParameter);
 
             var result = ExpressionHelpers.Select(query, selectLambda, this._elementType);
+
             return result;
         }
 

@@ -117,6 +117,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="CannotDeserializeUnknownProperty" xml:space="preserve">
+    <value>The property '{0}' does not exist on type '{1}'. Make sure to only use property names that are defined by the type.</value>
+  </data>
   <data name="CannotSerializerNull" xml:space="preserve">
     <value>Cannot serialize a null '{0}'.</value>
   </data>
@@ -534,8 +537,8 @@
   <data name="SelectionTypeNotSupported" xml:space="preserve">
     <value>$select does not support selections of type '{0}'.</value>
   </data>
-  <data name="SelectNonEntity" xml:space="preserve">
-    <value>The type '{0}' is not an entity type. Only entity types support $select and $expand.</value>
+  <data name="SelectNonStructured" xml:space="preserve">
+    <value>The type '{0}' is not a structured type. Only structured types support $select and $expand.</value>
   </data>
   <data name="PropertyNotFound" xml:space="preserve">
     <value>The EDM instance of type '{0}' is missing the property '{1}'.</value>
@@ -576,6 +579,12 @@
   </data>
   <data name="UnsupportedSelectExpandPath" xml:space="preserve">
     <value>A path within the select or expand query option is not supported.</value>
+  </data>
+  <data name="InvalidSegmentInSelectExpandPath" xml:space="preserve">
+    <value>A segment '{0}' within the select or expand query option is not supported.</value>
+  </data>
+  <data name="InvalidLastSegmentInSelectExpandPath" xml:space="preserve">
+    <value>The last segment '{0}' of the select or expand query option is not supported.</value>
   </data>
   <data name="UrlHelperNull" xml:space="preserve">
     <value>The property 'Url' of {0} cannot be null.</value>
@@ -728,6 +737,9 @@
   <data name="EntityTypeDoesntHaveKeyDefined" xml:space="preserve">
     <value>The entity '{0}' does not have a key defined.</value>
   </data>
+  <data name="CollectionNavigationPropertyEntityTypeDoesntHaveKeyDefined" xml:space="preserve">
+    <value>The entity type '{0}' of navigation property '{1}' on structural type '{2}' does not have a key defined.</value>
+  </data>
   <data name="InvalidPropertyMapper" xml:space="preserve">
     <value>The mapper provider must return a valid '{0}' instance for the given '{1}' IEdmType.</value>
   </data>
@@ -810,6 +822,9 @@
   <data name="NavigationSourceTypeHasNoKeys" xml:space="preserve">
     <value>The entity set or singleton '{0}' is based on type '{1}' that has no keys defined.</value>
   </data>
+  <data name="EntitySetTypeHasNoKeys" xml:space="preserve">
+    <value>The entity set '{0}' is based on type '{1}' that has no keys defined.</value>
+  </data>
   <data name="ParameterTypeIsNotCollection" xml:space="preserve">
     <value>The type '{0}' of the parameter '{1}' must be a collection.</value>
   </data>
@@ -887,6 +902,15 @@
   </data>
   <data name="AggregateKindNotSupported" xml:space="preserve">
     <value>{0} type of aggregation is not supported.</value>
+  </data>
+  <data name="PropertyMustBeBoolean" xml:space="preserve">
+    <value>The value must be a boolean.</value>
+  </data>
+  <data name="SkipTokenParseError" xml:space="preserve">
+    <value>Unable to parse the skiptoken value. Skiptoken value should always be server generated.</value>
+  </data>
+  <data name="ApplyQueryOptionNotSupportedForLinq2SQL" xml:space="preserve">
+    <value>$apply query options not supported for LINQ to SQL providers</value>
   </data>
   <data name="AggregationNotSupportedForSingleProperty" xml:space="preserve">
     <value>$apply/$compute not supported for single property {0}</value>

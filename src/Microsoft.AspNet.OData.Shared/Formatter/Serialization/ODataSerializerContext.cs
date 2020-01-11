@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Interfaces;
+using Microsoft.AspNet.OData.Query;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 using ODataPath = Microsoft.AspNet.OData.Routing.ODataPath;
 using SelectExpandClause = Microsoft.OData.UriParser.SelectExpandClause;
 
@@ -18,6 +20,9 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
     {
         private ClrTypeCache _typeMappingCache;
         private IDictionary<object, object> _items;
+        private ODataQueryContext _queryContext;
+        private SelectExpandClause _selectExpandClause;
+        private bool _isSelectExpandClauseSet;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ODataSerializerContext"/> class.
@@ -29,13 +34,28 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         /// <summary>
         /// Initializes a new instance of the <see cref="ODataSerializerContext"/> class.
         /// </summary>
-        /// <param name="resource">The resource whose navigation property is being expanded.</param>
-        /// <param name="selectExpandClause">The <see cref="SelectExpandClause"/> for the navigation property being expanded.</param>
+        /// <param name="resource">The resource whose property is being nested.</param>
+        /// <param name="selectExpandClause">The <see cref="SelectExpandClause"/> for the property being nested.</param>
         /// <param name="edmProperty">The complex property being nested or the navigation property being expanded.
         /// If the resource property is the dynamic complex, the resource property is null.
         /// </param>
         /// <remarks>This constructor is used to construct the serializer context for writing nested and expanded properties.</remarks>
         public ODataSerializerContext(ResourceContext resource, SelectExpandClause selectExpandClause, IEdmProperty edmProperty)
+            : this(resource, edmProperty, null, null)
+        {
+            SelectExpandClause = selectExpandClause;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ODataSerializerContext"/> class for nested resources.
+        /// </summary>
+        /// <param name="resource">The resource whose property is being nested.</param>
+        /// <param name="edmProperty">The complex property being nested or the navigation property being expanded.
+        /// If the resource property is the dynamic complex, the resource property is null.
+        /// </param>
+        /// <param name="queryContext">The <see cref="ODataQueryContext"/> for the property being nested.</param>
+        /// <param name="currentSelectItem">The <see cref="SelectItem"/> for the property being nested.></param>
+        internal ODataSerializerContext(ResourceContext resource, IEdmProperty edmProperty, ODataQueryContext queryContext, SelectItem currentSelectItem)
         {
             if (resource == null)
             {
@@ -53,17 +73,49 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             SkipExpensiveAvailabilityChecks = context.SkipExpensiveAvailabilityChecks;
             MetadataLevel = context.MetadataLevel;
             Items = context.Items;
+            ExpandReference = context.ExpandReference;
+
+            QueryContext = queryContext;
 
             ExpandedResource = resource; // parent resource
-            SelectExpandClause = selectExpandClause;
+
+            CurrentSelectItem = currentSelectItem;
+
+            var expandedNavigationSelectItem = currentSelectItem as ExpandedNavigationSelectItem;
+            if (expandedNavigationSelectItem != null)
+            {
+                SelectExpandClause = expandedNavigationSelectItem.SelectAndExpand;
+                NavigationSource = expandedNavigationSelectItem.NavigationSource;
+            }
+            else
+            {
+                var pathSelectItem = currentSelectItem as PathSelectItem;
+                if (pathSelectItem != null)
+                {
+                    SelectExpandClause = pathSelectItem.SelectAndExpand;
+                    NavigationSource = resource.NavigationSource; // Use it's parent navigation source.
+                }
+
+                var referencedNavigation = currentSelectItem as ExpandedReferenceSelectItem;
+                if (referencedNavigation != null)
+                {
+                    ExpandReference = true;
+                    NavigationSource = referencedNavigation.NavigationSource;
+                }
+            }
+
             EdmProperty = edmProperty; // should be nested property
 
-            if (context.NavigationSource != null)
+            if (currentSelectItem == null || (NavigationSource as IEdmUnknownEntitySet) != null)
             {
                 IEdmNavigationProperty navigationProperty = edmProperty as IEdmNavigationProperty;
-                if (navigationProperty != null)
+                if (navigationProperty != null && context.NavigationSource != null)
                 {
                     NavigationSource = context.NavigationSource.FindNavigationTarget(NavigationProperty);
+                }
+                else
+                {
+                    NavigationSource = resource.NavigationSource;
                 }
             }
         }
@@ -74,6 +126,23 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         /// Gets or sets the <see cref="IWebApiUrlHelper"/> to use for generating OData links.
         /// </summary>
         internal IWebApiUrlHelper InternalUrlHelper { get; private set; }
+
+        /// <summary>
+        /// ODataQueryContext object, retrieved from query options for top-level context and passed down to nested serializer context as is.
+        /// </summary>
+        internal ODataQueryContext QueryContext
+        {
+            get
+            {
+                if (QueryOptions != null)
+                {
+                    return QueryOptions.Context;
+                }
+
+                return _queryContext;
+            }
+            private set { _queryContext = value; }
+        }
 
         /// <summary>
         /// Gets or sets the navigation source.
@@ -108,12 +177,76 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         /// <summary>
         /// Gets or sets the <see cref="SelectExpandClause"/>.
         /// </summary>
-        public SelectExpandClause SelectExpandClause { get; set; }
+        public SelectExpandClause SelectExpandClause
+        {
+            get
+            {
+                // private backing field to be removed once public setter from ODataFeature is removed.
+                if (_isSelectExpandClauseSet)
+                {
+                    return _selectExpandClause;
+                }
+
+                if (QueryOptions != null)
+                {
+                    if (QueryOptions.SelectExpand != null)
+                    {
+                        return QueryOptions.SelectExpand.ProcessedSelectExpandClause;
+                    }
+
+                    return null;
+                }
+
+                ExpandedNavigationSelectItem expandedItem = CurrentSelectItem as ExpandedNavigationSelectItem;
+                if (expandedItem != null)
+                {
+                    return expandedItem.SelectAndExpand;
+                }
+
+                return null;
+            }
+            set
+            {
+                _isSelectExpandClauseSet = true;
+                _selectExpandClause = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the <see cref="ExpandedNavigationSelectItem"/>.
+        /// </summary>
+        internal ExpandedReferenceSelectItem CurrentExpandedSelectItem
+        {
+            get
+            {
+                return CurrentSelectItem as ExpandedReferenceSelectItem;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the <see cref="SelectItem"/>.
+        /// </summary>
+        internal SelectItem CurrentSelectItem { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="ODataQueryOptions"/>.
+        /// </summary>
+        public ODataQueryOptions QueryOptions { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets the relative path to the resouce being serialized
+        /// </summary>
+        internal Queue<IEdmProperty> PropertiesInPath { get; private set; }
 
         /// <summary>
         /// Gets or sets the resource that is being expanded.
         /// </summary>
         public ResourceContext ExpandedResource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the boolean value indicating whether it's $ref expanded.
+        /// </summary>
+        public bool ExpandReference { get; set; }
 
         /// <summary>
         /// Gets or sets the complex property being nested or navigation property being expanded.

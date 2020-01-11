@@ -34,6 +34,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Builder\ComplexTypeConfigurationTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\ComplexTypeTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\ContainmentPathBuilderTest.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\Attributes\DefaultValueAttributeEdmPropertyConventionTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\RecursiveComplexTypesTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\Conventions\RecursiveComplexTypesModels.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Builder\DynamicPropertyDictionaryAnnotationTest.cs" />
@@ -144,7 +145,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Common\Types\UIntEnum.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\Types\UShortEnum.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Common\VersionTestHelper.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ComputeTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\HttpContentExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\IHeaderDictionaryExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\RoutingConfigurationExtensions.cs" />
@@ -165,6 +165,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\ODataEntityReferenceLinkDeserializerTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\CollectionDeserializationHelpersTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\ODataActionPayloadDeserializerTest.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\ODataDeserializationTestsCommon.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataModelBinderConverterTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Serialization\ODataEntityReferenceLinksSerializerTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Serialization\ODataEnumTypeSerializerTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Serialization\ODataRawValueSerializerTests.cs" />
@@ -233,6 +235,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\LinqParameterContainerTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\PropertyContainerTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandBinderTest.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandIncludedPropertyTest.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandPathExtensionsTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\SelectExpandWrapperTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Expressions\UriFunctionBinderTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Query\Validators\ComputeQueryValidatorTest.cs" />
@@ -345,6 +349,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)TestCommon\Models\NonGenericEnumerable.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TestCommon\Models\TestDataModels.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ApplyTest.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ComputeTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ClrPropertyInfoAnnotationTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ContentIdHelpersTest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ContextUtil.cs" />

@@ -78,6 +78,12 @@ namespace Microsoft.AspNet.OData.Query.Validators
                 }
             }
 
+            if (options.SkipToken != null)
+            {
+                ValidateQueryOptionAllowed(AllowedQueryOptions.SkipToken, validationSettings.AllowedQueryOptions);
+                options.SkipToken.Validate(validationSettings);
+            }
+
             if (options.RawValues.Expand != null)
             {
                 ValidateQueryOptionAllowed(AllowedQueryOptions.Expand, validationSettings.AllowedQueryOptions);
