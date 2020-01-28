@@ -225,7 +225,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.ModelBoundQuerySettings.SelectAttribut
             Assert.Contains("Id", result);
         }
 
-        [Theory(Skip = "VSTS AX: Null elimination")]
+        [Theory]
         [InlineData(AutoSelectCustomerBaseUrl)]
         [InlineData(ModelBoundAutoSelectCustomerBaseUrl)]
         public async Task DollarSelectGetPrecedenceWithAutoSelect(string url)
@@ -248,7 +248,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.ModelBoundQuerySettings.SelectAttribut
             Assert.Contains("CarNumber", result);
         }
 
-        [Theory(Skip = "VSTS AX: Null elimination")]
+        [Theory]
         [InlineData(AutoSelectCustomerBaseUrl)]
         [InlineData(ModelBoundAutoSelectCustomerBaseUrl)]
         public async Task NestedDollarSelectGetPrecedenceWithAutoSelect(string url)
@@ -269,7 +269,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.ModelBoundQuerySettings.SelectAttribut
             Assert.Contains("CarNumber", result);
         }
 
-        [Theory(Skip = "VSTS AX: Null elimination")]
+        [Theory]
         [InlineData(AutoSelectCustomerBaseUrl)]
         [InlineData(AutoSelectCustomerBaseUrl + "(9)")]
         [InlineData(ModelBoundAutoSelectCustomerBaseUrl)]

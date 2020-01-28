@@ -86,7 +86,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.DateAndTimeOfDay
             Assert.Equal(expected, await response.Content.ReadAsStringAsync());
         }
 
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public async Task CanQueryEntitySet_WithDateAndTimeOfDayProperties()
         {
             // Arrange
@@ -110,7 +110,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.DateAndTimeOfDay
             Assert.Equal("05:03:05.0790000", result["value"][4]["CreatedTime"]);
         }
 
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public async Task CanQuerySingleEntity_WithDateAndTimeOfDayProperties()
         {
             // Arrange
@@ -149,7 +149,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.DateAndTimeOfDay
             Assert.Equal(JObject.Parse(expect), result);
         }
 
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public async Task CanSelect_OnDateAndTimeOfDayProperties()
         {
             // Arrange

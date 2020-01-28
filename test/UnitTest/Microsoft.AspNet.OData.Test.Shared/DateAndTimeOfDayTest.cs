@@ -63,7 +63,7 @@ namespace Microsoft.AspNet.OData.Test
             Assert.Contains("<Property Name=\"ResumeTime\" Type=\"Edm.Duration\" Nullable=\"false\" />", payload);
         }
 
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public async Task CanQueryEntity_WithDateAndTimeOfDayProperties()
         {
             // Arrange

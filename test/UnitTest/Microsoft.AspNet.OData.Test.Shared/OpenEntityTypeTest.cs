@@ -43,7 +43,7 @@ namespace Microsoft.AspNet.OData.Test
     {
         private const string _untypedCustomerRequestRooturl = "http://localhost/odata/UntypedSimpleOpenCustomers";
 
-        [Theory(Skip = "VSTS AX: Null elimination")]
+        [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Get_OpenEntityType(bool enableNullDynamicProperty)

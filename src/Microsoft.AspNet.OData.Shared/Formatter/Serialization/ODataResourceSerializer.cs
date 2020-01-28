@@ -553,7 +553,7 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             }
 
             IEdmStructuredType structuredType = resourceContext.StructuredType;
-            
+
             object value;
             IDelta delta = structuredObject as IDelta;
             if (delta == null)
@@ -710,14 +710,12 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             {
                 return;
             }
-            if (resourceContext.SerializerContext.MetadataLevel == ODataMetadataLevel.FullMetadata)
+
+            IEnumerable<ODataNestedResourceInfo> navigationLinks = CreateNavigationLinks(selectExpandNode.SelectedNavigationProperties, resourceContext);
+            foreach (ODataNestedResourceInfo navigationLink in navigationLinks)
             {
-                IEnumerable<ODataNestedResourceInfo> navigationLinks = CreateNavigationLinks(selectExpandNode.SelectedNavigationProperties, resourceContext);
-                foreach (ODataNestedResourceInfo navigationLink in navigationLinks)
-                {
-                    writer.WriteStart(navigationLink);
-                    writer.WriteEnd();
-                }
+                writer.WriteStart(navigationLink);
+                writer.WriteEnd();
             }
         }
 

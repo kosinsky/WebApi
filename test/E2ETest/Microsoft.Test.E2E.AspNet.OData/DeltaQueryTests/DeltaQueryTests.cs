@@ -42,7 +42,7 @@ namespace Microsoft.Test.E2E.AspNet.OData
             return builder.GetEdmModel();
         }
 
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public async Task DeltaVerifyReslt()
         {
             HttpRequestMessage get = new HttpRequestMessage(HttpMethod.Get, BaseAddress + "/odata/TestCustomers?$deltaToken=abc");

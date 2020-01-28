@@ -139,7 +139,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Serialization
             serializer.Verify();
         }
 
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public void WriteObject_CanWriteTopLevelResourceSetContainsNullComplexElement()
         {
             // Arrange

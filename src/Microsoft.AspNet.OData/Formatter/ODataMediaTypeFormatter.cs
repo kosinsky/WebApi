@@ -134,6 +134,20 @@ namespace Microsoft.AspNet.OData.Formatter
             headers.TryAddWithoutValidation(
                 ODataVersionConstraint.ODataServiceVersionHeader,
                 ODataUtils.ODataVersionToString(ResultHelpers.GetODataResponseVersion(Request)));
+
+            // Add Preference-Applied headers
+            var  responseMessage = ODataOutputFormatterHelper.PrepareResponseMessage(
+                new WebApiRequestMessage(Request),
+                new WebApiRequestHeaders(Request.Headers),
+                (services) => ODataMessageWrapperHelper.Create(null, headers, services));
+
+            foreach (var header in responseMessage.Headers)
+            {
+                if (!headers.Contains(header.Key))
+                {
+                    headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+            }
         }
 
         /// <inheritdoc/>

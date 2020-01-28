@@ -126,7 +126,7 @@ namespace Microsoft.AspNet.OData.Test
         }
 
 #if !NETCORE // TODO #939: Enable this test on AspNetCore.
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public async Task EnumTypeSerializerTestForOData()
         {
             // Arrange

@@ -438,6 +438,46 @@ namespace Microsoft.AspNet.OData.Test.Formatter
             Assert.Equal(expect, await response.Content.ReadAsStringAsync());
         }
 
+        [Fact]
+        public async Task OmitValuesPreferenceWorks()
+        {
+            var controllers = new[] { typeof(UnknownPeopleController) };
+            ODataConventionModelBuilder model = ODataConventionModelBuilderFactory.Create();
+            var people = model.EntitySet<FormatterPerson>("UnknownPeople");
+            var m = model.GetEdmModel();
+
+            var server = TestServerFactory.Create(controllers, (config) =>
+            {
+                config.MapODataServiceRoute("odata", null, m);
+            });
+
+            using (HttpClient client = TestServerFactory.CreateClient(server))
+
+
+            using (HttpRequestMessage request = CreateRequest("UnknownPeople", MediaTypeWithQualityHeaderValue.Parse("application/json")))
+            {
+                request.Headers.Add("Prefer", "omit-values=nulls");
+                // Act
+                using (HttpResponseMessage response = client.SendAsync(request).Result)
+                {
+                    // Assert
+                    Assert.NotNull(response);
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    string payload = await response.Content.ReadAsStringAsync();
+
+                    Assert.Contains("\"Name\":\"Asha\"", payload);
+                    Assert.DoesNotContain("\"Name\":null", payload);
+#if NETCORE
+                    var appliedHeader = response.Headers.GetValues("Preference-Applied");
+#else
+                    var appliedHeader = response.Content.Headers.GetValues("Preference-Applied");
+#endif
+                    Assert.Equal("omit-values=nulls", appliedHeader.First());
+
+                }
+            }
+        }
+
         [Theory]
         [InlineData("EnumKeyCustomers")] // using CLR as parameter type
         [InlineData("EnumKeyCustomers2")] // using EdmEnumObject as parameter type
@@ -1191,7 +1231,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter
         private static HttpRequestMessage CreateRequest(string pathAndQuery, MediaTypeWithQualityHeaderValue accept, string maxVersion, string minVersion, string requestVersion)
         {
             HttpRequestMessage request = CreateRequest(pathAndQuery, accept);
-            
+
             if (!string.IsNullOrEmpty(maxVersion))
             {
                 request.Headers.Add("OData-MaxVersion", maxVersion);

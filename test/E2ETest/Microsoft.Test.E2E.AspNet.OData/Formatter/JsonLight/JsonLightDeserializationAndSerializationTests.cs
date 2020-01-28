@@ -179,7 +179,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Formatter.JsonLight
             return PostAndGetShouldReturnSameEntity(entity);
         }
 
-        [Fact(Skip = "VSTS AX: Null elimination")]
+        [Fact]
         public async Task SerializationTests()
         {
             string requestUri = this.BaseAddress + "/UniverseEntity";

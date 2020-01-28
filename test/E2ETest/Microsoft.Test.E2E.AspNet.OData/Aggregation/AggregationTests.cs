@@ -191,7 +191,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
             var results = result["value"] as JArray;
             Assert.Equal(3, results.Count);
             Assert.Equal("0", results[0]["TotalPrice"].ToString());
-            Assert.Null(results[0]["Name"]);
+            Assert.Equal(JValue.CreateNull(), results[0]["Name"]);
             Assert.Equal("2000", results[1]["TotalPrice"].ToString());
             Assert.Equal("Customer0", results[1]["Name"].ToString());
             Assert.Equal("2500", results[2]["TotalPrice"].ToString());
@@ -254,7 +254,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var results = result["value"] as JArray;
             Assert.Equal(3, results.Count);
-            Assert.Null(results[0]["Bucket"]);
+            Assert.Equal(JValue.CreateNull(), results[0]["Bucket"]);
             Assert.Equal("Small", results[1]["Bucket"].ToString());
             Assert.Equal("Big", results[2]["Bucket"].ToString());
         }
@@ -570,7 +570,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
             Assert.Equal("0", results[0]["TotalAmount"].ToString());
             Assert.Equal("2000", results[1]["TotalAmount"].ToString());
             Assert.Equal("2500", results[2]["TotalAmount"].ToString());
-            Assert.Null(results[0]["Name"]);
+            Assert.Equal(JValue.CreateNull(), results[0]["Name"]);
             Assert.Equal("Customer0", results[1]["Name"].ToString());
             Assert.Equal("Customer1", results[2]["Name"].ToString());
         }
@@ -763,8 +763,8 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
             Assert.Equal(3, results.Count);
             Assert.Equal("0", results[0]["TotalAmount"].ToString());
             Assert.Equal("0", results[0]["DoubleAmount"].ToString());
-            Assert.Null(results[0]["NameLen"]);
-            Assert.Null(results[0]["Name"]);
+            Assert.Equal(JValue.CreateNull(), results[0]["NameLen"]);
+            Assert.Equal(JValue.CreateNull(), results[0]["Name"]);
             Assert.Equal("2000", results[1]["TotalAmount"].ToString());
             Assert.Equal("4000", results[1]["DoubleAmount"].ToString());
             Assert.Equal("9", results[1]["NameLen"].ToString());
@@ -799,8 +799,8 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
             var results = result["value"] as JArray;
             Assert.Equal(3, results.Count);
             Assert.Equal("0", results[0]["TotalAmount"].ToString());
-            Assert.Null(results[0]["NameLen"]);
-            Assert.Null(results[0]["Name"]);
+            Assert.Equal(JValue.CreateNull(), results[0]["NameLen"]);
+            Assert.Equal(JValue.CreateNull(), results[0]["Name"]);
             Assert.Equal("2000", results[1]["TotalAmount"].ToString());
             Assert.Equal("9", results[1]["NameLen"].ToString());
             Assert.Equal("Customer0", results[1]["Name"].ToString());
@@ -835,7 +835,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
             {
                 Assert.NotNull(customer["Id"]);
                 var name = customer["Name"]?.ToString();
-                if (name == null)
+                if (JValue.CreateNull().Equals(customer["Name"]))
                 {
                     Assert.Null(customer["NameLen"]);
                 }

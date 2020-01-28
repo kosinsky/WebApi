@@ -182,6 +182,20 @@ namespace Microsoft.AspNet.OData.Formatter
 
             // Add version header.
             response.Headers[ODataVersionConstraint.ODataServiceVersionHeader] = ODataUtils.ODataVersionToString(ResultHelpers.GetODataResponseVersion(request));
+
+            // Add Preference-Applied headers
+            var responseMessage = ODataOutputFormatterHelper.PrepareResponseMessage(
+                new WebApiRequestMessage(request),
+                new WebApiRequestHeaders(request.Headers),
+                (services) => ODataMessageWrapperHelper.Create(null, response.Headers, services));
+
+            foreach (var header in responseMessage.Headers)
+            {
+                if (!response.Headers.ContainsKey(header.Key))
+                {
+                    response.Headers.Add(header.Key, header.Value);
+                }
+            }
         }
 
         /// <inheritdoc/>

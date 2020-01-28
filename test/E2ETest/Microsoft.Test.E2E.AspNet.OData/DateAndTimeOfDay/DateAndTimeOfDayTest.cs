@@ -117,7 +117,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.DateAndTimeOfDay
             }
         }
 
-        [Theory(Skip = "VSTS AX: Null elimination")]
+        [Theory]
         [MemberData(nameof(MediaTypes))]
         public async Task QueryDCustomerEntityTest(string mode, string mime)
         {

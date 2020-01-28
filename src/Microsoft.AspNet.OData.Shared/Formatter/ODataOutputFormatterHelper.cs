@@ -135,20 +135,7 @@ namespace Microsoft.AspNet.OData.Formatter
             IEdmNavigationSource targetNavigationSource = path == null ? null : path.NavigationSource;
 
             // serialize a response
-            string preferHeader = RequestPreferenceHelpers.GetRequestPreferHeader(internalRequestHeaders);
-            string annotationFilter = null;
-            if (!String.IsNullOrEmpty(preferHeader))
-            {
-                ODataMessageWrapper messageWrapper = getODataMessageWrapper(null);
-                messageWrapper.SetHeader(RequestPreferenceHelpers.PreferHeaderName, preferHeader);
-                annotationFilter = messageWrapper.PreferHeader().AnnotationFilter;
-            }
-
-            IODataResponseMessage responseMessage = getODataMessageWrapper(internalRequest.RequestContainer);
-            if (annotationFilter != null)
-            {
-                responseMessage.PreferenceAppliedHeader().AnnotationFilter = annotationFilter;
-            }
+            IODataResponseMessage responseMessage = PrepareResponseMessage(internalRequest, internalRequestHeaders, getODataMessageWrapper);
 
             ODataMessageWriterSettings writerSettings = internalRequest.WriterSettings;
             writerSettings.BaseUri = baseAddress;
@@ -213,6 +200,40 @@ namespace Microsoft.AspNet.OData.Formatter
 
                 serializer.WriteObject(value, type, messageWriter, writeContext);
             }
+        }
+
+        internal static IODataResponseMessage PrepareResponseMessage(IWebApiRequestMessage internalRequest, IWebApiHeaders internalRequestHeaders, Func<IServiceProvider, ODataMessageWrapper> getODataMessageWrapper)
+        {
+            string preferHeader = RequestPreferenceHelpers.GetRequestPreferHeader(internalRequestHeaders);
+            string annotationFilter = null;
+            string omitValues = null;
+            int? maxPageSize = null;
+            if (!String.IsNullOrEmpty(preferHeader))
+            {
+                ODataMessageWrapper messageWrapper = getODataMessageWrapper(null);
+                messageWrapper.SetHeader(RequestPreferenceHelpers.PreferHeaderName, preferHeader);
+                annotationFilter = messageWrapper.PreferHeader().AnnotationFilter;
+                omitValues = messageWrapper.PreferHeader().OmitValues;
+                maxPageSize = messageWrapper.PreferHeader().MaxPageSize;
+            }
+
+            IODataResponseMessage responseMessage = getODataMessageWrapper(internalRequest.RequestContainer);
+            if (annotationFilter != null)
+            {
+                responseMessage.PreferenceAppliedHeader().AnnotationFilter = annotationFilter;
+            }
+
+            if (omitValues != null)
+            {
+                responseMessage.PreferenceAppliedHeader().OmitValues = omitValues;
+            }
+
+            if (maxPageSize != null)
+            {
+                responseMessage.PreferenceAppliedHeader().MaxPageSize = maxPageSize;
+            }
+
+            return responseMessage;
         }
 
         private static ODataPayloadKind? GetClrObjectResponsePayloadKind(Type type, bool isGenericSingleResult, Func<Type, ODataSerializer> getODataPayloadSerializer)

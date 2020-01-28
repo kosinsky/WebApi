@@ -48,9 +48,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mseng.OData.Core" Version="7.6.2" />
-    <PackageReference Include="Mseng.OData.Edm" Version="7.6.2" />
-    <PackageReference Include="Mseng.Spatial" Version="7.6.2" />
+    <PackageReference Include="Mseng.OData.Core" Version="7.6.3" />
+    <PackageReference Include="Mseng.OData.Edm" Version="7.6.3" />
+    <PackageReference Include="Mseng.Spatial" Version="7.6.3" />
   </ItemGroup>
 
   <ItemGroup>
