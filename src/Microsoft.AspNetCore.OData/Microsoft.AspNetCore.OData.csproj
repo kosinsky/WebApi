@@ -3,12 +3,13 @@
     <TargetFrameworks>netcoreapp3.1;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
   <Import Project="..\..\tools\WebStack.settings.targets" />
-  
+
   <PropertyGroup>
-    <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
     <CodeAnalysisRuleSet>..\Strict.ruleset</CodeAnalysisRuleSet>
     <DefineConstants>$(DefineConstants);ASPNETODATA;ASPNETWEBAPI;NETCORE;NETCORE2x;NOT_CLS_COMPLIANT</DefineConstants>
     <RootNamespace>Microsoft.AspNet.OData</RootNamespace>
+    <AssemblyName>Microsoft.TeamFoundation.AspNetCore.OData</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Let's generate our own assembly info -->
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <!-- SourceLink Options-->
@@ -16,9 +17,9 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <TargetFrameworkProfile />
-    <!-- /SourceLink Options-->    
+    <!-- /SourceLink Options-->
   </PropertyGroup>
-  
+
   <Import Project="..\Microsoft.AspNet.OData.Shared\Microsoft.AspNet.OData.Shared.projitems" Label="Shared" />
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1' ">
@@ -44,10 +45,17 @@
     <PackageReference Include="System.Linq.Queryable" Version="4.3.0" />
     <PackageReference Include="System.Runtime" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.Hashing.Algorithms.Analyzers" Version="1.1.0" />
-    <PackageReference Include="Microsoft.SourceLink.Vsts.Git" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" Version="1.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudioEng.MicroBuild.Core" Version="0.4.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Mseng.OData.Core" Version="7.6.3" />
     <PackageReference Include="Mseng.OData.Edm" Version="7.6.3" />
     <PackageReference Include="Mseng.Spatial" Version="7.6.3" />
@@ -58,6 +66,24 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
   </ItemGroup>
+
+  <ItemGroup>
+    <FilesToSign Include="$(OutDir)\$(AssemblyName).dll">
+      <Authenticode>Microsoft400</Authenticode>
+      <StrongName>StrongName</StrongName>
+    </FilesToSign>
+    <SignFilesDependsOn Include="GatherLocalizedOutputsForSigning">
+      <InProject>false</InProject>
+    </SignFilesDependsOn>
+  </ItemGroup>
+  <Target Name="GatherLocalizedOutputsForSigning" Condition="'$(LocalizationEnabled)' == 'true'">
+    <ItemGroup>
+      <FilesToSign Include="$(OutputPath)localize\**\$(AssemblyName).resources.dll">
+        <Authenticode>Microsoft400</Authenticode>
+        <StrongName>StrongName</StrongName>
+      </FilesToSign>
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <EmbeddedResource Include="..\Microsoft.AspNet.OData.Shared\Common\CommonWebApiResources.resx">
