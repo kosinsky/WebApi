@@ -5,7 +5,7 @@ namespace Microsoft.AspNet.OData.Test.PublicApi
 {
     public partial class PublicApiTest
     {
-        private const string AssemblyName = "Mseng.AspNetCore.OData.dll";
+        private const string AssemblyName = "Microsoft.TeamFoundation.AspNetCore.OData.dll";
         private const string OutputFileName = "Microsoft.AspNetCore.OData.PublicApi.out";
 #if NETCOREAPP2_0
         private const string BaseLineFileName = "Microsoft.AspNetCore.OData.PublicApi.bsl";
